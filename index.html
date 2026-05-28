@@ -1,633 +1,289 @@
+bash
+
+cat > /mnt/user-data/outputs/index.html << 'ENDOFFILE'
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>PayTrack — Raouf Andrea</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PayTrack</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.11.0/tabler-icons.min.css">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-
-
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono&display=swap" rel="stylesheet">
 <style>
-:root {
-  --bg0: #0a0a0f;
-  --bg1: #111118;
-  --bg2: #18181f;
-  --bg3: #1e1e28;
-  --bg4: #252530;
-  --border: rgba(255,255,255,0.07);
-  --border2: rgba(255,255,255,0.13);
-  --tx1: #f0f0f5;
-  --tx2: #9090a0;
-  --tx3: #555565;
-  --blue: #4f8ef7;
-  --blue2: #1a3a7a;
-  --green: #3ecf8e;
-  --green2: #0d3d25;
-  --red: #f26b6b;
-  --red2: #3d1010;
-  --amber: #f5a623;
-  --amber2: #3d2500;
-  --purple: #a78bfa;
-  --purple2: #2a1f4a;
-  --teal: #2dd4bf;
-  --r: 10px;
-  --rl: 14px;
-  --rx: 18px;
-  --f: 'Inter', sans-serif;
-  --m: 'JetBrains Mono', monospace;
-  --shadow: 0 4px 24px rgba(0,0,0,0.4);
-}
 *{box-sizing:border-box;margin:0;padding:0}
-html,body{height:100%;overflow:hidden}
-body{font-family:var(--f);font-size:13px;background:var(--bg0);color:var(--tx1);display:flex}
-
-/* SCROLLBAR */
-::-webkit-scrollbar{width:4px;height:4px}
-::-webkit-scrollbar-track{background:transparent}
-::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:4px}
-
-/* SIDEBAR */
-.sb{width:220px;flex-shrink:0;background:var(--bg1);border-right:1px solid var(--border);display:flex;flex-direction:column;height:100vh}
-.logo{padding:1.25rem 1.25rem 1rem;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border)}
-.logo-icon{width:32px;height:32px;background:linear-gradient(135deg,var(--blue),var(--purple));border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px}
-.logo-text{font-size:15px;font-weight:600;letter-spacing:-0.3px}
-.logo-sub{font-size:10px;color:var(--tx2);margin-top:1px}
-.nav-section{padding:.75rem 0 .25rem;border-bottom:1px solid var(--border)}
-.nav-label{padding:.25rem 1.25rem;font-size:10px;font-weight:600;color:var(--tx3);letter-spacing:1px;text-transform:uppercase;margin-bottom:.25rem}
-.ni{display:flex;align-items:center;gap:10px;padding:9px 1.25rem;cursor:pointer;font-size:13px;color:var(--tx2);border-left:2px solid transparent;transition:all .15s;position:relative}
-.ni:hover{color:var(--tx1);background:var(--bg2)}
-.ni.on{color:var(--tx1);background:var(--bg2);border-left-color:var(--blue);font-weight:500}
+:root{--bg0:#0d0d12;--bg1:#13131a;--bg2:#1a1a24;--bg3:#22222e;--bg4:#2a2a38;--b1:rgba(255,255,255,.07);--b2:rgba(255,255,255,.13);--t1:#eeeef5;--t2:#8888a0;--t3:#44445a;--blue:#5b9cf6;--green:#3ecf8e;--red:#f26b6b;--amber:#f5a623;--purple:#a78bfa;--teal:#2dd4bf;--f:'Inter',sans-serif;--m:'JetBrains Mono',monospace}
+html,body{height:100%;overflow:hidden;background:var(--bg0);color:var(--t1);font-family:var(--f);font-size:13px}
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:4px}
+.app{display:flex;height:100vh}
+.sb{width:220px;flex-shrink:0;background:var(--bg1);border-right:1px solid var(--b1);display:flex;flex-direction:column;height:100vh;overflow-y:auto}
+.logo{padding:1.25rem;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--b1)}
+.logo-icon{width:32px;height:32px;background:#5b9cf6;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:16px;flex-shrink:0}
+.logo-text{font-size:15px;font-weight:600}
+.logo-sub{font-size:10px;color:var(--t3);margin-top:1px}
+.nl{padding:.5rem 1rem .2rem;font-size:10px;font-weight:600;color:var(--t3);text-transform:uppercase;letter-spacing:1px;margin-top:.25rem}
+.ni{display:flex;align-items:center;gap:10px;padding:9px 1rem;cursor:pointer;font-size:13px;color:var(--t2);border-left:2px solid transparent;transition:all .12s}
+.ni:hover{color:var(--t1);background:var(--bg2)}
+.ni.on{color:var(--t1);background:var(--bg2);border-left-color:var(--blue);font-weight:500}
 .ni i{font-size:17px;flex-shrink:0}
-.ni .badge{margin-left:auto;background:var(--red);color:#fff;font-size:9px;font-weight:600;padding:1px 5px;border-radius:10px}
-.sb-bottom{padding:1rem 1.25rem;border-top:1px solid var(--border);margin-top:auto}
-.sb-user{display:flex;align-items:center;gap:10px}
-.avatar{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--blue),var(--purple));display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;flex-shrink:0}
-.user-name{font-size:13px;font-weight:500}
-.user-sub{font-size:10px;color:var(--tx2)}
-
-/* MAIN */
-.main{flex:1;display:flex;flex-direction:column;height:100vh;overflow:hidden}
-.topbar{height:52px;border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 1.5rem;gap:12px;flex-shrink:0;background:var(--bg1)}
-.topbar-title{font-size:15px;font-weight:600;flex:1}
-.topbar-time{font-size:11px;color:var(--tx2);font-family:var(--m)}
-.content{flex:1;overflow-y:auto;padding:1.5rem}
+.ni .dot{margin-left:auto;background:var(--red);color:#fff;font-size:9px;font-weight:700;padding:1px 5px;border-radius:10px;min-width:16px;text-align:center}
+.sb-foot{margin-top:auto;padding:1rem;border-top:1px solid var(--b1);display:flex;align-items:center;gap:10px}
+.av{width:32px;height:32px;border-radius:50%;background:#5b9cf6;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;flex-shrink:0}
+.main{flex:1;display:flex;flex-direction:column;height:100vh;overflow:hidden;min-width:0}
+.topbar{height:52px;background:var(--bg1);border-bottom:1px solid var(--b1);display:flex;align-items:center;padding:0 1.5rem;gap:10px;flex-shrink:0}
+.tb-title{font-size:15px;font-weight:600;flex:1}
+.tb-clock{font-size:11px;color:var(--t2);font-family:var(--m)}
+.ct{flex:1;overflow-y:auto;padding:1.5rem}
 .pg{display:none}.pg.on{display:block}
-
-/* CARDS */
-.card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--rl);padding:1.25rem}
-.card-title{font-size:12px;font-weight:600;color:var(--tx2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:1rem}
-
-/* METRIC CARDS */
 .mg{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:1.25rem}
-.mc{background:var(--bg2);border:1px solid var(--border);border-radius:var(--rl);padding:1.125rem;cursor:pointer;transition:border-color .15s,background .15s;position:relative;overflow:hidden}
-.mc:hover{border-color:var(--border2);background:var(--bg3)}
-.mc::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;border-radius:var(--rl) var(--rl) 0 0}
-.mc.c-blue::before{background:var(--blue)}
-.mc.c-green::before{background:var(--green)}
-.mc.c-red::before{background:var(--red)}
-.mc.c-amber::before{background:var(--amber)}
-.mc.c-purple::before{background:var(--purple)}
-.mc-icon{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;margin-bottom:.875rem}
-.mc-icon.c-blue{background:rgba(79,142,247,0.15);color:var(--blue)}
-.mc-icon.c-green{background:rgba(62,207,142,0.15);color:var(--green)}
-.mc-icon.c-red{background:rgba(242,107,107,0.15);color:var(--red)}
-.mc-icon.c-amber{background:rgba(245,166,35,0.15);color:var(--amber)}
-.mc-icon.c-purple{background:rgba(167,139,250,0.15);color:var(--purple)}
-.mc-lbl{font-size:11px;color:var(--tx2);margin-bottom:5px}
-.mc-val{font-size:20px;font-weight:600;letter-spacing:-0.5px;line-height:1}
-.mc-sub{font-size:10px;color:var(--tx3);margin-top:5px}
-
-/* GRID LAYOUTS */
+.mc{background:var(--bg2);border:1px solid var(--b1);border-radius:12px;padding:1rem;cursor:pointer;transition:all .12s;position:relative;overflow:hidden}
+.mc:hover{background:var(--bg3);border-color:var(--b2)}
+.mc::before{content:'';position:absolute;top:0;left:0;right:0;height:2px}
+.mc.rb::before{background:var(--red)}.mc.gb::before{background:var(--green)}.mc.ab::before{background:var(--amber)}.mc.bb::before{background:var(--blue)}.mc.pb::before{background:var(--purple)}
+.mc-ic{width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:15px;margin-bottom:.75rem}
+.mc-ic.r{background:rgba(242,107,107,.15);color:var(--red)}.mc-ic.g{background:rgba(62,207,142,.15);color:var(--green)}.mc-ic.a{background:rgba(245,166,35,.15);color:var(--amber)}.mc-ic.b{background:rgba(91,156,246,.15);color:var(--blue)}.mc-ic.p{background:rgba(167,139,250,.15);color:var(--purple)}
+.mc-lbl{font-size:11px;color:var(--t2);margin-bottom:4px}
+.mc-val{font-size:19px;font-weight:600;letter-spacing:-.5px;color:var(--t1)}
+.mc-sub{font-size:10px;color:var(--t3);margin-top:4px}
 .g2{display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;margin-bottom:1.25rem}
 .g3{display:grid;grid-template-columns:2fr 1fr;gap:1.25rem;margin-bottom:1.25rem}
-
-/* TABLE */
+.card{background:var(--bg2);border:1px solid var(--b1);border-radius:12px;padding:1.125rem}
+.card-t{font-size:11px;font-weight:600;color:var(--t2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:.875rem}
+.sh{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem}
+.st{font-size:13px;font-weight:600}
 table{width:100%;border-collapse:collapse;font-size:12px}
-th{text-align:left;padding:8px 12px;color:var(--tx3);font-weight:500;border-bottom:1px solid var(--border);white-space:nowrap;font-size:11px;text-transform:uppercase;letter-spacing:.4px}
-td{padding:9px 12px;border-bottom:1px solid var(--border);vertical-align:middle;color:var(--tx1)}
+th{text-align:left;padding:7px 10px;color:var(--t3);font-weight:500;border-bottom:1px solid var(--b1);white-space:nowrap;font-size:10px;text-transform:uppercase;letter-spacing:.4px}
+td{padding:8px 10px;border-bottom:1px solid var(--b1);vertical-align:middle}
 tr:last-child td{border-bottom:none}
-tr:hover td{background:rgba(255,255,255,0.02)}
-
-/* BADGES */
-.bdg{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:6px;font-size:11px;font-weight:500}
+tr:hover td{background:rgba(255,255,255,.02)}
+.bdg{display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border-radius:5px;font-size:11px;font-weight:500}
 .bdg::before{content:'';width:5px;height:5px;border-radius:50%;flex-shrink:0}
-.bp{background:rgba(62,207,142,0.15);color:var(--green)}.bp::before{background:var(--green)}
-.bo{background:rgba(242,107,107,0.15);color:var(--red)}.bo::before{background:var(--red)}
-.bn{background:rgba(245,166,35,0.15);color:var(--amber)}.bn::before{background:var(--amber)}
-.bd{background:rgba(79,142,247,0.15);color:var(--blue)}.bd::before{background:var(--blue)}
-
-/* BUTTONS */
-button{font-family:var(--f);font-size:12px;padding:6px 12px;border:1px solid var(--border2);border-radius:var(--r);background:var(--bg3);color:var(--tx1);cursor:pointer;transition:all .15s;display:inline-flex;align-items:center;gap:5px}
-button:hover{background:var(--bg4);border-color:rgba(255,255,255,0.2)}
-button:active{transform:scale(.98)}
-.btn-primary{background:var(--blue);border-color:var(--blue);color:#fff;font-weight:500}
-.btn-primary:hover{background:#3d7de8;border-color:#3d7de8}
-.btn-danger{background:var(--red2);border-color:var(--red);color:var(--red)}
-.btn-danger:hover{background:rgba(242,107,107,0.2)}
-.btn-sm{font-size:11px;padding:3px 8px}
-.btn-icon{padding:5px 8px}
-
-/* INPUTS */
-input,select,textarea{font-family:var(--f);font-size:13px;padding:8px 12px;border:1px solid var(--border2);border-radius:var(--r);background:var(--bg3);color:var(--tx1);outline:none;width:100%;transition:border-color .15s}
-input:focus,select:focus,textarea:focus{border-color:var(--blue);background:var(--bg4)}
-input::placeholder{color:var(--tx3)}
-select option{background:var(--bg3);color:var(--tx1)}
-label{display:block;font-size:11px;color:var(--tx2);margin-bottom:5px;font-weight:500}
-
-/* ACCOUNTS */
-.ar{background:var(--bg2);border:1px solid var(--border);border-radius:var(--rl);margin-bottom:10px;overflow:hidden;transition:border-color .15s}
-.ar:hover{border-color:var(--border2)}
+.bp{background:rgba(62,207,142,.12);color:var(--green)}.bp::before{background:var(--green)}
+.bo{background:rgba(242,107,107,.12);color:var(--red)}.bo::before{background:var(--red)}
+.bn{background:rgba(245,166,35,.12);color:var(--amber)}.bn::before{background:var(--amber)}
+.bd{background:rgba(91,156,246,.12);color:var(--blue)}.bd::before{background:var(--blue)}
+button{font-family:var(--f);font-size:12px;padding:6px 12px;border:1px solid var(--b2);border-radius:8px;background:var(--bg3);color:var(--t1);cursor:pointer;transition:all .12s;display:inline-flex;align-items:center;gap:5px}
+button:hover{background:var(--bg4)}
+.btn-p{background:var(--blue);border-color:var(--blue);color:#fff;font-weight:500}
+.btn-p:hover{background:#4a8be5}
+.btn-d{border-color:var(--red);color:var(--red)}
+.btn-d:hover{background:rgba(242,107,107,.1)}
+.btn-s{font-size:11px;padding:3px 8px}
+input,select,textarea{font-family:var(--f);font-size:13px;padding:7px 10px;border:1px solid var(--b2);border-radius:8px;background:var(--bg3);color:var(--t1);outline:none;width:100%;transition:border-color .12s}
+input:focus,select:focus{border-color:var(--blue)}
+input::placeholder{color:var(--t3)}
+select option{background:var(--bg2)}
+label{display:block;font-size:11px;color:var(--t2);margin-bottom:4px;font-weight:500}
+.fr{margin-bottom:12px}
+.fr2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+.fa{display:flex;gap:8px;justify-content:flex-end;margin-top:1rem;padding-top:1rem;border-top:1px solid var(--b1)}
+.ar{background:var(--bg2);border:1px solid var(--b1);border-radius:12px;margin-bottom:10px;overflow:hidden}
+.ar:hover{border-color:var(--b2)}
 .ah{display:flex;justify-content:space-between;align-items:center;padding:14px 16px;cursor:pointer}
-.ah:hover{background:rgba(255,255,255,0.02)}
-.a-icon{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;margin-right:12px}
-.adet{display:none;border-top:1px solid var(--border)}.adet.on{display:block}
-.a-sync{display:flex;align-items:center;gap:8px;padding:10px 16px;background:var(--bg1);border-bottom:1px solid var(--border);font-size:11px}
-.a-sync input{font-size:11px;padding:5px 10px}
+.ah:hover{background:rgba(255,255,255,.02)}
+.adet{display:none;border-top:1px solid var(--b1)}.adet.on{display:block}
+.prog{height:3px;background:var(--bg4);border-radius:3px;margin-top:5px;width:100px}
+.prog-f{height:100%;border-radius:3px;background:var(--green)}
+.syncbar{display:flex;align-items:center;gap:8px;padding:8px 14px;background:var(--bg1);border-bottom:1px solid var(--b1);font-size:11px}
+.syncbar input{font-size:11px;padding:4px 8px;flex:1}
 .ss{font-size:11px;font-family:var(--m)}.ss.ok{color:var(--green)}.ss.er{color:var(--red)}.ss.ld{color:var(--amber)}
-
-/* CALENDAR */
-.cal-hdr{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:3px}
-.cal-hdr div{text-align:center;font-size:10px;font-weight:600;color:var(--tx3);padding:6px;text-transform:uppercase;letter-spacing:.5px}
+.cal-dow{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:3px}
+.cal-dow div{text-align:center;font-size:10px;font-weight:600;color:var(--t3);padding:5px;text-transform:uppercase;letter-spacing:.5px}
 .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
-.cal-cell{min-height:80px;padding:6px;border:1px solid var(--border);border-radius:var(--r);background:var(--bg2);transition:background .15s}
+.cal-cell{min-height:76px;padding:6px;border:1px solid var(--b1);border-radius:8px;background:var(--bg2);cursor:pointer;transition:background .12s}
 .cal-cell:hover{background:var(--bg3)}
-.cal-cell.dim{opacity:.3;background:var(--bg1)}
-.cal-cell.today{border-color:var(--blue);background:rgba(79,142,247,0.05)}
-.cal-num{font-size:12px;font-weight:600;margin-bottom:4px;color:var(--tx2)}
+.cal-cell.dim{opacity:.25;background:var(--bg1);pointer-events:none}
+.cal-cell.today{border-color:var(--blue);background:rgba(91,156,246,.05)}
+.cal-num{font-size:11px;font-weight:600;color:var(--t2);margin-bottom:3px}
 .cal-cell.today .cal-num{color:var(--blue)}
-.cal-evt{padding:2px 5px;border-radius:4px;margin-bottom:2px;font-size:10px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;display:flex;align-items:center;gap:3px;cursor:pointer}
-.cal-evt.paid{background:rgba(62,207,142,0.15);color:var(--green)}
-.cal-evt.overdue{background:rgba(242,107,107,0.15);color:var(--red)}
-.cal-evt.notpaid{background:rgba(245,166,35,0.15);color:var(--amber)}
-.cal-evt.deferred{background:rgba(79,142,247,0.15);color:var(--blue)}
-.cal-total{font-size:9px;color:var(--tx3);margin-top:3px;font-family:var(--m)}
-
-/* AI */
-.ams{display:flex;flex-direction:column;gap:10px;max-height:340px;overflow-y:auto;padding-bottom:4px}
-.am{padding:10px 14px;border-radius:var(--rl);font-size:13px;line-height:1.7;max-width:86%}
-.am.u{background:linear-gradient(135deg,var(--blue2),rgba(79,142,247,0.2));color:var(--tx1);align-self:flex-end;border:1px solid rgba(79,142,247,0.3)}
-.am.a{background:var(--bg3);align-self:flex-start;border:1px solid var(--border)}
-.chip{display:inline-flex;align-items:center;padding:4px 10px;border-radius:20px;font-size:11px;border:1px solid var(--border2);cursor:pointer;margin:2px;color:var(--tx2);background:var(--bg3);transition:all .15s}
-.chip:hover{color:var(--tx1);border-color:var(--blue);background:rgba(79,142,247,0.1)}
-
-/* EMAIL PREVIEW */
-.eprev{background:var(--bg1);border:1px solid var(--border);border-radius:var(--r);padding:1rem;font-size:11px;line-height:1.8;max-height:240px;overflow-y:auto;white-space:pre-wrap;font-family:var(--m);color:var(--tx2)}
-
-/* MODAL */
-.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;z-index:200;backdrop-filter:blur(4px)}
-.modal{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--rx);padding:1.5rem;width:460px;max-width:95vw;box-shadow:var(--shadow)}
-.modal-title{font-size:15px;font-weight:600;margin-bottom:1.25rem;display:flex;align-items:center;gap:8px}
-.modal-title i{font-size:20px;color:var(--blue)}
-.fr{margin-bottom:14px}
-.fr-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px}
-.fa{display:flex;gap:8px;justify-content:flex-end;margin-top:1.25rem;padding-top:1rem;border-top:1px solid var(--border)}
-
-/* MONTHLY BREAKDOWN */
-.month-block{background:var(--bg2);border:1px solid var(--border);border-radius:var(--rl);margin-bottom:10px;overflow:hidden}
-.month-hdr{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;cursor:pointer;transition:background .15s}
-.month-hdr:hover{background:var(--bg3)}
-.month-name{font-size:13px;font-weight:600}
-.month-total{font-size:13px;font-weight:600;color:var(--amber);font-family:var(--m)}
-.month-body{display:none;border-top:1px solid var(--border)}.month-body.on{display:block}
-.month-count{font-size:11px;color:var(--tx2);background:var(--bg3);padding:2px 7px;border-radius:6px;margin-left:8px}
-
-/* STOCKS */
-.stock-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--rl);padding:1.125rem;transition:all .15s}
-.stock-card:hover{border-color:var(--border2);background:var(--bg3)}
-.stock-ticker{font-size:14px;font-weight:700;font-family:var(--m);color:var(--tx1)}
-.stock-name{font-size:11px;color:var(--tx2);margin-top:2px}
-.stock-price{font-size:18px;font-weight:600;font-family:var(--m);margin-top:.875rem}
-.stock-change{font-size:11px;font-family:var(--m);padding:2px 6px;border-radius:5px;margin-left:6px}
-.stock-change.up{background:rgba(62,207,142,0.15);color:var(--green)}
-.stock-change.dn{background:rgba(242,107,107,0.15);color:var(--red)}
-.stock-meta{display:flex;gap:16px;margin-top:.75rem}
-.stock-meta-item label{font-size:10px;color:var(--tx3);display:block}
-.stock-meta-item div{font-size:12px;font-weight:500;font-family:var(--m)}
-
-/* PROGRESS BAR */
-.prog-bar{height:4px;background:var(--bg4);border-radius:4px;overflow:hidden;margin-top:6px}
-.prog-fill{height:100%;border-radius:4px;transition:width .3s}
-
-/* ACTIVITY FEED */
-.activity-item{display:flex;align-items:flex-start;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)}
-.activity-item:last-child{border-bottom:none}
-.act-dot{width:8px;height:8px;border-radius:50%;margin-top:5px;flex-shrink:0}
-.act-content{flex:1}
-.act-title{font-size:12px;font-weight:500}
-.act-meta{font-size:11px;color:var(--tx2);margin-top:2px}
-
-/* SECTION HEADER */
-.sec-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem}
-.sec-title{font-size:13px;font-weight:600;color:var(--tx1)}
-
-/* TABS */
-.tabs{display:flex;gap:4px;background:var(--bg1);padding:4px;border-radius:var(--r);margin-bottom:1.25rem;width:fit-content}
-.tab{padding:6px 14px;border-radius:7px;font-size:12px;font-weight:500;cursor:pointer;color:var(--tx2);transition:all .15s;border:none;background:none}
-.tab.on{background:var(--bg3);color:var(--tx1);border:1px solid var(--border2)}
-.tab:hover:not(.on){color:var(--tx1)}
-
-/* REMINDER SETTINGS */
-.rem-acc{background:var(--bg2);border:1px solid var(--border);border-radius:var(--rl);margin-bottom:8px;overflow:hidden}
-.rem-acc-hdr{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;cursor:pointer}
-.rem-acc-hdr:hover{background:var(--bg3)}
-.rem-acc-body{display:none;border-top:1px solid var(--border);padding:14px 16px}.rem-acc-body.on{display:block}
-
+.cal-evt{padding:2px 4px;border-radius:3px;font-size:10px;margin-bottom:2px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.cal-evt.paid{background:rgba(62,207,142,.12);color:var(--green)}
+.cal-evt.overdue{background:rgba(242,107,107,.12);color:var(--red)}
+.cal-evt.notpaid{background:rgba(245,166,35,.12);color:var(--amber)}
+.cal-tot{font-size:9px;color:var(--t3);font-family:var(--m);margin-top:2px}
+.ams{display:flex;flex-direction:column;gap:8px;max-height:320px;overflow-y:auto;margin-bottom:10px}
+.am{padding:10px 14px;border-radius:10px;font-size:13px;line-height:1.65;max-width:86%}
+.am.u{background:rgba(91,156,246,.2);color:var(--t1);align-self:flex-end;border:1px solid rgba(91,156,246,.3)}
+.am.a{background:var(--bg3);align-self:flex-start;border:1px solid var(--b1)}
+.chip{display:inline-flex;align-items:center;padding:3px 10px;border-radius:20px;font-size:11px;border:1px solid var(--b2);cursor:pointer;margin:2px;color:var(--t2);background:var(--bg3);transition:all .12s}
+.chip:hover{color:var(--t1);border-color:var(--blue)}
+.eprev{background:var(--bg1);border:1px solid var(--b1);border-radius:8px;padding:1rem;font-size:11px;line-height:1.8;max-height:240px;overflow-y:auto;white-space:pre-wrap;font-family:var(--m);color:var(--t2)}
+.tabs{display:flex;gap:3px;background:var(--bg1);padding:4px;border-radius:8px;width:fit-content;margin-bottom:1.25rem}
+.tab{padding:5px 14px;border-radius:6px;font-size:12px;font-weight:500;cursor:pointer;color:var(--t2);border:none;background:none;transition:all .12s}
+.tab:hover{color:var(--t1)}
+.tab.on{background:var(--bg3);color:var(--t1);border:1px solid var(--b2)}
+.mh{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;cursor:pointer;background:var(--bg2)}
+.mh:hover{background:var(--bg3)}
+.mb{display:none;border-top:1px solid var(--b1)}.mb.on{display:block}
+.mbadge{background:var(--bg3);color:var(--t2);font-size:10px;padding:2px 6px;border-radius:5px;margin-left:8px}
+.act-item{display:flex;align-items:flex-start;gap:10px;padding:9px 0;border-bottom:1px solid var(--b1)}
+.act-item:last-child{border-bottom:none}
+.act-dot{width:7px;height:7px;border-radius:50%;margin-top:4px;flex-shrink:0}
+.stk-card{background:var(--bg2);border:1px solid var(--b1);border-radius:12px;padding:1rem;transition:all .12s}
+.stk-card:hover{border-color:var(--b2)}
+.ovlay{position:fixed;inset:0;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;z-index:100;backdrop-filter:blur(3px)}
+.modal{background:var(--bg2);border:1px solid var(--b2);border-radius:16px;padding:1.5rem;width:460px;max-width:95vw}
+.modal-t{font-size:15px;font-weight:600;margin-bottom:1.25rem;display:flex;align-items:center;gap:8px;color:var(--t1)}
+.modal-t i{font-size:20px;color:var(--blue)}
 .ldots::after{content:'...';animation:ld 1.2s infinite steps(1)}
 @keyframes ld{0%{content:'.'}33%{content:'..'}66%{content:'...'}}
-.spin{animation:spin 1s linear infinite;display:inline-block}
-@keyframes spin{to{transform:rotate(360deg)}}
-.glow{box-shadow:0 0 20px rgba(79,142,247,0.3)}
-
-@media(max-width:768px){.sb{width:52px}.sb .logo-text,.sb .logo-sub,.ni span,.nav-label,.sb-bottom .user-name,.sb-bottom .user-sub{display:none}.sb .logo{justify-content:center}.ni{justify-content:center;padding:12px}.g2,.g3{grid-template-columns:1fr}.mg{grid-template-columns:repeat(2,1fr)}.content{padding:1rem}}
+@media(max-width:720px){.sb{width:50px}.logo-text,.logo-sub,.ni span,.nl,.sb-foot .av+div{display:none}.logo{justify-content:center;padding:.75rem}.ni{justify-content:center}.g2,.g3{grid-template-columns:1fr}.ct{padding:1rem}}
 </style>
 </head>
 <body>
-
-<!-- SIDEBAR -->
+<div class="app">
 <div class="sb">
-  <div class="logo">
-    <div class="logo-icon"><i class="ti ti-wallet" style="color:#fff"></i></div>
-    <div><div class="logo-text">PayTrack</div><div class="logo-sub">Financial OS</div></div>
-  </div>
-  <div class="nav-section">
-    <div class="nav-label">Overview</div>
-    <div class="ni on" onclick="nav('dash',this)"><i class="ti ti-layout-dashboard"></i><span>Dashboard</span></div>
-  </div>
-  <div class="nav-section">
-    <div class="nav-label">Finance</div>
-    <div class="ni" onclick="nav('accs',this)"><i class="ti ti-building-bank"></i><span>Accounts</span></div>
-    <div class="ni" onclick="nav('monthly',this)"><i class="ti ti-calendar-stats"></i><span>Monthly view</span></div>
-    <div class="ni" onclick="nav('cal',this)"><i class="ti ti-calendar"></i><span>Calendar</span></div>
-    <div class="ni" onclick="nav('rem',this)"><i class="ti ti-bell"></i><span>Reminders</span><span class="badge" id="ov-count">0</span></div>
-  </div>
-  <div class="nav-section">
-    <div class="nav-label">Investments</div>
-    <div class="ni" onclick="nav('stocks',this)"><i class="ti ti-chart-line"></i><span>Stocks</span></div>
-  </div>
-  <div class="nav-section">
-    <div class="nav-label">Tools</div>
-    <div class="ni" onclick="nav('ai',this)"><i class="ti ti-robot"></i><span>AI assistant</span></div>
-    <div class="ni" onclick="nav('export',this)"><i class="ti ti-download"></i><span>Export</span></div>
-  </div>
-  <div class="sb-bottom">
-    <div class="sb-user">
-      <div class="avatar">RA</div>
-      <div><div class="user-name">Raouf Andrea</div><div class="user-sub">mr.raouf@gmail.com</div></div>
-    </div>
-  </div>
+  <div class="logo"><div class="logo-icon"><i class="ti ti-wallet"></i></div><div><div class="logo-text">PayTrack</div><div class="logo-sub">Financial OS</div></div></div>
+  <div class="nl">Overview</div>
+  <div class="ni on" onclick="go('dash',this)"><i class="ti ti-layout-dashboard"></i><span>Dashboard</span></div>
+  <div class="nl">Finance</div>
+  <div class="ni" onclick="go('accs',this)"><i class="ti ti-building-bank"></i><span>Accounts</span></div>
+  <div class="ni" onclick="go('monthly',this)"><i class="ti ti-calendar-stats"></i><span>Monthly view</span></div>
+  <div class="ni" onclick="go('cal',this)"><i class="ti ti-calendar"></i><span>Calendar</span></div>
+  <div class="ni" onclick="go('rem',this)"><i class="ti ti-bell"></i><span>Reminders</span><span class="dot" id="ov-dot">0</span></div>
+  <div class="nl">Investments</div>
+  <div class="ni" onclick="go('stk',this)"><i class="ti ti-chart-line"></i><span>Stocks</span></div>
+  <div class="nl">Tools</div>
+  <div class="ni" onclick="go('ai',this)"><i class="ti ti-robot"></i><span>AI assistant</span></div>
+  <div class="ni" onclick="go('exp',this)"><i class="ti ti-download"></i><span>Export</span></div>
+  <div class="sb-foot"><div class="av">RA</div><div><div style="font-size:13px;font-weight:500">Raouf Andrea</div><div style="font-size:10px;color:var(--t2)">mr.raouf@gmail.com</div></div></div>
 </div>
 
-<!-- MAIN -->
 <div class="main">
-  <div class="topbar">
-    <div class="topbar-title" id="page-title">Dashboard</div>
-    <div class="topbar-time" id="clock"></div>
-    <button onclick="nav('export',null)" style="margin-left:8px"><i class="ti ti-download"></i> Export</button>
-    <button onclick="syncAll()" id="sync-btn"><i class="ti ti-refresh"></i> Sync</button>
-  </div>
-  <div class="content">
+<div class="topbar">
+  <div class="tb-title" id="pg-title">Dashboard</div>
+  <div class="tb-clock" id="clk"></div>
+  <button onclick="go('exp',null)"><i class="ti ti-download"></i> Export</button>
+  <button onclick="syncAll()" id="sync-btn"><i class="ti ti-refresh"></i> Sync</button>
+</div>
+<div class="ct">
 
-<!-- DASHBOARD -->
 <div id="p-dash" class="pg on">
   <div class="mg">
-    <div class="mc c-red" onclick="filterByStatus('overdue')">
-      <div class="mc-icon c-red"><i class="ti ti-alert-circle"></i></div>
-      <div class="mc-lbl">Total outstanding</div>
-      <div class="mc-val" id="m1">—</div>
-      <div class="mc-sub">Click to see overdue</div>
-    </div>
-    <div class="mc c-green" onclick="nav('accs',null)">
-      <div class="mc-icon c-green"><i class="ti ti-circle-check"></i></div>
-      <div class="mc-lbl">Total paid</div>
-      <div class="mc-val" id="m2">—</div>
-      <div class="mc-sub">All time</div>
-    </div>
-    <div class="mc c-red" onclick="filterByStatus('overdue')">
-      <div class="mc-icon c-red"><i class="ti ti-clock-exclamation"></i></div>
-      <div class="mc-lbl">Overdue now</div>
-      <div class="mc-val" id="m3">—</div>
-      <div class="mc-sub" id="m3-sub">Requires action</div>
-    </div>
-    <div class="mc c-amber" onclick="nav('monthly',null)">
-      <div class="mc-icon c-amber"><i class="ti ti-calendar-due"></i></div>
-      <div class="mc-lbl">This month</div>
-      <div class="mc-val" id="m4">—</div>
-      <div class="mc-sub">May 2026</div>
-    </div>
-    <div class="mc c-blue" onclick="nav('accs',null)">
-      <div class="mc-icon c-blue"><i class="ti ti-building-bank"></i></div>
-      <div class="mc-lbl">Active accounts</div>
-      <div class="mc-val" id="m5">—</div>
-      <div class="mc-sub">Click to manage</div>
-    </div>
-    <div class="mc c-purple" onclick="nav('stocks',null)">
-      <div class="mc-icon c-purple"><i class="ti ti-chart-line"></i></div>
-      <div class="mc-lbl">Portfolio value</div>
-      <div class="mc-val" id="m6">—</div>
-      <div class="mc-sub">Click to view stocks</div>
-    </div>
+    <div class="mc rb" onclick="go('accs',null)"><div class="mc-ic r"><i class="ti ti-alert-circle"></i></div><div class="mc-lbl">Total outstanding</div><div class="mc-val" id="m1">—</div><div class="mc-sub">Click to view accounts</div></div>
+    <div class="mc gb" onclick="go('accs',null)"><div class="mc-ic g"><i class="ti ti-circle-check"></i></div><div class="mc-lbl">Total paid</div><div class="mc-val" id="m2">—</div><div class="mc-sub">All time</div></div>
+    <div class="mc rb" onclick="go('rem',null)"><div class="mc-ic r"><i class="ti ti-clock-exclamation"></i></div><div class="mc-lbl">Overdue now</div><div class="mc-val" id="m3">—</div><div class="mc-sub" id="m3s">Requires action</div></div>
+    <div class="mc ab" onclick="go('monthly',null)"><div class="mc-ic a"><i class="ti ti-calendar-due"></i></div><div class="mc-lbl">This month</div><div class="mc-val" id="m4">—</div><div class="mc-sub">May 2026</div></div>
+    <div class="mc bb" onclick="go('accs',null)"><div class="mc-ic b"><i class="ti ti-building-bank"></i></div><div class="mc-lbl">Active accounts</div><div class="mc-val" id="m5">—</div><div class="mc-sub">Click to manage</div></div>
+    <div class="mc pb" onclick="go('stk',null)"><div class="mc-ic p"><i class="ti ti-chart-line"></i></div><div class="mc-lbl">Portfolio value</div><div class="mc-val" id="m6">—</div><div class="mc-sub">Click to view stocks</div></div>
   </div>
-
   <div class="g2">
-    <div class="card">
-      <div class="card-title">Debt breakdown</div>
-      <div style="position:relative;height:200px"><canvas id="pc"></canvas></div>
-      <div id="pleg" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;font-size:11px;color:var(--tx2)"></div>
-    </div>
-    <div class="card">
-      <div class="card-title">Monthly obligations</div>
-      <div style="position:relative;height:200px"><canvas id="bc"></canvas></div>
-    </div>
+    <div class="card"><div class="card-t">Debt breakdown</div><div style="position:relative;height:195px"><canvas id="pc"></canvas></div><div id="pleg" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;font-size:11px;color:var(--t2)"></div></div>
+    <div class="card"><div class="card-t">Monthly obligations (AED)</div><div style="position:relative;height:195px"><canvas id="bc"></canvas></div></div>
   </div>
-
   <div class="g3">
-    <div class="card">
-      <div class="sec-hdr">
-        <div class="sec-title"><i class="ti ti-calendar-event" style="margin-right:6px;color:var(--blue)"></i>Upcoming — next 90 days</div>
-        <button class="btn-sm" onclick="nav('monthly',null)">View all <i class="ti ti-arrow-right"></i></button>
-      </div>
-      <div style="overflow-x:auto">
-        <table><thead><tr><th>Account</th><th>Date</th><th>Description</th><th>Chq</th><th style="text-align:right">Amount</th><th>Status</th><th></th></tr></thead>
-        <tbody id="utb"></tbody></table>
-      </div>
-    </div>
-    <div class="card">
-      <div class="sec-hdr"><div class="sec-title"><i class="ti ti-activity" style="margin-right:6px;color:var(--purple)"></i>Activity</div></div>
-      <div id="activity-feed"></div>
-    </div>
+    <div class="card"><div class="sh"><div class="st">Upcoming — next 90 days</div><button class="btn-s" onclick="go('monthly',null)">View all <i class="ti ti-arrow-right"></i></button></div><div style="overflow-x:auto"><table><thead><tr><th>Account</th><th>Date</th><th>Description</th><th>Chq</th><th style="text-align:right">Amount</th><th>Status</th><th></th></tr></thead><tbody id="utb"></tbody></table></div></div>
+    <div class="card"><div class="sh"><div class="st">Recent activity</div></div><div id="act-feed"></div></div>
   </div>
 </div>
 
-<!-- ACCOUNTS -->
 <div id="p-accs" class="pg">
-  <div class="sec-hdr">
-    <div class="sec-title">All accounts</div>
-    <div style="display:flex;gap:8px">
-      <button onclick="openAdd()"><i class="ti ti-plus"></i> Add account</button>
-      <button onclick="nav('export',null)"><i class="ti ti-download"></i> Export</button>
-    </div>
-  </div>
+  <div class="sh"><div class="st">Accounts</div><div style="display:flex;gap:8px"><button onclick="openAdd()"><i class="ti ti-plus"></i> Add account</button><button onclick="go('exp',null)"><i class="ti ti-download"></i> Export</button></div></div>
   <div id="aclist"></div>
 </div>
 
-<!-- MONTHLY VIEW -->
 <div id="p-monthly" class="pg">
-  <div class="sec-hdr">
-    <div class="sec-title">Monthly breakdown</div>
-    <select id="monthly-year" onchange="renderMonthly()" style="width:120px">
-      <option value="2026">2026</option><option value="2027">2027</option><option value="2028">2028</option><option value="2029">2029</option>
-    </select>
-  </div>
-  <div id="monthly-content"></div>
+  <div class="sh"><div class="st">Monthly breakdown</div><select id="mo-yr" onchange="renderMonthly()" style="width:110px"><option value="2026">2026</option><option value="2027">2027</option><option value="2028">2028</option><option value="2029">2029</option></select></div>
+  <div id="mo-body"></div>
 </div>
 
-<!-- CALENDAR -->
 <div id="p-cal" class="pg">
-  <div style="display:flex;align-items:center;gap:12px;margin-bottom:1.25rem">
-    <button class="btn-icon" onclick="calmv(-1)"><i class="ti ti-chevron-left"></i></button>
-    <div style="font-size:16px;font-weight:600" id="clbl"></div>
-    <button class="btn-icon" onclick="calmv(1)"><i class="ti ti-chevron-right"></i></button>
-    <button class="btn-sm" onclick="calY=2026;calM=4;renderCal()">Today</button>
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:1.25rem">
+    <button onclick="cmv(-1)"><i class="ti ti-chevron-left"></i></button>
+    <div style="font-size:16px;font-weight:600" id="cal-lbl"></div>
+    <button onclick="cmv(1)"><i class="ti ti-chevron-right"></i></button>
+    <button class="btn-s" onclick="calY=2026;calM=4;renderCal()">Today</button>
   </div>
-  <div class="cal-hdr"><div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div></div>
+  <div class="cal-dow"><div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div></div>
   <div class="cal-grid" id="cg"></div>
-  <div id="cal-detail" style="margin-top:1rem"></div>
 </div>
 
-<!-- REMINDERS -->
 <div id="p-rem" class="pg">
   <div class="tabs">
-    <div class="tab on" onclick="remTab('overview',this)">Overview</div>
-    <div class="tab" onclick="remTab('settings',this)">Per-account settings</div>
-    <div class="tab" onclick="remTab('email',this)">Email</div>
+    <div class="tab on" onclick="rtab('ov',this)">Overview</div>
+    <div class="tab" onclick="rtab('set',this)">Per-account</div>
+    <div class="tab" onclick="rtab('em',this)">Email</div>
   </div>
-
-  <div id="rem-overview" class="rem-section">
-    <div class="card" style="margin-bottom:1rem"><div class="card-title" style="color:var(--red)"><i class="ti ti-alert-circle"></i> Overdue now</div><div id="r1"></div></div>
-    <div class="card" style="margin-bottom:1rem"><div class="card-title"><i class="ti ti-clock"></i> Due in 30 days</div><div id="r2"></div></div>
-    <div class="card"><div class="card-title"><i class="ti ti-calendar"></i> Due in 31–90 days</div><div id="r3"></div></div>
+  <div id="rem-ov">
+    <div class="card" style="margin-bottom:1rem"><div class="card-t" style="color:var(--red)"><i class="ti ti-alert-circle"></i> Overdue now</div><div id="r1"></div></div>
+    <div class="card" style="margin-bottom:1rem"><div class="card-t"><i class="ti ti-clock"></i> Due in 30 days</div><div id="r2"></div></div>
+    <div class="card"><div class="card-t"><i class="ti ti-calendar"></i> Due in 31–90 days</div><div id="r3"></div></div>
   </div>
-
-  <div id="rem-settings" class="rem-section" style="display:none">
-    <div class="card" style="margin-bottom:1rem">
-      <div class="card-title">Default reminder settings</div>
-      <div class="fr-row">
-        <div><label>Reminder email</label><input type="email" id="rem-email" value="mr.raouf@gmail.com"></div>
-        <div><label>Days before due</label><input type="number" id="rem-days" value="7" style="width:100%"></div>
-      </div>
-      <button class="btn-primary" onclick="saveRemSettings()"><i class="ti ti-check"></i> Save defaults</button>
-    </div>
-    <div id="rem-accs-list"></div>
+  <div id="rem-set" style="display:none">
+    <div class="card" style="margin-bottom:1rem"><div class="card-t">Default settings</div><div class="fr2"><div><label>Reminder email</label><input type="email" id="rem-email" value="mr.raouf@gmail.com"></div><div><label>Days before due</label><input type="number" id="rem-days" value="7"></div></div><button class="btn-p" onclick="alert('Settings saved.')"><i class="ti ti-check"></i> Save</button></div>
+    <div id="rem-accs"></div>
   </div>
-
-  <div id="rem-email" class="rem-section" style="display:none">
-    <div class="card">
-      <div class="card-title">Generate email reminder</div>
-      <div class="fr-row">
-        <div><label>Send to</label><input type="email" id="email-to" value="mr.raouf@gmail.com"></div>
-        <div><label>Range</label>
-          <select id="email-range">
-            <option value="7">Next 7 days</option>
-            <option value="30" selected>Next 30 days</option>
-            <option value="90">Next 90 days</option>
-            <option value="ov">Overdue only</option>
-            <option value="all">All pending</option>
-          </select>
-        </div>
-      </div>
-      <div style="display:flex;gap:8px;margin-bottom:12px">
-        <button onclick="genEmail()"><i class="ti ti-eye"></i> Preview</button>
-        <button class="btn-primary" onclick="sendEmail()"><i class="ti ti-send"></i> Open in mail app</button>
-        <button onclick="copyEmail()"><i class="ti ti-copy"></i> Copy</button>
-      </div>
-      <div class="eprev" id="eprev">Click Preview to generate your reminder email.</div>
+  <div id="rem-em" style="display:none">
+    <div class="card"><div class="card-t">Email reminder</div>
+      <div class="fr2"><div><label>Send to</label><input type="email" id="em-to" value="mr.raouf@gmail.com"></div><div><label>Range</label><select id="em-rng"><option value="7">Next 7 days</option><option value="30" selected>Next 30 days</option><option value="90">Next 90 days</option><option value="ov">Overdue only</option><option value="all">All pending</option></select></div></div>
+      <div style="display:flex;gap:8px;margin-bottom:12px"><button onclick="genEmail()"><i class="ti ti-eye"></i> Preview</button><button class="btn-p" onclick="sendEmail()"><i class="ti ti-send"></i> Open in mail</button><button onclick="copyEmail()"><i class="ti ti-copy"></i> Copy</button></div>
+      <div class="eprev" id="eprev">Click Preview to generate.</div>
     </div>
   </div>
 </div>
 
-<!-- STOCKS -->
-<div id="p-stocks" class="pg">
-  <div class="sec-hdr">
-    <div class="sec-title">Stock portfolio</div>
-    <div style="display:flex;gap:8px">
-      <button onclick="openAddStock()"><i class="ti ti-plus"></i> Add stock</button>
-      <button onclick="exportStocks()"><i class="ti ti-download"></i> Export</button>
-    </div>
-  </div>
+<div id="p-stk" class="pg">
+  <div class="sh"><div class="st">Stock portfolio</div><div style="display:flex;gap:8px"><button onclick="openAddStk()"><i class="ti ti-plus"></i> Add stock</button><button onclick="expStocks()"><i class="ti ti-download"></i> Export</button></div></div>
   <div class="mg" style="margin-bottom:1.25rem">
-    <div class="mc c-blue"><div class="mc-icon c-blue"><i class="ti ti-briefcase"></i></div><div class="mc-lbl">Total value</div><div class="mc-val" id="s-total">AED 0</div></div>
-    <div class="mc c-green"><div class="mc-icon c-green"><i class="ti ti-trending-up"></i></div><div class="mc-lbl">Total gain/loss</div><div class="mc-val" id="s-gl">AED 0</div></div>
-    <div class="mc c-purple"><div class="mc-icon c-purple"><i class="ti ti-stack"></i></div><div class="mc-lbl">Positions</div><div class="mc-val" id="s-count">0</div></div>
+    <div class="mc bb"><div class="mc-ic b"><i class="ti ti-briefcase"></i></div><div class="mc-lbl">Total value</div><div class="mc-val" id="st1">AED 0</div></div>
+    <div class="mc gb"><div class="mc-ic g"><i class="ti ti-trending-up"></i></div><div class="mc-lbl">Total gain/loss</div><div class="mc-val" id="st2">AED 0</div></div>
+    <div class="mc pb"><div class="mc-ic p"><i class="ti ti-stack"></i></div><div class="mc-lbl">Positions</div><div class="mc-val" id="st3">0</div></div>
   </div>
-  <div id="stocks-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px"></div>
-  <div id="stocks-empty" style="text-align:center;padding:3rem;color:var(--tx2)">
-    <i class="ti ti-chart-line" style="font-size:48px;opacity:.3;display:block;margin-bottom:1rem"></i>
-    No stocks added yet. Click "Add stock" to start tracking your portfolio.
-  </div>
+  <div id="stk-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(255px,1fr));gap:12px"></div>
+  <div id="stk-empty" style="text-align:center;padding:3rem;color:var(--t2)"><i class="ti ti-chart-line" style="font-size:48px;opacity:.25;display:block;margin-bottom:1rem"></i>No stocks yet. Click Add stock to begin.</div>
 </div>
 
-<!-- AI ASSISTANT -->
 <div id="p-ai" class="pg">
-  <div class="card" style="min-height:500px;display:flex;flex-direction:column">
-    <div class="card-title"><i class="ti ti-robot" style="color:var(--blue);margin-right:6px"></i>AI financial assistant</div>
-    <div class="ams" id="ams" style="flex:1">
-      <div class="am a">Hi Raouf! I have full visibility into all your accounts, payment schedules, and obligations. Ask me anything.</div>
-    </div>
-    <div style="margin:10px 0 8px;display:flex;flex-wrap:wrap">
-      <span class="chip" onclick="askC('What is my total overdue and which accounts?')"><i class="ti ti-alert-circle" style="font-size:12px"></i> Overdue summary</span>
-      <span class="chip" onclick="askC('What are my biggest payments in the next 6 months?')"><i class="ti ti-calendar" style="font-size:12px"></i> Next 6 months</span>
-      <span class="chip" onclick="askC('NBF loan remaining balance and end date?')"><i class="ti ti-building-bank" style="font-size:12px"></i> NBF status</span>
-      <span class="chip" onclick="askC('Summarize my 2027 obligations')"><i class="ti ti-chart-bar" style="font-size:12px"></i> 2027 obligations</span>
-      <span class="chip" onclick="askC('Which account has the highest outstanding balance?')"><i class="ti ti-trending-up" style="font-size:12px"></i> Highest balance</span>
-      <span class="chip" onclick="askC('What should I prioritize paying this month?')"><i class="ti ti-list-check" style="font-size:12px"></i> Priority this month</span>
-    </div>
-    <div style="display:flex;gap:8px">
-      <input type="text" id="ain" placeholder="Ask about your finances, obligations, or get advice..." onkeydown="if(event.key==='Enter')doAI()" style="flex:1;font-size:13px">
-      <button class="btn-primary" onclick="doAI()">Ask <i class="ti ti-arrow-right"></i></button>
-    </div>
+  <div class="card" style="min-height:480px;display:flex;flex-direction:column">
+    <div class="card-t"><i class="ti ti-robot" style="color:var(--blue);margin-right:5px"></i>AI financial assistant</div>
+    <div class="ams" id="ams" style="flex:1"><div class="am a">Hi Raouf! I have full visibility into all your accounts and obligations. Ask me anything.</div></div>
+    <div style="margin-bottom:8px"><span class="chip" onclick="askC('What is my total overdue and which accounts?')">Overdue summary</span><span class="chip" onclick="askC('Biggest payments next 6 months?')">Next 6 months</span><span class="chip" onclick="askC('NBF loan remaining balance and end date?')">NBF status</span><span class="chip" onclick="askC('Summarize 2027 obligations')">2027</span><span class="chip" onclick="askC('What should I prioritize paying this month?')">Priority</span></div>
+    <div style="display:flex;gap:8px"><input type="text" id="ai-in" placeholder="Ask about your finances..." onkeydown="if(event.key==='Enter')doAI()" style="flex:1"><button class="btn-p" onclick="doAI()">Ask <i class="ti ti-arrow-right"></i></button></div>
   </div>
 </div>
 
-<!-- EXPORT -->
-<div id="p-export" class="pg">
-  <div class="sec-hdr"><div class="sec-title">Export data</div></div>
+<div id="p-exp" class="pg">
+  <div class="st" style="margin-bottom:1.25rem">Export data</div>
   <div class="g2">
-    <div class="card">
-      <div class="card-title"><i class="ti ti-table" style="color:var(--green);margin-right:6px"></i>Export to Excel</div>
-      <p style="font-size:12px;color:var(--tx2);margin-bottom:1rem;line-height:1.7">Export all accounts and payment schedules to Excel (.xlsx). Each account gets its own sheet.</p>
-      <div style="display:flex;flex-direction:column;gap:8px">
-        <button class="btn-primary" onclick="exportAllExcel()"><i class="ti ti-file-spreadsheet"></i> Export all accounts</button>
-        <div style="font-size:11px;color:var(--tx3);margin:4px 0">Or export individual account:</div>
-        <div id="export-acc-list" style="display:flex;flex-direction:column;gap:6px"></div>
-      </div>
-    </div>
-    <div class="card">
-      <div class="card-title"><i class="ti ti-file-text" style="color:var(--red);margin-right:6px"></i>Export to PDF</div>
-      <p style="font-size:12px;color:var(--tx2);margin-bottom:1rem;line-height:1.7">Generate a PDF financial report with all accounts, payment schedules, and dashboard summary.</p>
-      <div style="display:flex;flex-direction:column;gap:8px">
-        <button class="btn-primary" onclick="exportPDF()"><i class="ti ti-file-text"></i> Export PDF report</button>
-        <div style="font-size:11px;color:var(--tx3);margin-top:8px">Note: PDF will open in a new tab for printing/saving.</div>
-      </div>
-    </div>
+    <div class="card"><div class="card-t"><i class="ti ti-table" style="color:var(--green);margin-right:5px"></i>Export to Excel</div><p style="font-size:12px;color:var(--t2);margin-bottom:1rem;line-height:1.7">All accounts + schedules. Each account gets its own sheet.</p><button class="btn-p" style="margin-bottom:8px" onclick="expAllExcel()"><i class="ti ti-file-spreadsheet"></i> Export all accounts</button><div style="font-size:11px;color:var(--t3);margin:6px 0">Individual accounts:</div><div id="exp-acc" style="display:flex;flex-direction:column;gap:6px"></div></div>
+    <div class="card"><div class="card-t"><i class="ti ti-file-text" style="color:var(--red);margin-right:5px"></i>Export to PDF</div><p style="font-size:12px;color:var(--t2);margin-bottom:1rem;line-height:1.7">Full PDF report with all accounts and payment schedules.</p><button class="btn-p" onclick="expPDF()"><i class="ti ti-file-text"></i> Generate PDF report</button></div>
   </div>
-  <div class="card" style="margin-top:0">
-    <div class="card-title"><i class="ti ti-table-import" style="color:var(--blue);margin-right:6px"></i>Google Sheets sync</div>
-    <p style="font-size:12px;color:var(--tx2);margin-bottom:1rem;line-height:1.7">Connect each account to its Google Sheets CSV URL. The sheet must be published to the web via File → Share → Publish to web → CSV.</p>
-    <div id="sheet-sync-list"></div>
-  </div>
+  <div class="card"><div class="card-t"><i class="ti ti-table-import" style="color:var(--blue);margin-right:5px"></i>Google Sheets sync</div><p style="font-size:12px;color:var(--t2);margin-bottom:1rem;line-height:1.7">Connect each account to its Google Sheets CSV URL (File → Share → Publish to web → CSV).</p><div id="exp-sync"></div></div>
 </div>
 
+</div>
 </div>
 </div>
 
 <!-- MODALS -->
-<div class="modal-bg" id="modal-add" style="display:none">
-  <div class="modal">
-    <div class="modal-title"><i class="ti ti-plus"></i>Add account</div>
-    <div class="fr"><label>Account name</label><input id="an" placeholder="e.g. New Villa Project"></div>
-    <div class="fr-row">
-      <div><label>Type</label><select id="at"><option>Installments</option><option>Car Loan</option><option>Cash Loan</option><option>School Fees</option><option>Mortgage</option><option>Lender</option><option>Other</option></select></div>
-      <div><label>Principal (AED)</label><input type="number" id="ap" placeholder="0"></div>
-    </div>
-    <div class="fr"><label><input type="checkbox" id="ad" style="width:auto;margin-right:6px">Enable defer option (for loans)</label></div>
-    <div class="fa"><button onclick="closeAdd()">Cancel</button><button class="btn-primary" onclick="doAdd()"><i class="ti ti-check"></i> Add account</button></div>
-  </div>
-</div>
+<div class="ovlay" id="m-add" style="display:none"><div class="modal"><div class="modal-t"><i class="ti ti-plus"></i>Add account</div><div class="fr"><label>Name</label><input id="a-n" placeholder="e.g. Marina Villa"></div><div class="fr2"><div><label>Type</label><select id="a-t"><option>Installments</option><option>Car Loan</option><option>Cash Loan</option><option>School Fees</option><option>Mortgage</option><option>Lender</option><option>Other</option></select></div><div><label>Principal (AED)</label><input type="number" id="a-p" placeholder="0"></div></div><div class="fr"><label style="display:flex;align-items:center;gap:6px"><input type="checkbox" id="a-d" style="width:auto">Enable defer option (loans)</label></div><div class="fa"><button onclick="cM('m-add')">Cancel</button><button class="btn-p" onclick="doAdd()"><i class="ti ti-check"></i> Add</button></div></div></div>
 
-<div class="modal-bg" id="modal-del" style="display:none">
-  <div class="modal">
-    <div class="modal-title"><i class="ti ti-trash" style="color:var(--red)"></i>Delete account</div>
-    <p style="font-size:13px;color:var(--tx2);margin-bottom:1rem;line-height:1.7">Are you sure you want to delete <strong id="dn" style="color:var(--tx1)"></strong>? All payment data will be lost.</p>
-    <div class="fa"><button onclick="closeDel()">Cancel</button><button class="btn-danger" onclick="doDel()"><i class="ti ti-trash"></i> Delete</button></div>
-  </div>
-</div>
+<div class="ovlay" id="m-del" style="display:none"><div class="modal"><div class="modal-t" style="color:var(--red)"><i class="ti ti-trash"></i>Delete account</div><p style="font-size:13px;color:var(--t2);margin-bottom:1rem">Delete <strong id="d-n" style="color:var(--t1)"></strong>? This cannot be undone.</p><div class="fa"><button onclick="cM('m-del')">Cancel</button><button class="btn-d" onclick="doDel()"><i class="ti ti-trash"></i> Delete</button></div></div></div>
 
-<div class="modal-bg" id="modal-edit" style="display:none">
-  <div class="modal">
-    <div class="modal-title"><i class="ti ti-edit"></i>Edit payment</div>
-    <div class="fr"><label>Description</label><input id="e-desc"></div>
-    <div class="fr-row">
-      <div><label>Amount (AED)</label><input type="number" id="e-amt"></div>
-      <div><label>Cheque #</label><input id="e-chq"></div>
-    </div>
-    <div class="fr-row">
-      <div><label>Due date</label><input type="date" id="e-dt"></div>
-      <div><label>Revised date (optional)</label><input type="date" id="e-nd"></div>
-    </div>
-    <div class="fr"><label>Status</label>
-      <select id="e-st"><option value="paid">Paid</option><option value="notpaid">Not paid</option><option value="overdue">Overdue</option><option value="deferred">Deferred</option></select>
-    </div>
-    <div class="fa"><button onclick="closeEdit()">Cancel</button><button class="btn-primary" onclick="saveEdit()"><i class="ti ti-check"></i> Save changes</button></div>
-  </div>
-</div>
+<div class="ovlay" id="m-edit" style="display:none"><div class="modal"><div class="modal-t"><i class="ti ti-edit"></i>Edit payment</div><div class="fr"><label>Description</label><input id="e-d"></div><div class="fr2"><div><label>Amount (AED)</label><input type="number" id="e-a"></div><div><label>Cheque #</label><input id="e-c"></div></div><div class="fr2"><div><label>Due date</label><input type="date" id="e-dt"></div><div><label>Revised date</label><input type="date" id="e-nd"></div></div><div class="fr"><label>Status</label><select id="e-s"><option value="paid">Paid</option><option value="notpaid">Not paid</option><option value="overdue">Overdue</option><option value="deferred">Deferred</option></select></div><div class="fa"><button onclick="cM('m-edit')">Cancel</button><button class="btn-p" onclick="saveEdit()"><i class="ti ti-check"></i> Save</button></div></div></div>
 
-<div class="modal-bg" id="modal-addpay" style="display:none">
-  <div class="modal">
-    <div class="modal-title"><i class="ti ti-plus"></i>Add payment</div>
-    <div class="fr"><label>Description</label><input id="p-desc" placeholder="e.g. 5th instalment"></div>
-    <div class="fr-row">
-      <div><label>Amount (AED)</label><input type="number" id="p-amt" placeholder="0"></div>
-      <div><label>Cheque #</label><input id="p-chq" placeholder="optional"></div>
-    </div>
-    <div class="fr-row">
-      <div><label>Due date</label><input type="date" id="p-dt"></div>
-      <div><label>Percentage</label><input id="p-pct" placeholder="e.g. 5%"></div>
-    </div>
-    <div class="fr"><label>Status</label>
-      <select id="p-st"><option value="notpaid">Not paid</option><option value="paid">Paid</option><option value="overdue">Overdue</option></select>
-    </div>
-    <div class="fa"><button onclick="closePay()">Cancel</button><button class="btn-primary" onclick="doAddPay()"><i class="ti ti-check"></i> Add payment</button></div>
-  </div>
-</div>
+<div class="ovlay" id="m-pay" style="display:none"><div class="modal"><div class="modal-t"><i class="ti ti-plus"></i>Add payment</div><div class="fr"><label>Description</label><input id="p-d" placeholder="e.g. 5th instalment"></div><div class="fr2"><div><label>Amount (AED)</label><input type="number" id="p-a" placeholder="0"></div><div><label>Cheque #</label><input id="p-c" placeholder="optional"></div></div><div class="fr2"><div><label>Due date</label><input type="date" id="p-dt"></div><div><label>%</label><input id="p-pct" placeholder="e.g. 5%"></div></div><div class="fr"><label>Status</label><select id="p-s"><option value="notpaid">Not paid</option><option value="paid">Paid</option><option value="overdue">Overdue</option></select></div><div class="fa"><button onclick="cM('m-pay')">Cancel</button><button class="btn-p" onclick="doAddPay()"><i class="ti ti-check"></i> Add</button></div></div></div>
 
-<div class="modal-bg" id="modal-stock" style="display:none">
-  <div class="modal">
-    <div class="modal-title"><i class="ti ti-chart-line"></i>Add stock</div>
-    <div class="fr-row">
-      <div><label>Ticker / Symbol</label><input id="s-ticker" placeholder="e.g. EMAAR"></div>
-      <div><label>Company name</label><input id="s-name" placeholder="e.g. Emaar Properties"></div>
-    </div>
-    <div class="fr-row">
-      <div><label>Exchange / Market</label><select id="s-mkt"><option>DFM</option><option>ADX</option><option>NYSE</option><option>NASDAQ</option><option>LSE</option><option>Other</option></select></div>
-      <div><label>Currency</label><select id="s-cur"><option>AED</option><option>USD</option><option>GBP</option><option>EUR</option></select></div>
-    </div>
-    <div class="fr-row">
-      <div><label>Quantity</label><input type="number" id="s-qty" placeholder="0"></div>
-      <div><label>Avg buy price</label><input type="number" id="s-buy" placeholder="0.00" step="0.01"></div>
-    </div>
-    <div class="fr-row">
-      <div><label>Current price</label><input type="number" id="s-cur-price" placeholder="0.00" step="0.01"></div>
-      <div><label>Broker</label><input id="s-broker" placeholder="e.g. BHM Capital"></div>
-    </div>
-    <div class="fr"><label>Notes</label><input id="s-notes" placeholder="optional"></div>
-    <div class="fa"><button onclick="closeStock()">Cancel</button><button class="btn-primary" onclick="doAddStock()"><i class="ti ti-check"></i> Add stock</button></div>
-  </div>
-</div>
+<div class="ovlay" id="m-stk" style="display:none"><div class="modal"><div class="modal-t"><i class="ti ti-chart-line"></i>Add stock</div><div class="fr2"><div><label>Ticker</label><input id="s-t" placeholder="e.g. EMAAR"></div><div><label>Company name</label><input id="s-n" placeholder="e.g. Emaar Properties"></div></div><div class="fr2"><div><label>Market</label><select id="s-m"><option>DFM</option><option>ADX</option><option>NYSE</option><option>NASDAQ</option><option>LSE</option><option>Other</option></select></div><div><label>Currency</label><select id="s-cur"><option>AED</option><option>USD</option><option>GBP</option><option>EUR</option></select></div></div><div class="fr2"><div><label>Quantity</label><input type="number" id="s-q" placeholder="0"></div><div><label>Avg buy price</label><input type="number" id="s-b" placeholder="0.00" step="0.01"></div></div><div class="fr2"><div><label>Current price</label><input type="number" id="s-p" placeholder="0.00" step="0.01"></div><div><label>Broker</label><input id="s-br" placeholder="e.g. BHM Capital"></div></div><div class="fa"><button onclick="cM('m-stk')">Cancel</button><button class="btn-p" onclick="doAddStk()"><i class="ti ti-check"></i> Add</button></div></div></div>
 
-<div class="modal-bg" id="modal-cal-detail" style="display:none">
-  <div class="modal">
-    <div class="modal-title"><i class="ti ti-calendar-event"></i><span id="cal-detail-title">Payments</span></div>
-    <div id="cal-detail-content"></div>
-    <div class="fa"><button onclick="document.getElementById('modal-cal-detail').style.display='none'">Close</button></div>
-  </div>
-</div>
+<div class="ovlay" id="m-cal" style="display:none"><div class="modal"><div class="modal-t"><i class="ti ti-calendar-event"></i><span id="cal-dt">Payments</span></div><div id="cal-dc"></div><div class="fa"><button onclick="cM('m-cal')">Close</button></div></div></div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
-// ── DATA ─────────────────────────────────────────────────────────────────
-const TODAY = new Date('2026-05-28');
-const MNS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-const M3 = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-
+var TODAY=new Date('2026-05-28');
+var MNS=['January','February','March','April','May','June','July','August','September','October','November','December'];
+var M3=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 function fd(d){if(!d)return'';if(typeof d==='string')return d;return d.getFullYear()+'-'+(d.getMonth()+1).toString().padStart(2,'0')+'-'+d.getDate().toString().padStart(2,'0');}
-function pd(s){if(!s)return null;if(s instanceof Date)return s;const a=s.match(/^(\d{4})-(\d{2})-(\d{2})$/);if(a)return new Date(+a[1],+a[2]-1,+a[3]);const b=s.match(/^(\d{2})-(\d{2})-(\d{4})$/);if(b)return new Date(+b[3],+b[2]-1,+b[1]);const c=s.match(/^(\d{1,2})-([A-Za-z]{3})-(\d{2,4})$/);if(c){const mo={Jan:0,Feb:1,Mar:2,Apr:3,May:4,Jun:5,Jul:6,Aug:7,Sep:8,Oct:9,Nov:10,Dec:11};return new Date(+c[3],mo[c[2]],+c[1]);}return null;}
+function pd(s){if(!s)return null;if(s instanceof Date)return s;var a=s.match(/^(\d{4})-(\d{2})-(\d{2})$/);if(a)return new Date(+a[1],+a[2]-1,+a[3]);var b=s.match(/^(\d{2})-(\d{2})-(\d{4})$/);if(b)return new Date(+b[3],+b[2]-1,+b[1]);return null;}
 function fmt(n){return'AED '+Math.round(n).toLocaleString();}
 function eff(p){return(p.nd&&p.nd.trim())?p.nd:p.dt;}
-function sbdg(s){const m={paid:'Paid',overdue:'Overdue',notpaid:'Not paid',deferred:'Deferred'};const c={paid:'bp',overdue:'bo',notpaid:'bn',deferred:'bd'};return`<span class="bdg ${c[s]||'bn'}">${m[s]||s}</span>`;}
-function ticon(t){const m={Installments:'home','Car Loan':'car','Cash Loan':'cash','School Fees':'school',Lender:'user',Mortgage:'home-2'};return m[t]||'building-bank';}
-function tcolor(t){const m={Installments:'var(--blue)','Car Loan':'var(--amber)','Cash Loan':'var(--green)','School Fees':'var(--purple)','Lender':'var(--red)',Mortgage:'var(--teal)'};return m[t]||'var(--tx2)';}
+function sbdg(s){var m={paid:'Paid',overdue:'Overdue',notpaid:'Not paid',deferred:'Deferred'};var c={paid:'bp',overdue:'bo',notpaid:'bn',deferred:'bd'};return'<span class="bdg '+(c[s]||'bn')+'">'+(m[s]||s)+'</span>';}
+function tic(t){var m={Installments:'home','Car Loan':'car','Cash Loan':'cash','School Fees':'school',Lender:'user',Mortgage:'home-2'};return m[t]||'building-bank';}
+function tcl(t){var m={Installments:'#5b9cf6','Car Loan':'#f5a623','Cash Loan':'#3ecf8e','School Fees':'#a78bfa',Lender:'#f26b6b',Mortgage:'#2dd4bf'};return m[t]||'#8888a0';}
+function oM(id){document.getElementById(id).style.display='flex';}
+function cM(id){document.getElementById(id).style.display='none';}
 
-let accs = [
+var accs=[
   {id:'nawayef',name:'Nawayef Villa',type:'Installments',principal:5976679,url:'',defer:false,remDays:7,pays:[
     {desc:'ADM fees',status:'paid',amount:117679,dt:'2025-06-15',nd:'',chq:'000041',pct:'2%'},
     {desc:'Down payment',status:'paid',amount:585900,dt:'2025-06-15',nd:'',chq:'000042',pct:'10%'},
@@ -647,7 +303,7 @@ let accs = [
     {desc:'50% super structure',status:'notpaid',amount:193957,dt:'2026-06-30',nd:'',chq:''},
     {desc:'100% super structure',status:'notpaid',amount:193957,dt:'2026-12-30',nd:'',chq:''},
     {desc:'Completion of super structure',status:'notpaid',amount:193957,dt:'2027-06-30',nd:'',chq:''},
-    {desc:'At completion — BCC',status:'notpaid',amount:2327479,dt:'2027-12-30',nd:'',chq:''}
+    {desc:'At completion BCC',status:'notpaid',amount:2327479,dt:'2027-12-30',nd:'',chq:''}
   ]},
   {id:'sea',name:'Sea la vie',type:'Installments',principal:6362872,url:'',defer:false,remDays:7,pays:[
     {desc:'On booking',status:'paid',amount:127257,dt:'2024-01-23',nd:'',chq:''},
@@ -659,8 +315,8 @@ let accs = [
     {desc:'During construction',status:'overdue',amount:318144,dt:'2026-01-01',nd:'',chq:''},
     {desc:'On handover',status:'overdue',amount:4454010,dt:'2026-03-30',nd:'',chq:''}
   ]},
-  {id:'bmw',name:'BMW X4',type:'Car Loan',principal:305000,url:'',defer:false,remDays:7,pays:(()=>{const r=[];for(let i=0;i<61;i++){const d=new Date('2023-08-20');d.setMonth(d.getMonth()+i);r.push({desc:'Monthly car payment',status:d>TODAY?'notpaid':'paid',amount:5765,dt:fd(d),nd:'',chq:''});}return r;})()},
-  {id:'nbf',name:'Cash Loan NBF',type:'Cash Loan',principal:1000000,url:'',defer:true,remDays:7,pays:(()=>{const r=[];for(let i=0;i<48;i++){const d=new Date('2024-12-10');d.setMonth(d.getMonth()+i);r.push({desc:'Monthly loan payment',status:d>TODAY?'notpaid':'paid',amount:23081,dt:fd(d),nd:'',chq:''});}return r;})()},
+  {id:'bmw',name:'BMW X4',type:'Car Loan',principal:305000,url:'',defer:false,remDays:7,pays:(function(){var r=[];for(var i=0;i<61;i++){var d=new Date('2023-08-20');d.setMonth(d.getMonth()+i);r.push({desc:'Monthly car payment',status:d>TODAY?'notpaid':'paid',amount:5765,dt:fd(d),nd:'',chq:''});}return r;})()},
+  {id:'nbf',name:'Cash Loan NBF',type:'Cash Loan',principal:1000000,url:'',defer:true,remDays:7,pays:(function(){var r=[];for(var i=0;i<48;i++){var d=new Date('2024-12-10');d.setMonth(d.getMonth()+i);r.push({desc:'Monthly loan payment',status:d>TODAY?'notpaid':'paid',amount:23081,dt:fd(d),nd:'',chq:''});}return r;})()},
   {id:'school',name:'School Fees',type:'School Fees',principal:62200,url:'',defer:false,remDays:7,pays:[
     {desc:'Term 1',status:'paid',amount:23200,dt:'2025-08-01',nd:'',chq:''},
     {desc:'Term 2',status:'overdue',amount:19500,dt:'2025-12-12',nd:'',chq:''},
@@ -675,510 +331,406 @@ let accs = [
   ]},
   {id:'ali',name:'Ali Al Gebely',type:'Lender',principal:1090000,url:'',defer:false,remDays:7,pays:[]}
 ];
+var stocks=[];
+var delId=null,editId=null,editIdx=null,payId=null;
 
-let stocks = [];
-let delId=null, editId=null, editIdx=null, payId=null;
-
-// ── SYNC ──────────────────────────────────────────────────────────────────
 async function syncAcc(a){
   if(!a.url)return false;
-  const proxies=['https://api.allorigins.win/raw?url=','https://corsproxy.io/?'];
-  for(const proxy of proxies){
-    try{
-      const res=await fetch(proxy+encodeURIComponent(a.url));
-      if(!res.ok)continue;
-      const txt=await res.text();
-      if(txt.length<10)continue;
-      // Simple CSV parse
-      const rows=txt.split('\n').map(r=>r.split(',').map(c=>c.replace(/^"|"$/g,'').trim()));
-      // Auto-detect data rows (skip title rows, find rows with numbers)
-      let parsed=[];
-      for(let i=0;i<rows.length;i++){
-        const r=rows[i];
-        const amt=parseFloat((r[4]||r[3]||'').replace(/[^0-9.]/g,''));
-        if(!amt||isNaN(amt)||amt<100)continue;
-        const dateStr=r[6]||r[2]||'';
-        const d=pd(dateStr);if(!d)continue;
-        const statusRaw=(r[8]||r[4]||'').trim().toUpperCase();
-        let st='notpaid';
-        if(statusRaw==='PAID')st='paid';
-        else if(d<TODAY)st='overdue';
-        parsed.push({desc:(r[1]||r[0]||'Payment').trim(),status:st,amount:amt,dt:fd(d),nd:pd(r[7])?fd(pd(r[7])):'',chq:(r[5]||'').trim(),pct:(r[3]||'').trim()});
-      }
-      if(parsed.length>0){a.pays=parsed;a.synced=true;return true;}
-    }catch(e){continue;}
-  }
-  return false;
+  try{
+    var res=await fetch('https://api.allorigins.win/raw?url='+encodeURIComponent(a.url));
+    if(!res.ok)throw 0;
+    var txt=await res.text();
+    var rows=txt.split('\n').map(function(r){return r.split(',').map(function(c){return c.replace(/^"|"$/g,'').trim();});});
+    var parsed=[];
+    for(var i=0;i<rows.length;i++){
+      var r=rows[i];
+      var amt=parseFloat((r[4]||r[3]||'').replace(/[^0-9.]/g,''));
+      if(!amt||isNaN(amt)||amt<100)continue;
+      var d=pd(r[6]||r[2]||'');if(!d)continue;
+      var rs=(r[8]||'').trim().toUpperCase();
+      var st=rs==='PAID'?'paid':d<TODAY?'overdue':'notpaid';
+      parsed.push({desc:(r[1]||r[0]||'Payment').trim(),status:st,amount:amt,dt:fd(d),nd:pd(r[7])?fd(pd(r[7])):'',chq:(r[5]||'').trim(),pct:(r[3]||'').trim()});
+    }
+    if(parsed.length>0){a.pays=parsed;a.synced=true;return true;}
+  }catch(e){}return false;
 }
 async function syncAll(){
-  const b=document.getElementById('sync-btn');
-  b.innerHTML='<i class="ti ti-loader-2 spin"></i> Syncing...';b.disabled=true;
-  const results=await Promise.all(accs.filter(a=>a.url).map(a=>syncAcc(a)));
-  const n=results.filter(Boolean).length;
+  var b=document.getElementById('sync-btn');
+  b.innerHTML='<i class="ti ti-loader-2"></i> Syncing...';b.disabled=true;
+  var ps=accs.filter(function(a){return a.url;}).map(function(a){return syncAcc(a);});
+  var rs=await Promise.all(ps);
+  var n=rs.filter(Boolean).length;
   b.innerHTML='<i class="ti ti-refresh"></i> Sync';b.disabled=false;
   rAll();
-  if(n>0)alert(`Synced ${n} account${n>1?'s':''} from Google Sheets.`);
+  if(n>0)alert('Synced '+n+' account'+(n>1?'s':'')+'.');
 }
-
-// ── CHARTS ────────────────────────────────────────────────────────────────
-let pi=null,bi=null;
-function renderCharts(){
-  const cats={};accs.forEach(a=>{const d=a.pays.filter(p=>p.status!=='paid').reduce((s,p)=>s+p.amount,0);if(d>0)cats[a.type]=(cats[a.type]||0)+d;});
-  const lb=Object.keys(cats),dt=Object.values(cats);
-  const cl=['#4f8ef7','#f5a623','#3ecf8e','#a78bfa','#f26b6b','#2dd4bf','#e879f9','#fb923c'];
-  if(pi)pi.destroy();
-  pi=new Chart(document.getElementById('pc'),{type:'doughnut',data:{labels:lb,datasets:[{data:dt,backgroundColor:cl.slice(0,lb.length),borderWidth:2,borderColor:'#18181f'}]},options:{responsive:true,maintainAspectRatio:false,cutout:'65%',plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>' '+fmt(c.raw)},backgroundColor:'#1e1e28',titleColor:'#f0f0f5',bodyColor:'#9090a0',borderColor:'rgba(255,255,255,0.1)',borderWidth:1}}}}});
-  document.getElementById('pleg').innerHTML=lb.map((l,i)=>`<span style="display:flex;align-items:center;gap:5px"><span style="width:8px;height:8px;border-radius:2px;background:${cl[i]};flex-shrink:0"></span><span style="color:var(--tx2)">${l}</span></span>`).join('');
-  const mm={};accs.forEach(a=>{a.pays.forEach(p=>{if(p.status==='paid')return;const d=pd(eff(p));if(!d)return;const k=d.getFullYear()+'-'+(d.getMonth()+1).toString().padStart(2,'0');mm[k]=(mm[k]||0)+p.amount;});});
-  const sm=Object.keys(mm).sort().slice(0,14);
-  if(bi)bi.destroy();
-  bi=new Chart(document.getElementById('bc'),{type:'bar',data:{labels:sm.map(m=>{const[y,mo]=m.split('-');return M3[+mo-1]+' '+y.slice(2);}),datasets:[{data:sm.map(k=>mm[k]),backgroundColor:sm.map(k=>{const[y,mo]=k.split('-');const d=new Date(+y,+mo-1,1);return d.getFullYear()===2026&&d.getMonth()===4?'#4f8ef7':'rgba(79,142,247,0.4)';}),borderRadius:4,borderSkipped:false}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>' '+fmt(c.raw)},backgroundColor:'#1e1e28',titleColor:'#f0f0f5',bodyColor:'#9090a0',borderColor:'rgba(255,255,255,0.1)',borderWidth:1}},scales:{y:{ticks:{callback:v=>'AED '+(v>=1e6?(v/1e6).toFixed(1)+'M':(v/1000).toFixed(0)+'k'),color:'#555565',font:{size:10}},grid:{color:'rgba(255,255,255,0.04)'},border:{display:false}},x:{ticks:{autoSkip:false,maxRotation:50,font:{size:9},color:'#555565'},grid:{display:false},border:{display:false}}}}});
-}
-
-// ── DASHBOARD ─────────────────────────────────────────────────────────────
-function renderDash(){
-  let o=0,p=0,ov=0,mo=0;
-  accs.forEach(a=>{a.pays.forEach(x=>{if(x.status==='paid')p+=x.amount;else o+=x.amount;if(x.status==='overdue')ov+=x.amount;const d=pd(eff(x));if(x.status!=='paid'&&d&&d.getFullYear()===2026&&d.getMonth()===4)mo+=x.amount;});});
-  document.getElementById('m1').textContent=fmt(o);
-  document.getElementById('m2').textContent=fmt(p);
-  document.getElementById('m3').textContent=fmt(ov);
-  const ovCount=accs.reduce((s,a)=>s+a.pays.filter(p=>p.status==='overdue').length,0);
-  document.getElementById('m3-sub').textContent=ovCount+' payment'+(ovCount!==1?'s':'')+' overdue';
-  document.getElementById('m4').textContent=fmt(mo);
-  document.getElementById('m5').textContent=accs.length;
-  const sv=stocks.reduce((s,x)=>s+(x.qty*x.curPrice),0);
-  document.getElementById('m6').textContent=sv>0?fmt(sv):'—';
-  document.getElementById('ov-count').textContent=ovCount;
-  renderCharts();
-  // Upcoming
-  const cut=new Date(TODAY);cut.setDate(cut.getDate()+90);
-  const rows=[];
-  accs.forEach(a=>{a.pays.forEach((x,i)=>{const d=pd(eff(x));if(x.status!=='paid'&&d&&d>=TODAY&&d<=cut)rows.push({...x,acc:a.name,aid:a.id,pi:i,_d:d,defer:a.defer});});});
-  rows.sort((a,b)=>a._d-b._d);
-  document.getElementById('utb').innerHTML=rows.slice(0,15).map(r=>{
-    const hn=r.nd&&r.nd.trim();
-    return`<tr><td><span style="font-weight:500">${r.acc}</span></td><td><span style="font-family:var(--m);font-size:11px">${eff(r)}</span>${hn?`<br><span style="font-size:10px;color:var(--tx3);text-decoration:line-through">${r.dt}</span>`:''}</td><td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--tx2)">${r.desc}</td><td style="font-family:var(--m);font-size:10px;color:var(--tx3)">${r.chq||'—'}</td><td style="text-align:right;font-weight:600;font-family:var(--m)">${fmt(r.amount)}</td><td>${sbdg(r.status)}</td><td style="white-space:nowrap"><button class="btn-sm" onclick="markPaid('${r.aid}',${r.pi})"><i class="ti ti-check"></i></button>${r.defer?` <button class="btn-sm" onclick="deferPay('${r.aid}',${r.pi})">Defer</button>`:''} <button class="btn-sm" onclick="openEdit('${r.aid}',${r.pi})"><i class="ti ti-edit"></i></button></td></tr>`;
-  }).join('');
-  // Activity
-  const activity=[];
-  accs.forEach(a=>{a.pays.forEach(p=>{if(p.status==='paid'){const d=pd(p.dt);if(d)activity.push({type:'paid',acc:a.name,desc:p.desc,amount:p.amount,date:p.dt,_d:d});}else if(p.status==='overdue'){activity.push({type:'overdue',acc:a.name,desc:p.desc,amount:p.amount,date:p.dt,_d:pd(p.dt)||TODAY});}});});
-  activity.sort((a,b)=>b._d-a._d);
-  const actColors={paid:'var(--green)',overdue:'var(--red)',notpaid:'var(--amber)'};
-  document.getElementById('activity-feed').innerHTML=activity.slice(0,8).map(a=>`<div class="activity-item"><div class="act-dot" style="background:${actColors[a.type]}"></div><div class="act-content"><div class="act-title">${a.acc} — ${a.desc}</div><div class="act-meta">${fmt(a.amount)} · ${a.date} · ${sbdg(a.type)}</div></div></div>`).join('');
-}
-
-// ── ACCOUNTS ──────────────────────────────────────────────────────────────
-function renderAccs(){
-  document.getElementById('aclist').innerHTML=accs.map(a=>{
-    const debt=a.pays.filter(p=>p.status!=='paid').reduce((s,p)=>s+p.amount,0);
-    const paid=a.pays.filter(p=>p.status==='paid').reduce((s,p)=>s+p.amount,0);
-    const ov=a.pays.filter(p=>p.status==='overdue').reduce((s,p)=>s+p.amount,0);
-    const total=paid+debt;
-    const pct=total>0?Math.round(paid/total*100):0;
-    const rows=a.pays.map((p,i)=>{
-      const hn=p.nd&&p.nd.trim();
-      return`<tr><td style="color:var(--tx3);font-family:var(--m);font-size:11px">${i+1}</td><td><span style="font-family:var(--m);font-size:11px;font-weight:500">${eff(p)}</span>${hn?`<br><span style="font-size:10px;color:var(--tx3);text-decoration:line-through">${p.dt}</span>`:''}</td><td style="color:var(--tx2)">${p.desc}</td><td style="font-family:var(--m);font-size:10px;color:var(--tx3)">${p.chq||'—'}</td><td style="text-align:right;font-family:var(--m);font-weight:600">${fmt(p.amount)}</td><td style="color:var(--tx3);font-size:11px">${p.pct||''}</td><td>${sbdg(p.status)}</td><td style="white-space:nowrap"><button class="btn-sm" onclick="markPaid('${a.id}',${i})"><i class="ti ti-check"></i></button>${a.defer&&p.status!=='paid'?` <button class="btn-sm" onclick="deferPay('${a.id}',${i})">Defer</button>`:''} <button class="btn-sm" onclick="openEdit('${a.id}',${i})"><i class="ti ti-edit"></i></button></td></tr>`;
-    }).join('');
-    return`<div class="ar">
-      <div class="ah" onclick="togAcc('d-${a.id}')">
-        <div style="display:flex;align-items:center;gap:12px">
-          <div class="a-icon" style="background:rgba(79,142,247,0.1);color:${tcolor(a.type)}"><i class="ti ti-${ticon(a.type)}"></i></div>
-          <div>
-            <div style="font-weight:600;font-size:14px">${a.name} ${a.synced?'<span style="background:rgba(62,207,142,0.15);color:var(--green);font-size:10px;padding:1px 6px;border-radius:4px;font-weight:500">synced</span>':''}</div>
-            <div style="font-size:11px;color:var(--tx2);margin-top:2px">${a.type} · Principal: ${fmt(a.principal)}${a.defer?' · <span style="color:var(--blue)">defer on</span>':''}</div>
-            <div class="prog-bar" style="width:120px;margin-top:5px"><div class="prog-fill" style="width:${pct}%;background:var(--green)"></div></div>
-            <div style="font-size:10px;color:var(--tx3);margin-top:2px">${pct}% paid</div>
-          </div>
-        </div>
-        <div style="text-align:right;display:flex;align-items:center;gap:12px">
-          <div>
-            <div style="font-weight:600;font-size:15px;font-family:var(--m);color:var(--red)">${fmt(debt)}</div>
-            <div style="font-size:11px;color:var(--tx2);margin-top:2px">${fmt(paid)} paid${ov?` · <span style="color:var(--red)">${fmt(ov)} overdue</span>`:''}</div>
-          </div>
-          <button class="btn-danger btn-icon" onclick="event.stopPropagation();openDel('${a.id}')"><i class="ti ti-trash"></i></button>
-        </div>
-      </div>
-      <div class="adet" id="d-${a.id}">
-        <div class="a-sync">
-          <i class="ti ti-table-import" style="color:var(--tx3)"></i>
-          <input type="text" placeholder="Google Sheets CSV URL for auto-sync…" value="${a.url||''}" id="u-${a.id}" onchange="accs.find(x=>x.id==='${a.id}').url=this.value" style="font-size:11px;padding:4px 8px">
-          <button class="btn-sm" onclick="syncOneAcc('${a.id}')"><i class="ti ti-refresh"></i> Sync</button>
-          <span class="ss" id="ss-${a.id}">${a.url?(a.synced?'✓ synced':'not synced'):'no URL'}</span>
-        </div>
-        <div style="padding:8px 16px;border-bottom:1px solid var(--border)">
-          <button class="btn-sm" onclick="openAddPay('${a.id}')"><i class="ti ti-plus"></i> Add payment</button>
-        </div>
-        ${a.pays.length?`<div style="overflow-x:auto"><table><thead><tr><th>#</th><th>Date</th><th>Description</th><th>Chq</th><th style="text-align:right">Amount</th><th>%</th><th>Status</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`:'<p style="padding:1rem;font-size:12px;color:var(--tx2)">No payments yet.</p>'}
-      </div>
-    </div>`;
-  }).join('');
-}
-async function syncOneAcc(id){
-  const a=accs.find(x=>x.id===id);if(!a)return;
-  const ss=document.getElementById('ss-'+id);
+async function syncOne(id){
+  var a=accs.find(function(x){return x.id===id;});if(!a)return;
+  var ss=document.getElementById('ss-'+id);
   if(ss){ss.textContent='syncing…';ss.className='ss ld';}
-  const ok=await syncAcc(a);
+  var ok=await syncAcc(a);
   if(ss){ss.textContent=ok?'✓ synced':'✗ failed';ss.className='ss '+(ok?'ok':'er');}
   rAll();
 }
-function togAcc(id){document.getElementById(id).classList.toggle('on');}
 
-// ── MONTHLY VIEW ──────────────────────────────────────────────────────────
-function renderMonthly(){
-  const year=parseInt(document.getElementById('monthly-year').value)||2026;
-  const monthMap={};
-  accs.forEach(a=>{
-    a.pays.forEach((p,i)=>{
-      const d=pd(eff(p));if(!d||d.getFullYear()!==year)return;
-      const k=d.getMonth();
-      if(!monthMap[k])monthMap[k]=[];
-      monthMap[k].push({...p,acc:a.name,aid:a.id,pi:i,defer:a.defer,_d:d});
+var pi=null,bi=null;
+function renderCharts(){
+  var cats={};
+  accs.forEach(function(a){
+    var d=a.pays.filter(function(p){return p.status!=='paid';}).reduce(function(s,p){return s+p.amount;},0);
+    if(d>0)cats[a.type]=(cats[a.type]||0)+d;
+  });
+  var lb=Object.keys(cats),dt=Object.values(cats);
+  var cl=['#5b9cf6','#f5a623','#3ecf8e','#a78bfa','#f26b6b','#2dd4bf','#e879f9','#fb923c'];
+  if(pi)pi.destroy();
+  pi=new Chart(document.getElementById('pc'),{type:'doughnut',data:{labels:lb,datasets:[{data:dt,backgroundColor:cl.slice(0,lb.length),borderWidth:2,borderColor:'#1a1a24'}]},options:{responsive:true,maintainAspectRatio:false,cutout:'62%',plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return' '+fmt(c.raw);}},backgroundColor:'#22222e',titleColor:'#eeeef5',bodyColor:'#8888a0',borderColor:'rgba(255,255,255,.1)',borderWidth:1}}}});
+  document.getElementById('pleg').innerHTML=lb.map(function(l,i){return'<span style="display:flex;align-items:center;gap:4px"><span style="width:8px;height:8px;border-radius:2px;background:'+cl[i]+'"></span><span style="color:#8888a0">'+l+'</span></span>';}).join('');
+  var mm={};
+  accs.forEach(function(a){
+    a.pays.forEach(function(p){
+      if(p.status==='paid')return;
+      var d=pd(eff(p));if(!d)return;
+      var k=d.getFullYear()+'-'+(d.getMonth()+1).toString().padStart(2,'0');
+      mm[k]=(mm[k]||0)+p.amount;
     });
   });
-  const months=Object.keys(monthMap).map(Number).sort((a,b)=>a-b);
-  if(!months.length){document.getElementById('monthly-content').innerHTML='<p style="color:var(--tx2);padding:2rem;text-align:center">No payments found for '+year+'.</p>';return;}
-  document.getElementById('monthly-content').innerHTML=months.map(m=>{
-    const pays=monthMap[m].sort((a,b)=>a._d-b._d);
-    const total=pays.filter(p=>p.status!=='paid').reduce((s,p)=>s+p.amount,0);
-    const paid=pays.filter(p=>p.status==='paid').reduce((s,p)=>s+p.amount,0);
-    const ov=pays.filter(p=>p.status==='overdue').length;
-    const rows=pays.map(p=>`<tr><td style="font-weight:500">${p.acc}</td><td style="font-family:var(--m);font-size:11px">${eff(p)}${p.nd&&p.nd.trim()?`<br><span style="text-decoration:line-through;color:var(--tx3);font-size:10px">${p.dt}</span>`:''}</td><td style="color:var(--tx2)">${p.desc}</td><td style="font-family:var(--m);font-size:10px;color:var(--tx3)">${p.chq||'—'}</td><td style="text-align:right;font-family:var(--m);font-weight:600">${fmt(p.amount)}</td><td>${sbdg(p.status)}</td><td style="white-space:nowrap"><button class="btn-sm" onclick="markPaid('${p.aid}',${p.pi})"><i class="ti ti-check"></i></button>${p.defer&&p.status!=='paid'?` <button class="btn-sm" onclick="deferPay('${p.aid}',${p.pi})">Defer</button>`:''} <button class="btn-sm" onclick="openEdit('${p.aid}',${p.pi})"><i class="ti ti-edit"></i></button></td></tr>`).join('');
-    return`<div class="month-block">
-      <div class="month-hdr" onclick="this.nextElementSibling.classList.toggle('on')">
-        <div style="display:flex;align-items:center;gap:10px">
-          <div style="width:36px;height:36px;background:rgba(79,142,247,0.1);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--blue)">${M3[m]}</div>
-          <div>
-            <div class="month-name">${MNS[m]} ${year} <span class="month-count">${pays.length} payment${pays.length!==1?'s':''}</span></div>
-            <div style="font-size:11px;color:var(--tx2);margin-top:2px">${fmt(paid)} paid · ${ov>0?`<span style="color:var(--red)">${ov} overdue</span>`:'all on track'}</div>
-          </div>
-        </div>
-        <div class="month-total">${fmt(total)}</div>
-      </div>
-      <div class="month-body">
-        <div style="overflow-x:auto"><table><thead><tr><th>Account</th><th>Date</th><th>Description</th><th>Chq</th><th style="text-align:right">Amount</th><th>Status</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>
-      </div>
-    </div>`;
+  var sm=Object.keys(mm).sort().slice(0,14);
+  if(bi)bi.destroy();
+  bi=new Chart(document.getElementById('bc'),{type:'bar',data:{labels:sm.map(function(m){var p=m.split('-');return M3[+p[1]-1]+' '+p[0].slice(2);}),datasets:[{data:sm.map(function(k){return mm[k];}),backgroundColor:sm.map(function(k){var p=k.split('-');return(+p[0]===2026&&+p[1]-1===4)?'#5b9cf6':'rgba(91,156,246,.4)';}),borderRadius:4,borderSkipped:false}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return' '+fmt(c.raw);}},backgroundColor:'#22222e',titleColor:'#eeeef5',bodyColor:'#8888a0',borderColor:'rgba(255,255,255,.1)',borderWidth:1}},scales:{y:{ticks:{callback:function(v){return'AED '+(v>=1e6?(v/1e6).toFixed(1)+'M':(v/1000).toFixed(0)+'k');},color:'#44445a',font:{size:10}},grid:{color:'rgba(255,255,255,.04)'},border:{display:false}},x:{ticks:{autoSkip:false,maxRotation:50,font:{size:9},color:'#44445a'},grid:{display:false},border:{display:false}}}}});
+}
+
+function renderDash(){
+  var o=0,p=0,ov=0,mo=0;
+  accs.forEach(function(a){
+    a.pays.forEach(function(x){
+      if(x.status==='paid')p+=x.amount;else o+=x.amount;
+      if(x.status==='overdue')ov+=x.amount;
+      var d=pd(eff(x));
+      if(x.status!=='paid'&&d&&d.getFullYear()===2026&&d.getMonth()===4)mo+=x.amount;
+    });
+  });
+  document.getElementById('m1').textContent=fmt(o);
+  document.getElementById('m2').textContent=fmt(p);
+  document.getElementById('m3').textContent=fmt(ov);
+  var ovc=accs.reduce(function(s,a){return s+a.pays.filter(function(p){return p.status==='overdue';}).length;},0);
+  document.getElementById('m3s').textContent=ovc+' payment'+(ovc!==1?'s':'')+' overdue';
+  document.getElementById('m4').textContent=fmt(mo);
+  document.getElementById('m5').textContent=accs.length;
+  var sv=stocks.reduce(function(s,x){return s+x.qty*x.cp;},0);
+  document.getElementById('m6').textContent=sv>0?fmt(sv):'—';
+  document.getElementById('ov-dot').textContent=ovc;
+  renderCharts();
+  var cut=new Date(TODAY);cut.setDate(cut.getDate()+90);
+  var rows=[];
+  accs.forEach(function(a){
+    a.pays.forEach(function(x,i){
+      var d=pd(eff(x));
+      if(x.status!=='paid'&&d&&d>=TODAY&&d<=cut)rows.push(Object.assign({},x,{acc:a.name,aid:a.id,pi:i,_d:d,defer:a.defer}));
+    });
+  });
+  rows.sort(function(a,b){return a._d-b._d;});
+  document.getElementById('utb').innerHTML=rows.slice(0,15).map(function(r){
+    var hn=r.nd&&r.nd.trim();
+    return'<tr><td style="font-weight:500">'+r.acc+'</td><td style="font-family:var(--m);font-size:11px">'+eff(r)+(hn?'<br><span style="font-size:10px;color:var(--t3);text-decoration:line-through">'+r.dt+'</span>':'')+'</td><td style="max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--t2)">'+r.desc+'</td><td style="font-family:var(--m);font-size:10px;color:var(--t3)">'+(r.chq||'—')+'</td><td style="text-align:right;font-weight:600;font-family:var(--m)">'+fmt(r.amount)+'</td><td>'+sbdg(r.status)+'</td><td style="white-space:nowrap"><button class="btn-s" onclick="mkPaid(\''+r.aid+'\','+r.pi+')"><i class="ti ti-check"></i></button>'+(r.defer?' <button class="btn-s" onclick="deferP(\''+r.aid+'\','+r.pi+')">Defer</button>':'')+' <button class="btn-s" onclick="opEdit(\''+r.aid+'\','+r.pi+')"><i class="ti ti-edit"></i></button></td></tr>';
+  }).join('');
+  var activity=[];
+  accs.forEach(function(a){
+    a.pays.forEach(function(p){
+      var d=pd(p.dt);
+      if(p.status==='paid'&&d)activity.push({type:'paid',acc:a.name,desc:p.desc,amount:p.amount,date:p.dt,_d:d});
+      else if(p.status==='overdue')activity.push({type:'overdue',acc:a.name,desc:p.desc,amount:p.amount,date:p.dt,_d:pd(p.dt)||TODAY});
+    });
+  });
+  activity.sort(function(a,b){return b._d-a._d;});
+  var ac={paid:'var(--green)',overdue:'var(--red)',notpaid:'var(--amber)'};
+  document.getElementById('act-feed').innerHTML=activity.slice(0,8).map(function(a){
+    return'<div class="act-item"><div class="act-dot" style="background:'+ac[a.type]+'"></div><div><div style="font-size:12px;font-weight:500">'+a.acc+' — '+a.desc+'</div><div style="font-size:11px;color:var(--t2);margin-top:2px">'+fmt(a.amount)+' · '+a.date+' · '+sbdg(a.type)+'</div></div></div>';
   }).join('');
 }
 
-// ── CALENDAR ──────────────────────────────────────────────────────────────
-let calY=2026,calM=4;
+function renderAccs(){
+  document.getElementById('aclist').innerHTML=accs.map(function(a){
+    var debt=a.pays.filter(function(p){return p.status!=='paid';}).reduce(function(s,p){return s+p.amount;},0);
+    var paid=a.pays.filter(function(p){return p.status==='paid';}).reduce(function(s,p){return s+p.amount;},0);
+    var ov=a.pays.filter(function(p){return p.status==='overdue';}).reduce(function(s,p){return s+p.amount;},0);
+    var tot=paid+debt,pct=tot>0?Math.round(paid/tot*100):0;
+    var rows=a.pays.map(function(p,i){
+      var hn=p.nd&&p.nd.trim();
+      return'<tr><td style="color:var(--t3);font-family:var(--m);font-size:10px">'+(i+1)+'</td><td style="font-family:var(--m);font-size:11px">'+eff(p)+(hn?'<br><span style="font-size:10px;color:var(--t3);text-decoration:line-through">'+p.dt+'</span>':'')+'</td><td style="color:var(--t2)">'+p.desc+'</td><td style="font-family:var(--m);font-size:10px;color:var(--t3)">'+(p.chq||'—')+'</td><td style="text-align:right;font-family:var(--m);font-weight:600">'+fmt(p.amount)+'</td><td style="color:var(--t3);font-size:11px">'+(p.pct||'')+'</td><td>'+sbdg(p.status)+'</td><td style="white-space:nowrap"><button class="btn-s" onclick="mkPaid(\''+a.id+'\','+i+')"><i class="ti ti-check"></i></button>'+(a.defer&&p.status!=='paid'?' <button class="btn-s" onclick="deferP(\''+a.id+'\','+i+')">Defer</button>':'')+' <button class="btn-s" onclick="opEdit(\''+a.id+'\','+i+')"><i class="ti ti-edit"></i></button></td></tr>';
+    }).join('');
+    var sb=a.synced?'<span style="background:rgba(62,207,142,.12);color:var(--green);font-size:10px;padding:1px 6px;border-radius:4px;font-weight:500">synced</span>':'';
+    return'<div class="ar"><div class="ah" onclick="togAcc(\'d-'+a.id+'\')"><div style="display:flex;align-items:center;gap:12px"><div style="width:36px;height:36px;border-radius:10px;background:rgba(91,156,246,.1);color:'+tcl(a.type)+';display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0"><i class="ti ti-'+tic(a.type)+'"></i></div><div><div style="font-weight:600;font-size:14px">'+a.name+' '+sb+'</div><div style="font-size:11px;color:var(--t2);margin-top:2px">'+a.type+' · Principal: '+fmt(a.principal)+(a.defer?' · <span style="color:var(--blue)">defer on</span>':'')+'</div><div class="prog"><div class="prog-f" style="width:'+pct+'%"></div></div><div style="font-size:10px;color:var(--t3);margin-top:2px">'+pct+'% paid</div></div></div><div style="text-align:right;display:flex;align-items:center;gap:12px"><div><div style="font-weight:600;font-size:15px;font-family:var(--m);color:var(--red)">'+fmt(debt)+'</div><div style="font-size:11px;color:var(--t2);margin-top:2px">'+fmt(paid)+' paid'+(ov?' · <span style="color:var(--red)">'+fmt(ov)+' overdue</span>':'')+'</div></div><button class="btn-d btn-s" onclick="event.stopPropagation();opDel(\''+a.id+'\')"><i class="ti ti-trash"></i></button></div></div><div class="adet" id="d-'+a.id+'"><div class="syncbar"><i class="ti ti-table-import" style="color:var(--t3)"></i><input type="text" placeholder="Google Sheets CSV URL…" value="'+(a.url||'')+'" id="u-'+a.id+'" onchange="accs.find(function(x){return x.id===\''+a.id+'\';}).url=this.value" style="font-size:11px;padding:4px 8px"><button class="btn-s" onclick="syncOne(\''+a.id+'\')"><i class="ti ti-refresh"></i> Sync</button><span class="ss" id="ss-'+a.id+'">'+(a.url?(a.synced?'✓ synced':'not synced'):'no URL')+'</span></div><div style="padding:8px 14px;border-bottom:1px solid var(--b1)"><button class="btn-s" onclick="opAddPay(\''+a.id+'\')"><i class="ti ti-plus"></i> Add payment</button></div>'+(a.pays.length?'<div style="overflow-x:auto"><table><thead><tr><th>#</th><th>Date</th><th>Description</th><th>Chq</th><th style="text-align:right">Amount</th><th>%</th><th>Status</th><th></th></tr></thead><tbody>'+rows+'</tbody></table></div>':'<p style="padding:1rem;font-size:12px;color:var(--t2)">No payments yet.</p>')+'</div></div>';
+  }).join('');
+}
+function togAcc(id){document.getElementById(id).classList.toggle('on');}
+
+function renderMonthly(){
+  var yr=parseInt(document.getElementById('mo-yr').value)||2026;
+  var mm={};
+  accs.forEach(function(a){
+    a.pays.forEach(function(p,i){
+      var d=pd(eff(p));if(!d||d.getFullYear()!==yr)return;
+      var k=d.getMonth();
+      if(!mm[k])mm[k]=[];
+      mm[k].push(Object.assign({},p,{acc:a.name,aid:a.id,pi:i,defer:a.defer,_d:d}));
+    });
+  });
+  var months=Object.keys(mm).map(Number).sort(function(a,b){return a-b;});
+  if(!months.length){document.getElementById('mo-body').innerHTML='<p style="color:var(--t2);padding:2rem;text-align:center">No payments found for '+yr+'.</p>';return;}
+  document.getElementById('mo-body').innerHTML=months.map(function(m){
+    var pays=mm[m].sort(function(a,b){return a._d-b._d;});
+    var total=pays.filter(function(p){return p.status!=='paid';}).reduce(function(s,p){return s+p.amount;},0);
+    var paid=pays.filter(function(p){return p.status==='paid';}).reduce(function(s,p){return s+p.amount;},0);
+    var ovc=pays.filter(function(p){return p.status==='overdue';}).length;
+    var rows=pays.map(function(p){
+      var hn=p.nd&&p.nd.trim();
+      return'<tr><td style="font-weight:500">'+p.acc+'</td><td style="font-family:var(--m);font-size:11px">'+eff(p)+(hn?'<br><span style="font-size:10px;color:var(--t3);text-decoration:line-through">'+p.dt+'</span>':'')+'</td><td style="color:var(--t2)">'+p.desc+'</td><td style="font-family:var(--m);font-size:10px;color:var(--t3)">'+(p.chq||'—')+'</td><td style="text-align:right;font-family:var(--m);font-weight:600">'+fmt(p.amount)+'</td><td>'+sbdg(p.status)+'</td><td style="white-space:nowrap"><button class="btn-s" onclick="mkPaid(\''+p.aid+'\','+p.pi+')"><i class="ti ti-check"></i></button>'+(p.defer&&p.status!=='paid'?' <button class="btn-s" onclick="deferP(\''+p.aid+'\','+p.pi+')">Defer</button>':'')+' <button class="btn-s" onclick="opEdit(\''+p.aid+'\','+p.pi+')"><i class="ti ti-edit"></i></button></td></tr>';
+    }).join('');
+    return'<div class="ar" style="margin-bottom:10px"><div class="mh" onclick="this.nextElementSibling.classList.toggle(\'on\')"><div style="display:flex;align-items:center;gap:10px"><div style="width:36px;height:36px;background:rgba(91,156,246,.1);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--blue)">'+M3[m]+'</div><div><div style="font-size:13px;font-weight:600">'+MNS[m]+' '+yr+'<span class="mbadge">'+pays.length+' payments</span></div><div style="font-size:11px;color:var(--t2);margin-top:2px">'+fmt(paid)+' paid · '+(ovc>0?'<span style="color:var(--red)">'+ovc+' overdue</span>':'all on track')+'</div></div></div><div style="font-size:13px;font-weight:600;color:var(--amber);font-family:var(--m)">'+fmt(total)+'</div></div><div class="mb"><div style="overflow-x:auto"><table><thead><tr><th>Account</th><th>Date</th><th>Description</th><th>Chq</th><th style="text-align:right">Amount</th><th>Status</th><th></th></tr></thead><tbody>'+rows+'</tbody></table></div></div></div>';
+  }).join('');
+}
+
+var calY=2026,calM=4;
 function renderCal(){
-  document.getElementById('clbl').textContent=MNS[calM]+' '+calY;
-  const first=new Date(calY,calM,1).getDay(),days=new Date(calY,calM+1,0).getDate(),em={};
-  accs.forEach(a=>{a.pays.forEach((p,i)=>{const d=pd(eff(p));if(d&&d.getFullYear()===calY&&d.getMonth()===calM){const k=d.getDate();if(!em[k])em[k]=[];em[k].push({n:a.name,sn:a.name.split(' ')[0],st:p.status,amt:p.amount,desc:p.desc,aid:a.id,pi:i});}});});
-  let h='';
-  for(let i=0;i<first;i++)h+='<div class="cal-cell dim"></div>';
-  for(let d=1;d<=days;d++){
-    const it=calY===TODAY.getFullYear()&&calM===TODAY.getMonth()&&d===TODAY.getDate();
-    const evts=em[d]||[];
-    const dayTotal=evts.filter(e=>e.st!=='paid').reduce((s,e)=>s+e.amt,0);
-    h+=`<div class="cal-cell${it?' today':''}">
-      <div class="cal-num">${d}</div>
-      ${evts.slice(0,3).map(e=>`<div class="cal-evt ${e.st}" onclick="showCalDetail(${calY},${calM},${d})" title="${e.n}: ${fmt(e.amt)}"><i class="ti ti-circle-dot" style="font-size:8px"></i>${e.sn}</div>`).join('')}
-      ${evts.length>3?`<div style="font-size:9px;color:var(--tx3);margin-top:2px">+${evts.length-3} more</div>`:''}
-      ${dayTotal>0?`<div class="cal-total">${fmt(dayTotal)}</div>`:''}
-    </div>`;
+  document.getElementById('cal-lbl').textContent=MNS[calM]+' '+calY;
+  var first=new Date(calY,calM,1).getDay(),days=new Date(calY,calM+1,0).getDate(),em={};
+  accs.forEach(function(a){
+    a.pays.forEach(function(p,i){
+      var d=pd(eff(p));
+      if(d&&d.getFullYear()===calY&&d.getMonth()===calM){
+        var k=d.getDate();if(!em[k])em[k]=[];
+        em[k].push({n:a.name,sn:a.name.split(' ')[0],st:p.status,amt:p.amount,desc:p.desc,aid:a.id,pi:i});
+      }
+    });
+  });
+  var h='';
+  for(var i=0;i<first;i++)h+='<div class="cal-cell dim"></div>';
+  for(var d=1;d<=days;d++){
+    var it=calY===TODAY.getFullYear()&&calM===TODAY.getMonth()&&d===TODAY.getDate();
+    var evts=em[d]||[];
+    var dayTot=evts.filter(function(e){return e.st!=='paid';}).reduce(function(s,e){return s+e.amt;},0);
+    h+='<div class="cal-cell'+(it?' today':'')+'" onclick="showCalDet('+calY+','+calM+','+d+')">'+'<div class="cal-num">'+d+'</div>'+evts.slice(0,3).map(function(e){return'<div class="cal-evt '+e.st+'" title="'+e.n+': '+fmt(e.amt)+'">'+e.sn+'</div>';}).join('')+(evts.length>3?'<div style="font-size:9px;color:var(--t3)">+'+( evts.length-3)+' more</div>':'')+(dayTot>0?'<div class="cal-tot">'+fmt(dayTot)+'</div>':'')+'</div>';
   }
   document.getElementById('cg').innerHTML=h;
 }
-function showCalDetail(y,m,d){
-  const evts=[];
-  accs.forEach(a=>{a.pays.forEach((p,i)=>{const dt=pd(eff(p));if(dt&&dt.getFullYear()===y&&dt.getMonth()===m&&dt.getDate()===d)evts.push({...p,acc:a.name,aid:a.id,pi:i});});});
-  document.getElementById('cal-detail-title').textContent=`${d} ${MNS[m]} ${y} — ${evts.length} payment${evts.length!==1?'s':''}`;
-  document.getElementById('cal-detail-content').innerHTML=evts.length?`<div style="overflow-x:auto"><table><thead><tr><th>Account</th><th>Description</th><th style="text-align:right">Amount</th><th>Status</th><th></th></tr></thead><tbody>${evts.map(e=>`<tr><td style="font-weight:500">${e.acc}</td><td style="color:var(--tx2)">${e.desc}</td><td style="text-align:right;font-family:var(--m);font-weight:600">${fmt(e.amount)}</td><td>${sbdg(e.status)}</td><td><button class="btn-sm" onclick="markPaid('${e.aid}',${e.pi});document.getElementById('modal-cal-detail').style.display='none';renderCal();"><i class="ti ti-check"></i> Mark paid</button></td></tr>`).join('')}</tbody></table></div>`:'<p style="color:var(--tx2);padding:1rem;text-align:center">No payments on this day.</p>';
-  document.getElementById('modal-cal-detail').style.display='flex';
+function showCalDet(y,m,d){
+  var evts=[];
+  accs.forEach(function(a){
+    a.pays.forEach(function(p,i){
+      var dt=pd(eff(p));
+      if(dt&&dt.getFullYear()===y&&dt.getMonth()===m&&dt.getDate()===d)evts.push(Object.assign({},p,{acc:a.name,aid:a.id,pi:i}));
+    });
+  });
+  document.getElementById('cal-dt').textContent=d+' '+MNS[m]+' '+y+' — '+evts.length+' payment'+(evts.length!==1?'s':'');
+  document.getElementById('cal-dc').innerHTML=evts.length?'<div style="overflow-x:auto"><table><thead><tr><th>Account</th><th>Description</th><th style="text-align:right">Amount</th><th>Status</th><th></th></tr></thead><tbody>'+evts.map(function(e){return'<tr><td style="font-weight:500">'+e.acc+'</td><td style="color:var(--t2)">'+e.desc+'</td><td style="text-align:right;font-family:var(--m);font-weight:600">'+fmt(e.amount)+'</td><td>'+sbdg(e.status)+'</td><td><button class="btn-s" onclick="mkPaid(\''+e.aid+'\','+e.pi+');renderCal();cM(\'m-cal\');"><i class="ti ti-check"></i> Mark paid</button></td></tr>';}).join('')+'</tbody></table></div>':'<p style="color:var(--t2);padding:1rem;text-align:center">No payments on this day.</p>';
+  oM('m-cal');
 }
-function calmv(d){calM+=d;if(calM>11){calM=0;calY++;}if(calM<0){calM=11;calY--;}renderCal();}
+function cmv(d){calM+=d;if(calM>11){calM=0;calY++;}if(calM<0){calM=11;calY--;}renderCal();}
 
-// ── REMINDERS ─────────────────────────────────────────────────────────────
-function remTab(id,el){
-  document.querySelectorAll('.rem-section').forEach(x=>x.style.display='none');
-  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('on'));
+function rtab(id,el){
+  document.querySelectorAll('#p-rem>div').forEach(function(x){x.style.display='none';});
+  document.querySelectorAll('.tab').forEach(function(x){x.classList.remove('on');});
   document.getElementById('rem-'+id).style.display='block';
   if(el)el.classList.add('on');
 }
 function remTbl(rows,empty){
-  if(!rows.length)return`<p style="font-size:12px;color:var(--tx2);padding:.75rem 0;display:flex;align-items:center;gap:6px"><i class="ti ti-circle-check" style="color:var(--green)"></i>${empty}</p>`;
-  rows.sort((a,b)=>a._d-b._d);
-  return`<div style="overflow-x:auto"><table><thead><tr><th>Account</th><th>Date</th><th>Description</th><th style="text-align:right">Amount</th><th>Status</th></tr></thead><tbody>${rows.map(r=>`<tr><td style="font-weight:500">${r.acc}</td><td style="font-family:var(--m);font-size:11px">${eff(r)}</td><td style="color:var(--tx2)">${r.desc}</td><td style="text-align:right;font-family:var(--m);font-weight:600">${fmt(r.amount)}</td><td>${sbdg(r.status)}</td></tr>`).join('')}</tbody></table></div>`;
+  if(!rows.length)return'<p style="font-size:12px;color:var(--t2);padding:.5rem 0;display:flex;align-items:center;gap:6px"><i class="ti ti-circle-check" style="color:var(--green)"></i>'+empty+'</p>';
+  rows.sort(function(a,b){return a._d-b._d;});
+  return'<div style="overflow-x:auto"><table><thead><tr><th>Account</th><th>Date</th><th>Description</th><th style="text-align:right">Amount</th><th>Status</th></tr></thead><tbody>'+rows.map(function(r){return'<tr><td style="font-weight:500">'+r.acc+'</td><td style="font-family:var(--m);font-size:11px">'+eff(r)+'</td><td style="color:var(--t2)">'+r.desc+'</td><td style="text-align:right;font-family:var(--m);font-weight:600">'+fmt(r.amount)+'</td><td>'+sbdg(r.status)+'</td></tr>';}).join('')+'</tbody></table></div>';
 }
 function renderRem(){
-  const d30=new Date(TODAY);d30.setDate(d30.getDate()+30);
-  const d90=new Date(TODAY);d90.setDate(d90.getDate()+90);
-  const ov=[],n30=[],n90=[];
-  accs.forEach(a=>{a.pays.forEach(p=>{const d=pd(eff(p));if(p.status==='overdue')ov.push({...p,acc:a.name,_d:d||TODAY});else if(p.status!=='paid'&&d&&d>=TODAY&&d<=d30)n30.push({...p,acc:a.name,_d:d});else if(p.status!=='paid'&&d&&d>d30&&d<=d90)n90.push({...p,acc:a.name,_d:d});});});
+  var d30=new Date(TODAY);d30.setDate(d30.getDate()+30);
+  var d90=new Date(TODAY);d90.setDate(d90.getDate()+90);
+  var ov=[],n30=[],n90=[];
+  accs.forEach(function(a){
+    a.pays.forEach(function(p){
+      var d=pd(eff(p));
+      if(p.status==='overdue')ov.push(Object.assign({},p,{acc:a.name,_d:d||TODAY}));
+      else if(p.status!=='paid'&&d&&d>=TODAY&&d<=d30)n30.push(Object.assign({},p,{acc:a.name,_d:d}));
+      else if(p.status!=='paid'&&d&&d>d30&&d<=d90)n90.push(Object.assign({},p,{acc:a.name,_d:d}));
+    });
+  });
   document.getElementById('r1').innerHTML=remTbl(ov,'No overdue payments — great!');
-  document.getElementById('r2').innerHTML=remTbl(n30,'No payments due in the next 30 days.');
+  document.getElementById('r2').innerHTML=remTbl(n30,'No payments due in 30 days.');
   document.getElementById('r3').innerHTML=remTbl(n90,'No payments due in 31–90 days.');
-  // Per-account reminder settings
-  document.getElementById('rem-accs-list').innerHTML=accs.map(a=>{
-    const upcoming=a.pays.filter(p=>{const d=pd(eff(p));return p.status!=='paid'&&d&&d>=TODAY;}).slice(0,3);
-    return`<div class="rem-acc">
-      <div class="rem-acc-hdr" onclick="this.nextElementSibling.classList.toggle('on')">
-        <div style="display:flex;align-items:center;gap:10px"><i class="ti ti-${ticon(a.type)}" style="color:${tcolor(a.type)};font-size:18px"></i><div><div style="font-weight:500">${a.name}</div><div style="font-size:11px;color:var(--tx2)">${upcoming.length} upcoming payment${upcoming.length!==1?'s':''}</div></div></div>
-        <i class="ti ti-chevron-down" style="color:var(--tx3)"></i>
-      </div>
-      <div class="rem-acc-body">
-        <div class="fr-row">
-          <div><label>Reminder days before due</label><input type="number" value="${a.remDays||7}" onchange="accs.find(x=>x.id==='${a.id}').remDays=+this.value" style="width:100%"></div>
-          <div><label>Custom email (leave blank for default)</label><input type="email" value="${a.remEmail||''}" placeholder="mr.raouf@gmail.com" onchange="accs.find(x=>x.id==='${a.id}').remEmail=this.value"></div>
-        </div>
-        ${upcoming.length?`<div style="font-size:12px;color:var(--tx2);margin-bottom:8px">Upcoming:</div><div style="display:flex;flex-direction:column;gap:6px">${upcoming.map(p=>`<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 10px;background:var(--bg1);border-radius:8px"><div><div style="font-size:12px;font-weight:500">${p.desc}</div><div style="font-size:11px;color:var(--tx2)">${eff(p)}</div></div><div style="font-family:var(--m);font-size:12px;font-weight:600">${fmt(p.amount)}</div></div>`).join('')}</div>`:''}
-      </div>
-    </div>`;
+  document.getElementById('rem-accs').innerHTML=accs.map(function(a){
+    var up=a.pays.filter(function(p){var d=pd(eff(p));return p.status!=='paid'&&d&&d>=TODAY;}).slice(0,3);
+    return'<div class="ar" style="margin-bottom:8px"><div class="mh" onclick="this.nextElementSibling.classList.toggle(\'on\')"><div style="display:flex;align-items:center;gap:10px"><i class="ti ti-'+tic(a.type)+'" style="color:'+tcl(a.type)+';font-size:18px"></i><div><div style="font-weight:500">'+a.name+'</div><div style="font-size:11px;color:var(--t2)">'+up.length+' upcoming</div></div></div><i class="ti ti-chevron-down" style="color:var(--t3)"></i></div><div class="mb" style="padding:14px 16px"><div class="fr2"><div><label>Reminder days before due</label><input type="number" value="'+(a.remDays||7)+'" onchange="accs.find(function(x){return x.id===\''+a.id+'\';}).remDays=+this.value"></div><div><label>Custom email</label><input type="email" value="'+(a.remEmail||'')+'" placeholder="mr.raouf@gmail.com" onchange="accs.find(function(x){return x.id===\''+a.id+'\';}).remEmail=this.value"></div></div>'+(up.length?'<div style="display:flex;flex-direction:column;gap:6px">'+up.map(function(p){return'<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 10px;background:var(--bg1);border-radius:8px"><div><div style="font-size:12px;font-weight:500">'+p.desc+'</div><div style="font-size:11px;color:var(--t2)">'+eff(p)+'</div></div><div style="font-family:var(--m);font-size:12px;font-weight:600">'+fmt(p.amount)+'</div></div>';}).join('')+'</div>':'')+'</div></div>';
   }).join('');
 }
-function saveRemSettings(){alert('Default reminder settings saved.');}
-let curEmail='';
+var curEmail='';
 function genEmail(){
-  const range=document.getElementById('email-range').value;
-  const to=document.getElementById('email-to').value||'mr.raouf@gmail.com';
-  let pays=[];
-  if(range==='ov'){accs.forEach(a=>{a.pays.forEach(p=>{if(p.status==='overdue')pays.push({...p,acc:a.name,_d:pd(eff(p))||TODAY});});});}
-  else if(range==='all'){accs.forEach(a=>{a.pays.forEach(p=>{if(p.status!=='paid'){const d=pd(eff(p));if(d)pays.push({...p,acc:a.name,_d:d});}});});}
-  else{const cut=new Date(TODAY);cut.setDate(cut.getDate()+parseInt(range));accs.forEach(a=>{a.pays.forEach(p=>{const d=pd(eff(p));if(p.status!=='paid'&&d&&d>=TODAY&&d<=cut)pays.push({...p,acc:a.name,_d:d});});});}
-  pays.sort((a,b)=>a._d-b._d);
-  const lbl=range==='ov'?'Overdue payments':range==='all'?'All pending payments':`Payments due — next ${range} days`;
-  const total=pays.reduce((s,p)=>s+p.amount,0);
-  const lines=pays.map(p=>`  • ${p.acc} — ${p.desc}\n    Date: ${eff(p)}  |  ${fmt(p.amount)}  |  ${p.status.toUpperCase()}${p.chq?' | Chq: '+p.chq:''}`).join('\n\n');
-  curEmail=`To: ${to}\nSubject: PayTrack Reminder — ${lbl}\n\nHi Raouf,\n\nPayment reminder as of ${fd(TODAY)}.\n\n${lbl.toUpperCase()}\n${'─'.repeat(50)}\n\n${lines||'  No payments found.'}\n\n${'─'.repeat(50)}\nTOTAL OUTSTANDING: ${fmt(total)}\n\nGenerated by PayTrack.`;
+  var rng=document.getElementById('em-rng').value,to=document.getElementById('em-to').value||'mr.raouf@gmail.com';
+  var pays=[];
+  if(rng==='ov'){accs.forEach(function(a){a.pays.forEach(function(p){if(p.status==='overdue')pays.push(Object.assign({},p,{acc:a.name,_d:pd(eff(p))||TODAY}));});});}
+  else if(rng==='all'){accs.forEach(function(a){a.pays.forEach(function(p){if(p.status!=='paid'){var d=pd(eff(p));if(d)pays.push(Object.assign({},p,{acc:a.name,_d:d}));}});});}
+  else{var cut=new Date(TODAY);cut.setDate(cut.getDate()+parseInt(rng));accs.forEach(function(a){a.pays.forEach(function(p){var d=pd(eff(p));if(p.status!=='paid'&&d&&d>=TODAY&&d<=cut)pays.push(Object.assign({},p,{acc:a.name,_d:d}));});});}
+  pays.sort(function(a,b){return a._d-b._d;});
+  var lbl=rng==='ov'?'Overdue payments':rng==='all'?'All pending':`Payments due — next ${rng} days`;
+  var total=pays.reduce(function(s,p){return s+p.amount;},0);
+  var lines=pays.map(function(p){return'  • '+p.acc+' — '+p.desc+'\n    Date: '+eff(p)+'  |  '+fmt(p.amount)+'  |  '+p.status.toUpperCase()+(p.chq?' | Chq: '+p.chq:'');}).join('\n\n');
+  curEmail='To: '+to+'\nSubject: PayTrack Reminder — '+lbl+'\n\nHi Raouf,\n\nPayment reminder as of '+fd(TODAY)+'.\n\n'+lbl.toUpperCase()+'\n'+'─'.repeat(46)+'\n\n'+(lines||'  None.')+'\n\n'+'─'.repeat(46)+'\nTOTAL: '+fmt(total)+'\n\nGenerated by PayTrack.';
   document.getElementById('eprev').textContent=curEmail;
 }
-function sendEmail(){
-  if(!curEmail){genEmail();}
-  const to=document.getElementById('email-to').value||'mr.raouf@gmail.com';
-  const lines=curEmail.split('\n');
-  const subj=lines.find(l=>l.startsWith('Subject:'))||'';
-  window.open(`mailto:${to}?subject=${encodeURIComponent(subj.replace('Subject: ',''))}&body=${encodeURIComponent(lines.slice(2).join('\n'))}`);
-}
-function copyEmail(){if(!curEmail)genEmail();navigator.clipboard.writeText(curEmail).then(()=>alert('Email copied to clipboard!'));}
+function sendEmail(){if(!curEmail)genEmail();var ls=curEmail.split('\n');var subj=ls.find(function(l){return l.startsWith('Subject:');});window.open('mailto:'+document.getElementById('em-to').value+'?subject='+encodeURIComponent((subj||'').replace('Subject: ',''))+'&body='+encodeURIComponent(ls.slice(2).join('\n')));}
+function copyEmail(){if(!curEmail)genEmail();navigator.clipboard.writeText(curEmail).then(function(){alert('Copied!');});}
 
-// ── STOCKS ────────────────────────────────────────────────────────────────
 function renderStocks(){
-  const total=stocks.reduce((s,x)=>s+(x.qty*x.curPrice),0);
-  const gl=stocks.reduce((s,x)=>s+(x.qty*(x.curPrice-x.buyPrice)),0);
-  document.getElementById('s-total').textContent=total>0?fmt(total):'AED 0';
-  document.getElementById('s-gl').innerHTML=gl===0?'AED 0':`<span style="color:${gl>=0?'var(--green)':'var(--red)'}">${gl>=0?'+':''}${fmt(gl)}</span>`;
-  document.getElementById('s-count').textContent=stocks.length;
-  if(!stocks.length){document.getElementById('stocks-grid').style.display='none';document.getElementById('stocks-empty').style.display='block';return;}
-  document.getElementById('stocks-grid').style.display='grid';document.getElementById('stocks-empty').style.display='none';
-  document.getElementById('stocks-grid').innerHTML=stocks.map((s,i)=>{
-    const val=s.qty*s.curPrice;const gl2=s.qty*(s.curPrice-s.buyPrice);const glPct=s.buyPrice>0?((s.curPrice-s.buyPrice)/s.buyPrice*100):0;
-    return`<div class="stock-card">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start">
-        <div><div class="stock-ticker">${s.ticker}</div><div class="stock-name">${s.name}</div></div>
-        <div style="display:flex;gap:6px">
-          <span style="background:rgba(79,142,247,0.1);color:var(--blue);font-size:10px;padding:2px 6px;border-radius:4px;font-weight:600">${s.market}</span>
-          <button class="btn-sm btn-danger btn-icon" onclick="delStock(${i})"><i class="ti ti-trash"></i></button>
-        </div>
-      </div>
-      <div style="display:flex;align-items:baseline;gap:6px;margin-top:.875rem">
-        <div class="stock-price">${s.currency} ${s.curPrice.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
-        <span class="stock-change ${glPct>=0?'up':'dn'}">${glPct>=0?'+':''}${glPct.toFixed(2)}%</span>
-      </div>
-      <div class="stock-meta">
-        <div class="stock-meta-item"><label>Qty</label><div>${s.qty.toLocaleString()}</div></div>
-        <div class="stock-meta-item"><label>Avg buy</label><div>${s.currency} ${s.buyPrice.toFixed(2)}</div></div>
-        <div class="stock-meta-item"><label>Value</label><div>${fmt(val)}</div></div>
-        <div class="stock-meta-item"><label>G/L</label><div style="color:${gl2>=0?'var(--green)':'var(--red)'}">${gl2>=0?'+':''}${fmt(gl2)}</div></div>
-      </div>
-      ${s.broker?`<div style="font-size:10px;color:var(--tx3);margin-top:8px"><i class="ti ti-building" style="font-size:11px"></i> ${s.broker}</div>`:''}
-      ${s.notes?`<div style="font-size:11px;color:var(--tx2);margin-top:4px">${s.notes}</div>`:''}
-    </div>`;
-  }).join('');
+  var total=stocks.reduce(function(s,x){return s+x.qty*x.cp;},0);
+  var gl=stocks.reduce(function(s,x){return s+x.qty*(x.cp-x.bp);},0);
+  document.getElementById('st1').textContent=total>0?fmt(total):'AED 0';
+  document.getElementById('st2').innerHTML=gl===0?'AED 0':'<span style="color:'+(gl>=0?'var(--green)':'var(--red)')+'"> '+(gl>=0?'+':'')+fmt(gl)+'</span>';
+  document.getElementById('st3').textContent=stocks.length;
   document.getElementById('m6').textContent=total>0?fmt(total):'—';
+  if(!stocks.length){document.getElementById('stk-grid').style.display='none';document.getElementById('stk-empty').style.display='block';return;}
+  document.getElementById('stk-grid').style.display='grid';document.getElementById('stk-empty').style.display='none';
+  document.getElementById('stk-grid').innerHTML=stocks.map(function(s,i){
+    var val=s.qty*s.cp,gl2=s.qty*(s.cp-s.bp),pct=s.bp>0?((s.cp-s.bp)/s.bp*100):0;
+    return'<div class="stk-card"><div style="display:flex;justify-content:space-between;align-items:flex-start"><div><div style="font-size:14px;font-weight:700;font-family:var(--m)">'+s.ticker+'</div><div style="font-size:11px;color:var(--t2);margin-top:2px">'+s.name+'</div></div><div style="display:flex;gap:6px"><span style="background:rgba(91,156,246,.1);color:var(--blue);font-size:10px;padding:2px 6px;border-radius:4px;font-weight:600">'+s.mkt+'</span><button class="btn-s btn-d" onclick="delStk('+i+')"><i class="ti ti-trash"></i></button></div></div><div style="display:flex;align-items:baseline;gap:6px;margin-top:.875rem"><div style="font-size:18px;font-weight:600;font-family:var(--m)">'+s.cur+' '+s.cp.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})+'</div><span style="background:'+(pct>=0?'rgba(62,207,142,.12)':'rgba(242,107,107,.12)')+';color:'+(pct>=0?'var(--green)':'var(--red)')+';font-size:11px;padding:2px 6px;border-radius:5px;font-family:var(--m)">'+(pct>=0?'+':'')+pct.toFixed(2)+'%</span></div><div style="display:flex;gap:16px;margin-top:.75rem"><div><div style="font-size:10px;color:var(--t3)">Qty</div><div style="font-size:12px;font-weight:500;font-family:var(--m)">'+s.qty.toLocaleString()+'</div></div><div><div style="font-size:10px;color:var(--t3)">Avg buy</div><div style="font-size:12px;font-weight:500;font-family:var(--m)">'+s.cur+' '+s.bp.toFixed(2)+'</div></div><div><div style="font-size:10px;color:var(--t3)">Value</div><div style="font-size:12px;font-weight:500;font-family:var(--m)">'+fmt(val)+'</div></div><div><div style="font-size:10px;color:var(--t3)">G/L</div><div style="font-size:12px;font-weight:500;font-family:var(--m);color:'+(gl2>=0?'var(--green)':'var(--red)')+'"> '+(gl2>=0?'+':'')+fmt(gl2)+'</div></div></div>'+(s.broker?'<div style="font-size:10px;color:var(--t3);margin-top:8px">'+s.broker+'</div>':'')+'</div>';
+  }).join('');
 }
-
-function openAddStock(){document.getElementById('modal-stock').style.display='flex';}
-function closeStock(){document.getElementById('modal-stock').style.display='none';}
-function doAddStock(){
-  const ticker=document.getElementById('s-ticker').value.trim().toUpperCase();
-  if(!ticker){alert('Enter a ticker symbol.');return;}
-  stocks.push({ticker,name:document.getElementById('s-name').value||ticker,market:document.getElementById('s-mkt').value,currency:document.getElementById('s-cur').value,qty:+document.getElementById('s-qty').value||0,buyPrice:+document.getElementById('s-buy').value||0,curPrice:+document.getElementById('s-cur-price').value||0,broker:document.getElementById('s-broker').value,notes:document.getElementById('s-notes').value});
-  closeStock();['s-ticker','s-name','s-qty','s-buy','s-cur-price','s-broker','s-notes'].forEach(x=>document.getElementById(x).value='');
+function openAddStk(){oM('m-stk');}
+function closeStock(){cM('m-stk');}
+function doAddStk(){
+  var t=document.getElementById('s-t').value.trim().toUpperCase();if(!t){alert('Enter ticker.');return;}
+  stocks.push({ticker:t,name:document.getElementById('s-n').value||t,mkt:document.getElementById('s-m').value,cur:document.getElementById('s-cur').value,qty:+document.getElementById('s-q').value||0,bp:+document.getElementById('s-b').value||0,cp:+document.getElementById('s-p').value||0,broker:document.getElementById('s-br').value});
+  cM('m-stk');['s-t','s-n','s-q','s-b','s-p','s-br'].forEach(function(x){document.getElementById(x).value='';});
   renderStocks();
 }
-function delStock(i){if(confirm('Delete this stock?')){stocks.splice(i,1);renderStocks();}}
-function exportStocks(){
+function delStk(i){if(confirm('Delete?')){stocks.splice(i,1);renderStocks();}}
+function expStocks(){
   if(!stocks.length){alert('No stocks to export.');return;}
-  const wb=XLSX.utils.book_new();
-  const data=[['Ticker','Name','Market','Currency','Qty','Avg Buy Price','Current Price','Total Value','Gain/Loss','Gain/Loss %','Broker','Notes'],...stocks.map(s=>[s.ticker,s.name,s.market,s.currency,s.qty,s.buyPrice,s.curPrice,s.qty*s.curPrice,s.qty*(s.curPrice-s.buyPrice),s.buyPrice>0?((s.curPrice-s.buyPrice)/s.buyPrice*100).toFixed(2)+'%':'—',s.broker||'',s.notes||''])];
-  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(data),'Stocks');
+  var wb=XLSX.utils.book_new();
+  var d=[['Ticker','Name','Market','Currency','Qty','Avg Buy','Current Price','Value','G/L','Broker']].concat(stocks.map(function(s){return[s.ticker,s.name,s.mkt,s.cur,s.qty,s.bp,s.cp,s.qty*s.cp,s.qty*(s.cp-s.bp),s.broker||''];}));
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(d),'Stocks');
   XLSX.writeFile(wb,'paytrack_stocks.xlsx');
 }
 
-// ── EXPORT ────────────────────────────────────────────────────────────────
 function renderExport(){
-  document.getElementById('export-acc-list').innerHTML=accs.map(a=>`<button onclick="exportAccExcel('${a.id}')"><i class="ti ti-file-spreadsheet"></i> ${a.name}</button>`).join('');
-  document.getElementById('sheet-sync-list').innerHTML=accs.map(a=>`<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
-    <div style="width:28px;height:28px;border-radius:7px;background:rgba(79,142,247,0.1);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--blue)"><i class="ti ti-${ticon(a.type)}" style="font-size:14px"></i></div>
-    <div style="flex:1"><div style="font-size:12px;font-weight:500;margin-bottom:3px">${a.name}</div><input type="text" placeholder="Paste CSV URL here…" value="${a.url||''}" onchange="accs.find(x=>x.id==='${a.id}').url=this.value" style="font-size:11px;padding:5px 8px"></div>
-    <button class="btn-sm" onclick="syncOneAcc('${a.id}')"><i class="ti ti-refresh"></i> Sync</button>
-    <span class="ss" id="ss2-${a.id}" style="font-size:11px;min-width:60px">${a.url?(a.synced?'<span style="color:var(--green)">✓ synced</span>':'not synced'):'no URL'}</span>
-  </div>`).join('');
+  document.getElementById('exp-acc').innerHTML=accs.map(function(a){return'<button onclick="expOneExcel(\''+a.id+'\')"><i class="ti ti-file-spreadsheet"></i> '+a.name+'</button>';}).join('');
+  document.getElementById('exp-sync').innerHTML=accs.map(function(a){return'<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px"><div style="width:28px;height:28px;border-radius:7px;background:rgba(91,156,246,.1);display:flex;align-items:center;justify-content:center;color:'+tcl(a.type)+';flex-shrink:0"><i class="ti ti-'+tic(a.type)+'" style="font-size:14px"></i></div><div style="flex:1"><div style="font-size:12px;font-weight:500;margin-bottom:3px">'+a.name+'</div><input type="text" placeholder="CSV URL…" value="'+(a.url||'')+'" onchange="accs.find(function(x){return x.id===\''+a.id+'\';}).url=this.value" style="font-size:11px;padding:5px 8px"></div><button class="btn-s" onclick="syncOne(\''+a.id+'\')"><i class="ti ti-refresh"></i> Sync</button><span class="ss" id="ss2-'+a.id+'">'+(a.url?(a.synced?'<span style="color:var(--green)">✓</span>':'—'):'—')+'</span></div>';}).join('');
 }
-
-function exportAllExcel(){
-  const wb=XLSX.utils.book_new();
-  // Summary sheet
-  const summary=[['PayTrack — Financial Summary','','',''],['Generated:',fd(TODAY),'',''],['','','',''],['Account','Type','Principal (AED)','Outstanding (AED)','Paid (AED)','Overdue (AED)'],...accs.map(a=>{const debt=a.pays.filter(p=>p.status!=='paid').reduce((s,p)=>s+p.amount,0);const paid=a.pays.filter(p=>p.status==='paid').reduce((s,p)=>s+p.amount,0);const ov=a.pays.filter(p=>p.status==='overdue').reduce((s,p)=>s+p.amount,0);return[a.name,a.type,a.principal,debt,paid,ov];})];
-  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(summary),'Summary');
-  accs.forEach(a=>{
-    const rows=[['PayTrack — '+a.name,'','','','','',''],['Principal:',a.principal,'','','','',''],['','','','','','',''],['#','Description','Due Date','Revised Date','Amount (AED)','Chq #','Status','%'],...a.pays.map((p,i)=>[i+1,p.desc,p.dt,p.nd||'',p.amount,p.chq||'',p.status,p.pct||''])];
-    XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(rows),a.name.slice(0,30));
-  });
-  XLSX.writeFile(wb,'paytrack_all_accounts.xlsx');
+function expAllExcel(){
+  var wb=XLSX.utils.book_new();
+  var sum=[['Account','Type','Principal','Outstanding','Paid','Overdue']].concat(accs.map(function(a){var db=a.pays.filter(function(p){return p.status!=='paid';}).reduce(function(s,p){return s+p.amount;},0);var pd2=a.pays.filter(function(p){return p.status==='paid';}).reduce(function(s,p){return s+p.amount;},0);var ov=a.pays.filter(function(p){return p.status==='overdue';}).reduce(function(s,p){return s+p.amount;},0);return[a.name,a.type,a.principal,db,pd2,ov];}));
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(sum),'Summary');
+  accs.forEach(function(a){var rows=[['#','Description','Due Date','Revised Date','Amount','Chq #','Status','%']].concat(a.pays.map(function(p,i){return[i+1,p.desc,p.dt,p.nd||'',p.amount,p.chq||'',p.status,p.pct||''];}));XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(rows),a.name.slice(0,30));});
+  XLSX.writeFile(wb,'paytrack_all.xlsx');
 }
-function exportAccExcel(id){
-  const a=accs.find(x=>x.id===id);if(!a)return;
-  const wb=XLSX.utils.book_new();
-  const rows=[['PayTrack — '+a.name,'','','','','',''],['Type:',a.type,'','','Principal:',a.principal,''],['','','','','','',''],['#','Description','Due Date','Revised Date','Amount (AED)','Chq #','Status','%'],...a.pays.map((p,i)=>[i+1,p.desc,p.dt,p.nd||'',p.amount,p.chq||'',p.status,p.pct||''])];
+function expOneExcel(id){
+  var a=accs.find(function(x){return x.id===id;});if(!a)return;
+  var wb=XLSX.utils.book_new();
+  var rows=[['#','Description','Due Date','Revised Date','Amount','Chq #','Status','%']].concat(a.pays.map(function(p,i){return[i+1,p.desc,p.dt,p.nd||'',p.amount,p.chq||'',p.status,p.pct||''];}));
   XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(rows),a.name.slice(0,30));
   XLSX.writeFile(wb,'paytrack_'+a.name.replace(/\s+/g,'_')+'.xlsx');
 }
-function exportPDF(){
-  const w=window.open('','_blank');
-  let html=`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>PayTrack Report</title><style>body{font-family:Arial,sans-serif;font-size:12px;color:#1a1a1a;margin:2cm}h1{font-size:22px;margin-bottom:4px}h2{font-size:15px;margin:20px 0 8px;border-bottom:2px solid #eee;padding-bottom:4px}h3{font-size:13px;margin:14px 0 6px}table{width:100%;border-collapse:collapse;margin-bottom:10px}th{background:#f5f5f3;text-align:left;padding:6px 10px;font-size:11px;border:1px solid #ddd}td{padding:6px 10px;border:1px solid #ddd;font-size:11px}.red{color:#A32D2D}.green{color:#3B6D11}.amber{color:#854F0B}.meta{color:#666;font-size:11px}@media print{body{margin:1cm}}<\/style><\/head><body>`;
-  html+=`<h1>PayTrack Financial Report</h1><div class="meta">Generated: ${fd(TODAY)} &nbsp;|&nbsp; Raouf Andrea</div>`;
-  html+=`<h2>Dashboard Summary</h2><table><tr><th>Metric</th><th>Value</th></tr>`;
-  let o=0,p=0,ov=0;accs.forEach(a=>{a.pays.forEach(x=>{if(x.status==='paid')p+=x.amount;else o+=x.amount;if(x.status==='overdue')ov+=x.amount;});});
-  html+=`<tr><td>Total outstanding</td><td class="red"><strong>${fmt(o)}</strong></td></tr><tr><td>Total paid</td><td class="green">${fmt(p)}</td></tr><tr><td>Total overdue</td><td class="red">${fmt(ov)}</td></tr><tr><td>Active accounts</td><td>${accs.length}</td></tr></table>`;
-  html+=`<h2>Accounts</h2>`;
-  accs.forEach(a=>{
-    const debt=a.pays.filter(p=>p.status!=='paid').reduce((s,p)=>s+p.amount,0);
-    const paid=a.pays.filter(p=>p.status==='paid').reduce((s,p)=>s+p.amount,0);
-    html+=`<h3>${a.name} <span class="meta">(${a.type} · Principal: ${fmt(a.principal)})</span></h3>`;
-    html+=`<p class="meta">Outstanding: <strong class="red">${fmt(debt)}</strong> &nbsp;|&nbsp; Paid: <strong class="green">${fmt(paid)}</strong></p>`;
-    html+=`<table><tr><th>#</th><th>Description</th><th>Due date</th><th>Revised date</th><th>Amount</th><th>Chq #</th><th>Status</th></tr>`;
-    a.pays.forEach((p,i)=>{html+=`<tr><td>${i+1}</td><td>${p.desc}</td><td>${p.dt}</td><td>${p.nd||'—'}</td><td>${fmt(p.amount)}</td><td>${p.chq||'—'}</td><td class="${p.status==='paid'?'green':p.status==='overdue'?'red':'amber'}">${p.status}</td></tr>`;});
-    html+=`</table>`;
+function expPDF(){
+  var w=window.open('','_blank');
+  var html='<!DOCTYPE html><html><head><meta charset="UTF-8"><title>PayTrack Report</title><style>body{font-family:Arial,sans-serif;font-size:12px;color:#1a1a1a;margin:2cm}h1{font-size:22px}h2{font-size:15px;margin:20px 0 8px;border-bottom:2px solid #eee;padding-bottom:4px}h3{font-size:13px;margin:14px 0 6px}table{width:100%;border-collapse:collapse;margin-bottom:10px}th{background:#f5f5f3;text-align:left;padding:6px 8px;font-size:11px;border:1px solid #ddd}td{padding:6px 8px;border:1px solid #ddd;font-size:11px}.r{color:#A32D2D}.g{color:#3B6D11}.am{color:#854F0B}@media print{body{margin:1cm}}</style></head><body>';
+  html+='<h1>PayTrack Financial Report</h1><p style="color:#666;font-size:11px">Generated: '+fd(TODAY)+' | Raouf Andrea</p>';
+  var o=0,p=0,ov=0;accs.forEach(function(a){a.pays.forEach(function(x){if(x.status==='paid')p+=x.amount;else o+=x.amount;if(x.status==='overdue')ov+=x.amount;});});
+  html+='<h2>Summary</h2><table><tr><th>Metric</th><th>Value</th></tr><tr><td>Total outstanding</td><td class="r"><strong>'+fmt(o)+'</strong></td></tr><tr><td>Total paid</td><td class="g">'+fmt(p)+'</td></tr><tr><td>Total overdue</td><td class="r">'+fmt(ov)+'</td></tr><tr><td>Active accounts</td><td>'+accs.length+'</td></tr></table>';
+  html+='<h2>Accounts</h2>';
+  accs.forEach(function(a){
+    var debt=a.pays.filter(function(p){return p.status!=='paid';}).reduce(function(s,p){return s+p.amount;},0);
+    var paid=a.pays.filter(function(p){return p.status==='paid';}).reduce(function(s,p){return s+p.amount;},0);
+    html+='<h3>'+a.name+' <span style="color:#666;font-size:11px">('+a.type+' · Principal: '+fmt(a.principal)+')</span></h3>';
+    html+='<p style="font-size:11px;color:#666;margin-bottom:6px">Outstanding: <strong class="r">'+fmt(debt)+'</strong> | Paid: <strong class="g">'+fmt(paid)+'</strong></p>';
+    html+='<table><tr><th>#</th><th>Description</th><th>Due Date</th><th>Revised</th><th>Amount</th><th>Chq</th><th>Status</th></tr>';
+    a.pays.forEach(function(p,i){html+='<tr><td>'+(i+1)+'</td><td>'+p.desc+'</td><td>'+p.dt+'</td><td>'+(p.nd||'—')+'</td><td>'+fmt(p.amount)+'</td><td>'+(p.chq||'—')+'</td><td class="'+(p.status==='paid'?'g':p.status==='overdue'?'r':'am')+'">'+p.status+'</td></tr>';});
+    html+='</table>';
   });
-  html+=`<\/body><\/html>`;
-  w.document.write(html);w.document.close();setTimeout(()=>w.print(),500);
+  html+='</body></html>';
+  w.document.write(html);w.document.close();setTimeout(function(){w.print();},600);
 }
 
-// ── PAYMENT ACTIONS ───────────────────────────────────────────────────────
-function markPaid(id,i){const a=accs.find(x=>x.id===id);if(a&&a.pays[i])a.pays[i].status='paid';rAll();}
-function deferPay(id,i){
-  const a=accs.find(x=>x.id===id);if(!a||!a.defer)return;
-  const p=a.pays[i];if(!p)return;
-  const d=pd(p.nd||p.dt);if(!d)return;
+function mkPaid(id,i){var a=accs.find(function(x){return x.id===id;});if(a&&a.pays[i])a.pays[i].status='paid';rAll();}
+function deferP(id,i){
+  var a=accs.find(function(x){return x.id===id;});if(!a||!a.defer)return;
+  var p=a.pays[i];if(!p)return;
+  var d=pd(p.nd||p.dt);if(!d)return;
   d.setMonth(d.getMonth()+1);p.nd=fd(d);p.status='deferred';
   rAll();alert('Deferred to '+p.nd);
 }
-function filterByStatus(status){nav('accs',document.querySelector('[onclick*="accs"]'));}
-
-// Edit
-function openEdit(id,i){
-  editId=id;editIdx=i;
-  const a=accs.find(x=>x.id===id);const p=a.pays[i];
-  document.getElementById('e-desc').value=p.desc;
-  document.getElementById('e-amt').value=p.amount;
+var eId=null,eIdx=null,pId=null;
+function opEdit(id,i){
+  eId=id;eIdx=i;
+  var a=accs.find(function(x){return x.id===id;});var p=a.pays[i];
+  document.getElementById('e-d').value=p.desc;
+  document.getElementById('e-a').value=p.amount;
   document.getElementById('e-dt').value=p.dt;
   document.getElementById('e-nd').value=p.nd||'';
-  document.getElementById('e-chq').value=p.chq||'';
-  document.getElementById('e-st').value=p.status;
-  document.getElementById('modal-edit').style.display='flex';
+  document.getElementById('e-c').value=p.chq||'';
+  document.getElementById('e-s').value=p.status;
+  oM('m-edit');
 }
-function closeEdit(){document.getElementById('modal-edit').style.display='none';}
 function saveEdit(){
-  const a=accs.find(x=>x.id===editId);
-  a.pays[editIdx]={...a.pays[editIdx],desc:document.getElementById('e-desc').value,amount:+document.getElementById('e-amt').value,dt:document.getElementById('e-dt').value,nd:document.getElementById('e-nd').value,chq:document.getElementById('e-chq').value,status:document.getElementById('e-st').value};
-  closeEdit();rAll();
+  var a=accs.find(function(x){return x.id===eId;});
+  a.pays[eIdx]=Object.assign({},a.pays[eIdx],{desc:document.getElementById('e-d').value,amount:+document.getElementById('e-a').value,dt:document.getElementById('e-dt').value,nd:document.getElementById('e-nd').value,chq:document.getElementById('e-c').value,status:document.getElementById('e-s').value});
+  cM('m-edit');rAll();
 }
-
-// Add payment
-function openAddPay(id){payId=id;document.getElementById('modal-addpay').style.display='flex';}
-function closePay(){document.getElementById('modal-addpay').style.display='none';}
+function opAddPay(id){pId=id;oM('m-pay');}
 function doAddPay(){
-  const a=accs.find(x=>x.id===payId);
-  a.pays.push({desc:document.getElementById('p-desc').value||'Payment',amount:+document.getElementById('p-amt').value||0,dt:document.getElementById('p-dt').value||fd(TODAY),nd:'',chq:document.getElementById('p-chq').value||'',pct:document.getElementById('p-pct').value||'',status:document.getElementById('p-st').value});
-  ['p-desc','p-amt','p-dt','p-chq','p-pct'].forEach(x=>document.getElementById(x).value='');
-  closePay();rAll();
+  var a=accs.find(function(x){return x.id===pId;});
+  a.pays.push({desc:document.getElementById('p-d').value||'Payment',amount:+document.getElementById('p-a').value||0,dt:document.getElementById('p-dt').value||fd(TODAY),nd:'',chq:document.getElementById('p-c').value||'',pct:document.getElementById('p-pct').value||'',status:document.getElementById('p-s').value});
+  ['p-d','p-a','p-dt','p-c','p-pct'].forEach(function(x){document.getElementById(x).value='';});
+  cM('m-pay');rAll();
 }
-
-// Add/delete account
-function openAdd(){document.getElementById('modal-add').style.display='flex';}
-function closeAdd(){document.getElementById('modal-add').style.display='none';}
+function openAdd(){oM('m-add');}
 function doAdd(){
-  const name=document.getElementById('an').value.trim();if(!name){alert('Enter a name.');return;}
-  accs.push({id:'a'+Date.now(),name,type:document.getElementById('at').value,principal:+document.getElementById('ap').value||0,url:'',defer:document.getElementById('ad').checked,remDays:7,pays:[]});
-  closeAdd();document.getElementById('an').value='';document.getElementById('ap').value='';document.getElementById('ad').checked=false;
+  var name=document.getElementById('a-n').value.trim();if(!name){alert('Enter a name.');return;}
+  accs.push({id:'a'+Date.now(),name:name,type:document.getElementById('a-t').value,principal:+document.getElementById('a-p').value||0,url:'',defer:document.getElementById('a-d').checked,remDays:7,pays:[]});
+  cM('m-add');document.getElementById('a-n').value='';document.getElementById('a-p').value='';document.getElementById('a-d').checked=false;
   rAll();
 }
-function openDel(id){const a=accs.find(x=>x.id===id);if(!a)return;delId=id;document.getElementById('dn').textContent=a.name;document.getElementById('modal-del').style.display='flex';}
-function closeDel(){document.getElementById('modal-del').style.display='none';}
-function doDel(){accs=accs.filter(x=>x.id!==delId);closeDel();rAll();}
+function opDel(id){var a=accs.find(function(x){return x.id===id;});if(!a)return;delId=id;document.getElementById('d-n').textContent=a.name;oM('m-del');}
+function doDel(){accs=accs.filter(function(x){return x.id!==delId;});cM('m-del');rAll();}
 
-// ── AI ────────────────────────────────────────────────────────────────────
-const ASYS=`You are a concise financial assistant for Raouf Andrea. Data as of May 28 2026:
-Total outstanding: AED 9,503,567 | Total paid: AED 2,955,199 | 8 accounts:
-1. Nawayef Villa (Installments, AED 5.98M): next AED 293k revised Aug 2026 Chq 000044. Handover AED 2.93M Apr 2029.
-2. Mayar M13-03 (Installments, AED 3.88M): AED 194k overdue Dec 2025. AED 2.33M due Dec 2027.
-3. Sea la vie (Installments, AED 6.36M, 5%): AED 5.73M outstanding, multiple overdue incl AED 4.45M handover.
-4. BMW X4 (Car Loan, AED 305k): AED 5,765/mo, 34 paid, 27 left, ends Aug 2028.
-5. Cash Loan NBF (AED 1M, 5%): AED 23,081/mo, 18 paid, 30 left, ends Nov 2028. Defer enabled.
-6. School Fees (AED 62.2k): AED 39k overdue Terms 2-3.
-7. Noya Villa (AED 230k): AED 183k overdue, AED 57k due Jun 2026.
-8. Ali Al Gebely (Lender, AED 1.09M): no schedule.
-Be direct and concise. Use AED formatting. Bullet points for lists. Give actionable advice when relevant.`;
-const ah=[];
+var ASYS='Financial assistant for Raouf Andrea. May 28 2026. Outstanding AED 9.5M, Paid AED 2.96M. 8 accounts: Nawayef Villa (Installments AED 5.98M, next AED 293k revised Aug 2026 Chq 000044), Mayar M13-03 (Installments AED 3.88M, AED 194k overdue Dec 2025, AED 2.33M due Dec 2027), Sea la vie (Installments AED 6.36M 5%, AED 5.73M overdue incl AED 4.45M handover), BMW X4 (Car Loan AED 305k AED 5765/mo 34 paid 27 left closes Aug 2028 balance AED 148k), Cash Loan NBF (AED 1M 5% 48mo AED 23081/mo 18 paid 30 left balance AED 690k closes Nov 2028 defer enabled), School Fees (AED 62.2k AED 39k overdue Terms 2-3), Noya Villa (AED 230k AED 183k overdue AED 57k due Jun 2026), Ali Al Gebely (Lender AED 1.09M no schedule). Be concise, AED, bullet points.';
+var ah=[];
 async function doAI(){
-  const inp=document.getElementById('ain');const q=inp.value.trim();if(!q)return;inp.value='';
-  const ms=document.getElementById('ams');
-  ms.innerHTML+=`<div class="am u">${q}</div>`;
-  const ld=document.createElement('div');ld.className='am a';ld.innerHTML='<span class="ldots" style="color:var(--tx2)">Thinking</span>';
+  var inp=document.getElementById('ai-in');var q=inp.value.trim();if(!q)return;inp.value='';
+  var ms=document.getElementById('ams');
+  ms.innerHTML+='<div class="am u">'+q+'</div>';
+  var ld=document.createElement('div');ld.className='am a';ld.innerHTML='<span class="ldots" style="color:var(--t2)">Thinking</span>';
   ms.appendChild(ld);ms.scrollTop=ms.scrollHeight;
   ah.push({role:'user',content:q});
   try{
-    const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1024,system:ASYS,messages:ah.slice(-10)})});
-    const d=await r.json();
-    const reply=d.content?.[0]?.text||'Could not get a response.';
+    var r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1024,system:ASYS,messages:ah.slice(-10)})});
+    var d=await r.json();
+    var reply=(d.content&&d.content[0]&&d.content[0].text)||'Error.';
     ah.push({role:'assistant',content:reply});ld.remove();
-    ms.innerHTML+=`<div class="am a">${reply.replace(/\n/g,'<br>').replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/^• /gm,'<span style="color:var(--blue)">•</span> ')}</div>`;
+    ms.innerHTML+='<div class="am a">'+reply.replace(/\n/g,'<br>').replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')+'</div>';
     ms.scrollTop=ms.scrollHeight;
-  }catch(e){ld.remove();ms.innerHTML+=`<div class="am a" style="color:var(--red)">Connection error. Please try again.</div>`;}
+  }catch(e){ld.remove();ms.innerHTML+='<div class="am a" style="color:var(--red)">Connection error. Try again.</div>';}
 }
-function askC(q){document.getElementById('ain').value=q;doAI();}
+function askC(q){document.getElementById('ai-in').value=q;doAI();}
 
-// ── NAV ───────────────────────────────────────────────────────────────────
-const pageTitles={dash:'Dashboard',accs:'Accounts',monthly:'Monthly view',cal:'Calendar',rem:'Reminders',stocks:'Stocks',ai:'AI assistant',export:'Export'};
-function nav(pg,el){
-  document.querySelectorAll('.pg').forEach(p=>p.classList.remove('on'));
-  document.querySelectorAll('.ni').forEach(n=>n.classList.remove('on'));
-  const page=document.getElementById('p-'+pg);if(page)page.classList.add('on');
+var pgTitles={dash:'Dashboard',accs:'Accounts',monthly:'Monthly view',cal:'Calendar',rem:'Reminders',stk:'Stocks',ai:'AI assistant',exp:'Export'};
+function go(pg,el){
+  document.querySelectorAll('.pg').forEach(function(p){p.classList.remove('on');});
+  document.querySelectorAll('.ni').forEach(function(n){n.classList.remove('on');});
+  var page=document.getElementById('p-'+pg);if(page)page.classList.add('on');
   if(el)el.classList.add('on');
-  else{document.querySelectorAll('.ni').forEach(n=>{if(n.getAttribute('onclick')&&n.getAttribute('onclick')&&n.getAttribute('onclick').indexOf(pg)>=0)n.classList.add('on');});}
-  document.getElementById('page-title').textContent=pageTitles[pg]||pg;
+  else{document.querySelectorAll('.ni').forEach(function(n){if(n.getAttribute('onclick')&&n.getAttribute('onclick').indexOf("'"+pg+"'")>=0)n.classList.add('on');});}
+  document.getElementById('pg-title').textContent=pgTitles[pg]||pg;
   if(pg==='cal')renderCal();
   if(pg==='accs')renderAccs();
   if(pg==='monthly')renderMonthly();
   if(pg==='rem')renderRem();
-  if(pg==='stocks')renderStocks();
-  if(pg==='export')renderExport();
+  if(pg==='stk')renderStocks();
+  if(pg==='exp')renderExport();
 }
 function rAll(){
   renderDash();
-  const active=['accs','monthly','rem','stocks','export'].find(p=>document.getElementById('p-'+p)?.classList.contains('on'));
-  if(active==='accs')renderAccs();
-  if(active==='monthly')renderMonthly();
-  if(active==='rem')renderRem();
-  if(active==='stocks')renderStocks();
-  if(active==='export')renderExport();
+  var pgs=['accs','monthly','rem','stk','exp'];
+  pgs.forEach(function(p){if(document.getElementById('p-'+p)&&document.getElementById('p-'+p).classList.contains('on')){if(p==='accs')renderAccs();if(p==='monthly')renderMonthly();if(p==='rem')renderRem();if(p==='stk')renderStocks();if(p==='exp')renderExport();}});
 }
-
-// ── CLOCK ─────────────────────────────────────────────────────────────────
-function updateClock(){
-  const now=new Date();
-  document.getElementById('clock').textContent=now.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short',year:'numeric'})+' · '+now.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
-}
-setInterval(updateClock,1000);updateClock();
-
-// ── INIT ──────────────────────────────────────────────────────────────────
-// init below
+function tick(){document.getElementById('clk').textContent=new Date().toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short',year:'numeric'})+' · '+new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});}
+setInterval(tick,1000);tick();
+renderDash();
 </script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js" onload="renderDash()"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </body>
 </html>
+ENDOFFILE
+echo "Done: $(wc -c < /mnt/user-data/outputs/index.html) bytes"
