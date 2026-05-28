@@ -6,8 +6,8 @@
 <title>PayTrack — Raouf Andrea</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.11.0/tabler-icons.min.css">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+
 <style>
 :root {
   --bg0: #0a0a0f;
@@ -1039,7 +1039,7 @@ function exportAccExcel(id){
 }
 function exportPDF(){
   const w=window.open('','_blank');
-  let html=`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>PayTrack Report</title><style>body{font-family:Arial,sans-serif;font-size:12px;color:#1a1a1a;margin:2cm}h1{font-size:22px;margin-bottom:4px}h2{font-size:15px;margin:20px 0 8px;border-bottom:2px solid #eee;padding-bottom:4px}h3{font-size:13px;margin:14px 0 6px}table{width:100%;border-collapse:collapse;margin-bottom:10px}th{background:#f5f5f3;text-align:left;padding:6px 10px;font-size:11px;border:1px solid #ddd}td{padding:6px 10px;border:1px solid #ddd;font-size:11px}.red{color:#A32D2D}.green{color:#3B6D11}.amber{color:#854F0B}.meta{color:#666;font-size:11px}@media print{body{margin:1cm}}</style></head><body>`;
+  let html=`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>PayTrack Report</title><style>body{font-family:Arial,sans-serif;font-size:12px;color:#1a1a1a;margin:2cm}h1{font-size:22px;margin-bottom:4px}h2{font-size:15px;margin:20px 0 8px;border-bottom:2px solid #eee;padding-bottom:4px}h3{font-size:13px;margin:14px 0 6px}table{width:100%;border-collapse:collapse;margin-bottom:10px}th{background:#f5f5f3;text-align:left;padding:6px 10px;font-size:11px;border:1px solid #ddd}td{padding:6px 10px;border:1px solid #ddd;font-size:11px}.red{color:#A32D2D}.green{color:#3B6D11}.amber{color:#854F0B}.meta{color:#666;font-size:11px}@media print{body{margin:1cm}}<\/style><\/head><body>`;
   html+=`<h1>PayTrack Financial Report</h1><div class="meta">Generated: ${fd(TODAY)} &nbsp;|&nbsp; Raouf Andrea</div>`;
   html+=`<h2>Dashboard Summary</h2><table><tr><th>Metric</th><th>Value</th></tr>`;
   let o=0,p=0,ov=0;accs.forEach(a=>{a.pays.forEach(x=>{if(x.status==='paid')p+=x.amount;else o+=x.amount;if(x.status==='overdue')ov+=x.amount;});});
@@ -1054,7 +1054,7 @@ function exportPDF(){
     a.pays.forEach((p,i)=>{html+=`<tr><td>${i+1}</td><td>${p.desc}</td><td>${p.dt}</td><td>${p.nd||'—'}</td><td>${fmt(p.amount)}</td><td>${p.chq||'—'}</td><td class="${p.status==='paid'?'green':p.status==='overdue'?'red':'amber'}">${p.status}</td></tr>`;});
     html+=`</table>`;
   });
-  html+=`</body></html>`;
+  html+=`<\/body><\/html>`;
   w.document.write(html);w.document.close();setTimeout(()=>w.print(),500);
 }
 
@@ -1149,7 +1149,7 @@ function nav(pg,el){
   document.querySelectorAll('.ni').forEach(n=>n.classList.remove('on'));
   const page=document.getElementById('p-'+pg);if(page)page.classList.add('on');
   if(el)el.classList.add('on');
-  else{document.querySelectorAll('.ni').forEach(n=>{if(n.getAttribute('onclick')&&n.getAttribute('onclick').includes("'"+pg+"'"))n.classList.add('on');});}
+  else{document.querySelectorAll('.ni').forEach(n=>{if(n.getAttribute('onclick')&&n.getAttribute('onclick')&&n.getAttribute('onclick').indexOf(pg)>=0)n.classList.add('on');});}
   document.getElementById('page-title').textContent=pageTitles[pg]||pg;
   if(pg==='cal')renderCal();
   if(pg==='accs')renderAccs();
@@ -1176,7 +1176,9 @@ function updateClock(){
 setInterval(updateClock,1000);updateClock();
 
 // ── INIT ──────────────────────────────────────────────────────────────────
-window.addEventListener('DOMContentLoaded',()=>{renderDash();});
+// init below
 </script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js" onload="renderDash()"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </body>
 </html>
