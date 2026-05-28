@@ -5,143 +5,111 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>PayTrack — Raouf Andrea</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.11.0/tabler-icons.min.css">
-<link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500&family=DM+Mono&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <style>
-:root{--bg:#fff;--bg2:#f7f7f5;--bg3:#f0efeb;--tx:#1a1a1a;--tx2:#6b6b68;--tx3:#9b9b98;--br:rgba(0,0,0,0.1);--br2:rgba(0,0,0,0.18);--blue:#378ADD;--green:#3B6D11;--gbg:#EAF3DE;--red:#A32D2D;--rbg:#FCEBEB;--amber:#854F0B;--abg:#FAEEDA;--info:#185FA5;--ibg:#E6F1FB;--r:8px;--rl:12px;--f:'DM Sans',system-ui,sans-serif;--m:'DM Mono',monospace}
-@media(prefers-color-scheme:dark){:root{--bg:#1c1c1a;--bg2:#242422;--bg3:#2c2c2a;--tx:#f0efeb;--tx2:#9b9b98;--tx3:#6b6b68;--br:rgba(255,255,255,0.1);--br2:rgba(255,255,255,0.18);--gbg:#1a2f0a;--rbg:#2f0f0f;--abg:#2f1f05;--ibg:#0a1f3f}}
 *{box-sizing:border-box;margin:0;padding:0}
-html,body{height:100%}
-body{font-family:var(--f);font-size:14px;color:var(--tx);background:var(--bg);display:flex;flex-direction:column}
-.app{display:flex;flex:1;min-height:0}
-.sb{width:210px;flex-shrink:0;border-right:.5px solid var(--br);padding:1rem 0;display:flex;flex-direction:column;background:var(--bg);position:sticky;top:0;height:100vh;overflow-y:auto}
-.logo{padding:0 1rem 1rem;font-size:15px;font-weight:500;border-bottom:.5px solid var(--br);margin-bottom:.5rem;display:flex;align-items:center;gap:8px}
-.ni{display:flex;align-items:center;gap:9px;padding:9px 1rem;cursor:pointer;font-size:13px;color:var(--tx2);transition:background .1s}
-.ni:hover,.ni.on{background:var(--bg2)}
-.ni.on{color:var(--tx);font-weight:500}
-.ni i{font-size:16px}
-.main{flex:1;padding:1.5rem 2rem;overflow-y:auto;min-width:0}
+body{font-family:'DM Sans',sans-serif;font-size:14px;background:#fff;color:#1a1a1a;display:flex;height:100vh;overflow:hidden}
+@media(prefers-color-scheme:dark){body{background:#1c1c1a;color:#f0efeb}.card,.ah{background:#242422!important}.mc{background:#2c2c2a!important}th,td{border-color:rgba(255,255,255,.1)!important}.sb{border-color:rgba(255,255,255,.1)!important;background:#1c1c1a!important}}
+.sb{width:200px;flex-shrink:0;border-right:1px solid #eee;display:flex;flex-direction:column;height:100vh}
+.logo{padding:1rem;font-size:15px;font-weight:500;border-bottom:1px solid #eee}
+.ni{padding:10px 1rem;cursor:pointer;font-size:13px;color:#666;display:flex;align-items:center;gap:8px}
+.ni:hover,.ni.on{background:#f5f5f3;color:#1a1a1a;font-weight:500}
+.main{flex:1;overflow-y:auto;padding:1.5rem 2rem}
 .pg{display:none}.pg.on{display:block}
-.pt{font-size:18px;font-weight:500;margin-bottom:1.5rem;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
-.mg{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:1.5rem}
-.mc{background:var(--bg2);border-radius:var(--r);padding:1rem}
-.ml{font-size:11px;color:var(--tx2);margin-bottom:6px}
+.pt{font-size:18px;font-weight:500;margin-bottom:1.5rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
+.mg{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:1.5rem}
+.mc{background:#f5f5f3;border-radius:8px;padding:1rem}
+.ml{font-size:11px;color:#888;margin-bottom:6px}
 .mv{font-size:18px;font-weight:500}
-.mv.r{color:var(--red)}.mv.a{color:var(--amber)}.mv.g{color:var(--green)}
-.card{background:var(--bg);border:.5px solid var(--br);border-radius:var(--rl);padding:1rem 1.25rem;margin-bottom:1rem}
-.ct{font-size:13px;font-weight:500;margin-bottom:1rem;color:var(--tx2)}
+.red{color:#A32D2D}.grn{color:#3B6D11}.amb{color:#854F0B}
 .g2{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem}
+.card{border:1px solid #eee;border-radius:12px;padding:1rem 1.25rem;margin-bottom:1rem}
+.ct{font-size:13px;color:#888;font-weight:500;margin-bottom:1rem}
 .bdg{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:500}
-.bp{background:var(--gbg);color:var(--green)}.bo{background:var(--rbg);color:var(--red)}.bn{background:var(--abg);color:var(--amber)}.bd{background:var(--ibg);color:var(--info)}
+.bp{background:#EAF3DE;color:#3B6D11}.bo{background:#FCEBEB;color:#A32D2D}.bn{background:#FAEEDA;color:#854F0B}.bd{background:#E6F1FB;color:#185FA5}
 table{width:100%;border-collapse:collapse;font-size:12px}
-th{text-align:left;padding:7px 10px;color:var(--tx2);font-weight:400;border-bottom:.5px solid var(--br);white-space:nowrap}
-td{padding:7px 10px;border-bottom:.5px solid var(--br);vertical-align:middle}
+th{text-align:left;padding:7px 10px;color:#888;font-weight:400;border-bottom:1px solid #eee;white-space:nowrap}
+td{padding:7px 10px;border-bottom:1px solid #eee;vertical-align:middle}
 tr:last-child td{border-bottom:none}
-tr:hover td{background:var(--bg2)}
-.ar{border:.5px solid var(--br);border-radius:var(--r);margin-bottom:8px;overflow:hidden}
-.ah{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;cursor:pointer;background:var(--bg)}
-.ah:hover{background:var(--bg2)}
-.adet{display:none;border-top:.5px solid var(--br)}.adet.on{display:block}
-.syncbar{display:flex;align-items:center;gap:8px;padding:8px 14px;background:var(--bg2);border-bottom:.5px solid var(--br);font-size:11px}
-.syncbar input[type=text]{flex:1;font-size:11px;padding:4px 8px;border:.5px solid var(--br2);border-radius:var(--r);background:var(--bg);color:var(--tx);outline:none}
-.syncbar input[type=text]:focus{border-color:var(--blue)}
-.ss{font-size:11px}.ss.ok{color:var(--green)}.ss.er{color:var(--red)}.ss.ld{color:var(--amber)}
-button{font-family:var(--f);font-size:13px;padding:6px 12px;border:.5px solid var(--br2);border-radius:var(--r);background:var(--bg);color:var(--tx);cursor:pointer;transition:background .1s}
-button:hover{background:var(--bg2)}
-button:active{transform:scale(.98)}
-input,select{font-family:var(--f);font-size:13px;padding:7px 10px;border:.5px solid var(--br2);border-radius:var(--r);background:var(--bg);color:var(--tx);outline:none;width:100%}
-input:focus,select:focus{border-color:var(--blue)}
+tr:hover td{background:#f9f9f7}
+.ar{border:1px solid #eee;border-radius:8px;margin-bottom:8px;overflow:hidden}
+.ah{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;cursor:pointer;background:#fff}
+.ah:hover{background:#f9f9f7}
+.adet{display:none;border-top:1px solid #eee}.adet.on{display:block}
+button{font-family:'DM Sans',sans-serif;font-size:13px;padding:6px 12px;border:1px solid #ddd;border-radius:8px;background:#fff;color:#1a1a1a;cursor:pointer}
+button:hover{background:#f5f5f3}
+input,select,textarea{font-family:'DM Sans',sans-serif;font-size:13px;padding:7px 10px;border:1px solid #ddd;border-radius:8px;background:#fff;color:#1a1a1a;outline:none;width:100%}
+input:focus,select:focus{border-color:#378ADD}
 .rb{font-size:12px;padding:5px 10px;display:flex;align-items:center;gap:5px}
-.db{font-size:11px;padding:3px 8px;border-color:#E24B4A;color:var(--red)}
-.db:hover{background:var(--rbg)}
-.calnav{display:flex;align-items:center;gap:10px;margin-bottom:1rem}
-.cdow{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:2px}
-.cdow div{text-align:center;font-size:11px;color:var(--tx2);padding:4px}
-.cgrid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}
-.cc{min-height:60px;padding:4px;border:.5px solid var(--br);border-radius:4px;background:var(--bg)}
-.cc.dim{background:var(--bg2);opacity:.4}.cc.today{border-color:var(--blue)}
-.cnum{font-size:11px;font-weight:500;margin-bottom:2px}
-.ce{padding:1px 3px;border-radius:2px;margin-bottom:1px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font-size:10px}
-.ce.paid{background:var(--gbg);color:var(--green)}.ce.overdue{background:var(--rbg);color:var(--red)}.ce.notpaid{background:var(--abg);color:var(--amber)}.ce.deferred{background:var(--ibg);color:var(--info)}
-.ams{display:flex;flex-direction:column;gap:8px;overflow-y:auto;max-height:320px;padding-bottom:4px}
-.am{padding:10px 14px;border-radius:var(--r);font-size:13px;line-height:1.6;max-width:88%}
-.am.u{background:var(--ibg);color:var(--info);align-self:flex-end}
-.am.a{background:var(--bg2);align-self:flex-start}
-.chip{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;border:.5px solid var(--br2);cursor:pointer;margin:3px 3px 0 0;background:var(--bg);color:var(--tx)}
-.chip:hover{background:var(--bg2)}
-.eprev{background:var(--bg2);border-radius:var(--r);padding:1rem;font-size:11px;line-height:1.7;max-height:280px;overflow-y:auto;white-space:pre-wrap;font-family:var(--m);color:var(--tx)}
-.modwrap{min-height:320px;background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;border-radius:var(--rl);margin-bottom:1rem}
-.mod{background:var(--bg);border:.5px solid var(--br);border-radius:var(--rl);padding:1.5rem;width:400px;max-width:95%}
-.mt{font-size:15px;font-weight:500;margin-bottom:1rem}
+.xb{font-size:11px;padding:3px 8px;border-color:#E24B4A;color:#A32D2D}
+.xb:hover{background:#FCEBEB}
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:100}
+.modal{background:#fff;border-radius:12px;padding:1.5rem;width:420px;max-width:95vw}
+.modal h3{font-size:15px;font-weight:500;margin-bottom:1rem}
 .fr{margin-bottom:12px}
-.fr label{display:block;font-size:12px;color:var(--tx2);margin-bottom:4px}
+.fr label{display:block;font-size:12px;color:#888;margin-bottom:4px}
 .fa{display:flex;gap:8px;justify-content:flex-end;margin-top:1rem}
-.sl{padding:.75rem 1rem;border-top:.5px solid var(--br);font-size:11px;color:var(--tx2)}
+.sl{padding:.75rem 1rem;border-top:1px solid #eee;font-size:11px;color:#888;margin-top:auto}
+.cdow{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:2px}
+.cdow div{text-align:center;font-size:11px;color:#888;padding:4px}
+.cgrid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}
+.cc{min-height:60px;padding:4px;border:1px solid #eee;border-radius:4px}
+.cc.dim{opacity:.3}.cc.today{border-color:#378ADD}
+.cnum{font-size:11px;font-weight:500;margin-bottom:2px}
+.ce{padding:1px 3px;border-radius:2px;margin-bottom:1px;font-size:10px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.ce.paid{background:#EAF3DE;color:#3B6D11}.ce.overdue{background:#FCEBEB;color:#A32D2D}.ce.notpaid{background:#FAEEDA;color:#854F0B}
+.ams{display:flex;flex-direction:column;gap:8px;max-height:300px;overflow-y:auto;margin-bottom:8px}
+.am{padding:10px 14px;border-radius:8px;font-size:13px;line-height:1.6;max-width:85%}
+.am.u{background:#E6F1FB;color:#185FA5;align-self:flex-end}
+.am.a{background:#f5f5f3;align-self:flex-start}
+.chip{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;border:1px solid #ddd;cursor:pointer;margin:2px}
+.chip:hover{background:#f5f5f3}
+.eprev{background:#f5f5f3;border-radius:8px;padding:1rem;font-size:11px;line-height:1.7;max-height:260px;overflow-y:auto;white-space:pre-wrap;font-family:'DM Mono',monospace}
 .ldots::after{content:'...';animation:ld 1.2s infinite steps(1)}
 @keyframes ld{0%{content:'.'}33%{content:'..'}66%{content:'...'}}
-@media(max-width:640px){.sb{width:48px}.sb .logo span,.sb .ni span,.sl{display:none}.sb .logo{justify-content:center;padding:.75rem 0}.ni{justify-content:center;padding:10px 0}.main{padding:1rem}.g2{grid-template-columns:1fr}}
+@media(max-width:600px){.sb{width:44px}.sb .logo span,.ni span,.sl{display:none}.sb .logo{justify-content:center}.ni{justify-content:center}.g2{grid-template-columns:1fr}.main{padding:1rem}}
 </style>
 </head>
 <body>
-<div class="app">
 <div class="sb">
-  <div class="logo"><i class="ti ti-wallet"></i><span>PayTrack</span></div>
+  <div class="logo" style="display:flex;align-items:center;gap:8px"><i class="ti ti-wallet"></i><span>PayTrack</span></div>
   <div class="ni on" onclick="nav('dash',this)"><i class="ti ti-layout-dashboard"></i><span>Dashboard</span></div>
   <div class="ni" onclick="nav('accs',this)"><i class="ti ti-building-bank"></i><span>Accounts</span></div>
   <div class="ni" onclick="nav('cal',this)"><i class="ti ti-calendar"></i><span>Calendar</span></div>
   <div class="ni" onclick="nav('rem',this)"><i class="ti ti-bell"></i><span>Reminders</span></div>
   <div class="ni" onclick="nav('ai',this)"><i class="ti ti-robot"></i><span>AI assistant</span></div>
-  <div style="flex:1"></div>
-  <div class="sl" id="slbl">Not synced</div>
+  <div class="sl">PayTrack v5</div>
 </div>
 <div class="main">
 
 <div id="p-dash" class="pg on">
-  <div class="pt">Dashboard
-    <div style="display:flex;gap:8px;flex-wrap:wrap">
-      <button class="rb" onclick="syncAll()"><i class="ti ti-refresh"></i> Sync all</button>
-      <button class="rb" onclick="autoMark()"><i class="ti ti-check"></i> Auto-mark paid</button>
-    </div>
-  </div>
+  <div class="pt">Dashboard <div style="display:flex;gap:8px"><button class="rb" onclick="rAll()"><i class="ti ti-refresh"></i> Refresh</button></div></div>
   <div class="mg">
-    <div class="mc"><div class="ml">Total outstanding</div><div class="mv r" id="m1"></div></div>
-    <div class="mc"><div class="ml">Total paid</div><div class="mv g" id="m2"></div></div>
-    <div class="mc"><div class="ml">Overdue</div><div class="mv r" id="m3"></div></div>
-    <div class="mc"><div class="ml">This month</div><div class="mv a" id="m4"></div></div>
+    <div class="mc"><div class="ml">Total outstanding</div><div class="mv red" id="m1"></div></div>
+    <div class="mc"><div class="ml">Total paid</div><div class="mv grn" id="m2"></div></div>
+    <div class="mc"><div class="ml">Overdue</div><div class="mv red" id="m3"></div></div>
+    <div class="mc"><div class="ml">This month</div><div class="mv amb" id="m4"></div></div>
     <div class="mc"><div class="ml">Accounts</div><div class="mv" id="m5"></div></div>
   </div>
   <div class="g2">
-    <div class="card"><div class="ct">Debt by category</div><div style="position:relative;height:190px"><canvas id="pc" role="img" aria-label="Debt by category">Doughnut chart.</canvas></div><div id="pleg" style="display:flex;flex-wrap:wrap;gap:10px;margin-top:10px;font-size:11px;color:var(--tx2)"></div></div>
-    <div class="card"><div class="ct">Monthly obligations (AED)</div><div style="position:relative;height:190px"><canvas id="bc" role="img" aria-label="Monthly obligations">Bar chart.</canvas></div></div>
+    <div class="card"><div class="ct">Debt by category</div><div style="position:relative;height:190px"><canvas id="pc"></canvas></div><div id="pleg" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;font-size:11px;color:#888"></div></div>
+    <div class="card"><div class="ct">Monthly obligations (AED)</div><div style="position:relative;height:190px"><canvas id="bc"></canvas></div></div>
   </div>
-  <div class="card"><div class="ct">Next 90 days</div><div style="overflow-x:auto"><table><thead><tr><th>Account</th><th>Effective date</th><th>Original</th><th>Description</th><th>Chq</th><th style="text-align:right">Amount</th><th>Status</th><th></th></tr></thead><tbody id="utb"></tbody></table></div></div>
+  <div class="card"><div class="ct">Next 90 days</div><div style="overflow-x:auto"><table><thead><tr><th>Account</th><th>Date</th><th>Description</th><th>Chq</th><th style="text-align:right">Amount</th><th>Status</th><th></th></tr></thead><tbody id="utb"></tbody></table></div></div>
 </div>
 
 <div id="p-accs" class="pg">
-  <div class="pt">Accounts <button class="rb" onclick="showAddModal()"><i class="ti ti-plus"></i> Add account</button></div>
+  <div class="pt">Accounts <button class="rb" onclick="openAdd()"><i class="ti ti-plus"></i> Add account</button></div>
   <div id="aclist"></div>
-  <div id="addwrap" style="display:none"><div class="modwrap"><div class="mod">
-    <div class="mt">Add account</div>
-    <div class="fr"><label>Name</label><input type="text" id="nn" placeholder="e.g. New Villa"></div>
-    <div class="fr"><label>Type</label><select id="nt"><option>Installments</option><option>Car Loan</option><option>Cash Loan</option><option>School Fees</option><option>Mortgage</option><option>Lender</option><option>Other</option></select></div>
-    <div class="fr"><label>Principal (AED)</label><input type="number" id="np" placeholder="0"></div>
-    <div class="fr"><label>Google Sheets CSV URL (optional)</label><input type="text" id="nu" placeholder="https://docs.google.com/...pub?output=csv"></div>
-    <div class="fr"><label style="display:flex;align-items:center;gap:8px"><input type="checkbox" id="nd" style="width:auto"> Enable defer (for loans)</label></div>
-    <div class="fa"><button onclick="hideAddModal()">Cancel</button><button onclick="doAdd()" style="background:var(--ibg);color:var(--info)">Add account</button></div>
-  </div></div></div>
-  <div id="delwrap" style="display:none"><div class="modwrap"><div class="mod">
-    <div class="mt">Delete account</div>
-    <p style="font-size:13px;color:var(--tx2);margin-bottom:1rem">Delete <strong id="dname"></strong>? This cannot be undone.</p>
-    <div class="fa"><button onclick="hideDelModal()">Cancel</button><button class="db" onclick="doDel()">Delete</button></div>
-  </div></div></div>
 </div>
 
 <div id="p-cal" class="pg">
   <div class="pt">Calendar</div>
-  <div class="calnav">
-    <button onclick="cm(-1)"><i class="ti ti-chevron-left"></i></button>
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:1rem">
+    <button onclick="calmv(-1)"><i class="ti ti-chevron-left"></i></button>
     <div style="font-size:14px;font-weight:500" id="clbl"></div>
-    <button onclick="cm(1)"><i class="ti ti-chevron-right"></i></button>
+    <button onclick="calmv(1)"><i class="ti ti-chevron-right"></i></button>
   </div>
   <div class="cdow"><div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div></div>
   <div class="cgrid" id="cg"></div>
@@ -149,33 +117,32 @@ input:focus,select:focus{border-color:var(--blue)}
 
 <div id="p-rem" class="pg">
   <div class="pt">Reminders</div>
-  <div class="card"><div class="ct" style="color:var(--red)">Overdue now</div><div id="r1"></div></div>
+  <div class="card"><div class="ct" style="color:#A32D2D">Overdue now</div><div id="r1"></div></div>
   <div class="card"><div class="ct">Due in next 30 days</div><div id="r2"></div></div>
   <div class="card"><div class="ct">Due in 31–90 days</div><div id="r3"></div></div>
   <div class="card">
     <div class="ct">Email reminder</div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
-      <button class="rb" onclick="genEmail('7')"><i class="ti ti-mail"></i> Next 7 days</button>
-      <button class="rb" onclick="genEmail('30')"><i class="ti ti-mail"></i> Next 30 days</button>
-      <button class="rb" onclick="genEmail('ov')"><i class="ti ti-mail"></i> Overdue only</button>
-      <button class="rb" onclick="doMailto()"><i class="ti ti-send"></i> Open in mail app</button>
+      <button class="rb" onclick="genEmail('7')"><i class="ti ti-mail"></i> 7 days</button>
+      <button class="rb" onclick="genEmail('30')"><i class="ti ti-mail"></i> 30 days</button>
+      <button class="rb" onclick="genEmail('ov')"><i class="ti ti-mail"></i> Overdue</button>
+      <button class="rb" onclick="openMailto()"><i class="ti ti-send"></i> Open in mail</button>
     </div>
-    <div class="eprev" id="eprev">Select a range above to generate your reminder email.</div>
+    <div class="eprev" id="eprev">Select a range above.</div>
   </div>
 </div>
 
 <div id="p-ai" class="pg">
   <div class="pt">AI assistant</div>
-  <div class="card" style="display:flex;flex-direction:column;min-height:420px">
-    <div class="ams" id="ams"><div class="am a">Hi Raouf! I have full visibility into your 8 accounts. Ask me anything about your obligations, overdue items, or upcoming payments.</div></div>
-    <div style="margin-top:8px">
+  <div class="card" style="display:flex;flex-direction:column;min-height:400px">
+    <div class="ams" id="ams"><div class="am a">Hi Raouf! Ask me anything about your 8 accounts and payment obligations.</div></div>
+    <div style="margin-bottom:8px">
       <span class="chip" onclick="askC('What is my total overdue and which accounts?')">Overdue summary</span>
-      <span class="chip" onclick="askC('Biggest payments in next 6 months?')">Next 6 months</span>
-      <span class="chip" onclick="askC('NBF loan remaining balance and end date?')">NBF status</span>
-      <span class="chip" onclick="askC('Summarize my 2027 obligations')">2027 obligations</span>
-      <span class="chip" onclick="askC('Which accounts have deferred payments?')">Deferred</span>
+      <span class="chip" onclick="askC('Biggest payments in the next 6 months?')">Next 6 months</span>
+      <span class="chip" onclick="askC('NBF loan status and end date?')">NBF status</span>
+      <span class="chip" onclick="askC('Summarize my 2027 obligations')">2027</span>
     </div>
-    <div style="display:flex;gap:8px;margin-top:8px">
+    <div style="display:flex;gap:8px">
       <input type="text" id="ain" placeholder="Ask about your finances..." onkeydown="if(event.key==='Enter')doAI()" style="flex:1">
       <button onclick="doAI()">Ask ↗</button>
     </div>
@@ -183,76 +150,304 @@ input:focus,select:focus{border-color:var(--blue)}
 </div>
 
 </div>
+
+<!-- Add Account Modal -->
+<div class="modal-bg" id="modal-add" style="display:none">
+  <div class="modal">
+    <h3>Add account</h3>
+    <div class="fr"><label>Name</label><input id="an" placeholder="e.g. New Villa"></div>
+    <div class="fr"><label>Type</label><select id="at"><option>Installments</option><option>Car Loan</option><option>Cash Loan</option><option>School Fees</option><option>Mortgage</option><option>Lender</option><option>Other</option></select></div>
+    <div class="fr"><label>Principal (AED)</label><input type="number" id="ap" placeholder="0"></div>
+    <div class="fr"><label><input type="checkbox" id="ad" style="width:auto;margin-right:6px">Enable defer option (loans)</label></div>
+    <div class="fa"><button onclick="closeAdd()">Cancel</button><button onclick="doAdd()" style="background:#E6F1FB;color:#185FA5">Add</button></div>
+  </div>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<!-- Delete Modal -->
+<div class="modal-bg" id="modal-del" style="display:none">
+  <div class="modal">
+    <h3>Delete account</h3>
+    <p style="font-size:13px;color:#888;margin-bottom:1rem">Delete <strong id="dn"></strong>? Cannot be undone.</p>
+    <div class="fa"><button onclick="closeDel()">Cancel</button><button class="xb" onclick="doDel()">Delete</button></div>
+  </div>
+</div>
+
+<!-- Edit Payment Modal -->
+<div class="modal-bg" id="modal-edit" style="display:none">
+  <div class="modal">
+    <h3>Edit payment</h3>
+    <div class="fr"><label>Description</label><input id="ed"></div>
+    <div class="fr"><label>Amount (AED)</label><input type="number" id="ea"></div>
+    <div class="fr"><label>Date</label><input type="date" id="edt"></div>
+    <div class="fr"><label>Revised date (optional)</label><input type="date" id="end"></div>
+    <div class="fr"><label>Cheque #</label><input id="ec"></div>
+    <div class="fr"><label>Status</label><select id="es"><option value="paid">Paid</option><option value="notpaid">Not paid</option><option value="overdue">Overdue</option><option value="deferred">Deferred</option></select></div>
+    <div class="fa"><button onclick="closeEdit()">Cancel</button><button onclick="saveEdit()" style="background:#E6F1FB;color:#185FA5">Save</button></div>
+  </div>
+</div>
+
+<!-- Add Payment Modal -->
+<div class="modal-bg" id="modal-pay" style="display:none">
+  <div class="modal">
+    <h3>Add payment</h3>
+    <div class="fr"><label>Description</label><input id="pd"></div>
+    <div class="fr"><label>Amount (AED)</label><input type="number" id="pa"></div>
+    <div class="fr"><label>Date</label><input type="date" id="pdt"></div>
+    <div class="fr"><label>Cheque #</label><input id="pc2"></div>
+    <div class="fr"><label>Status</label><select id="ps"><option value="notpaid">Not paid</option><option value="paid">Paid</option><option value="overdue">Overdue</option></select></div>
+    <div class="fa"><button onclick="closePay()">Cancel</button><button onclick="doAddPay()" style="background:#E6F1FB;color:#185FA5">Add</button></div>
+  </div>
+</div>
+
 <script>
-const TODAY=new Date('2026-05-28');
+const T=new Date('2026-05-28');
 const MNS=['January','February','March','April','May','June','July','August','September','October','November','December'];
 const M3=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-function psd(s){if(!s)return null;s=s.trim();const a=s.match(/^(\d{1,2})-([A-Za-z]{3})-(\d{2,4})$/);if(a){const mo={Jan:0,Feb:1,Mar:2,Apr:3,May:4,Jun:5,Jul:6,Aug:7,Sep:8,Oct:9,Nov:10,Dec:11};return new Date(a[3].length===2?2000+ +a[3]:+a[3],mo[a[2]],+a[1]);}const b=s.match(/^(\d{2})-(\d{2})-(\d{4})$/);if(b)return new Date(+b[3],+b[2]-1,+b[1]);const c=s.match(/^(\d{4})-(\d{2})-(\d{2})$/);if(c)return new Date(+c[1],+c[2]-1,+c[3]);const d=new Date(s);return isNaN(d)?null:d;}
-function fd(d){if(!d)return'';return d.getFullYear()+'-'+(d.getMonth()+1).toString().padStart(2,'0')+'-'+d.getDate().toString().padStart(2,'0');}
+
+function fd(d){if(!d)return'';if(typeof d==='string')return d;return d.getFullYear()+'-'+(d.getMonth()+1).toString().padStart(2,'0')+'-'+d.getDate().toString().padStart(2,'0');}
+function pd(s){if(!s)return null;if(s instanceof Date)return s;const a=s.match(/^(\d{4})-(\d{2})-(\d{2})$/);if(a)return new Date(+a[1],+a[2]-1,+a[3]);const b=s.match(/^(\d{2})-(\d{2})-(\d{4})$/);if(b)return new Date(+b[3],+b[2]-1,+b[1]);return null;}
 function fmt(n){return'AED '+Math.round(n).toLocaleString();}
 function eff(p){return(p.nd&&p.nd.trim())?p.nd:p.dt;}
 function sbdg(s){const m={paid:'Paid',overdue:'Overdue',notpaid:'Not paid',deferred:'Deferred'};const c={paid:'bp',overdue:'bo',notpaid:'bn',deferred:'bd'};return`<span class="bdg ${c[s]||'bn'}">${m[s]||s}</span>`;}
-function parseNW(rows){const out=[];for(let i=3;i<rows.length;i++){const r=rows[i];if(!r||!r[4])continue;const amt=parseFloat((r[4]||'').replace(/[^0-9.]/g,''));if(!amt||isNaN(amt))continue;const fs=(r[8]||'').trim().toUpperCase();let st='notpaid';if(fs==='PAID')st='paid';else{const ed=psd(r[7])||psd(r[6]);if(ed&&ed<TODAY)st='overdue';}out.push({desc:(r[1]||r[0]||'').trim(),status:st,amount:amt,dt:psd(r[6])?fd(psd(r[6])):'',nd:psd(r[7])?fd(psd(r[7])):'',chq:(r[5]||'').trim(),pct:(r[3]||'').trim()});}return out;}
-function parseLoan(rows){const out=[];for(let i=12;i<rows.length;i++){const r=rows[i];if(!r||(!r[2]&&!r[9]))continue;const d=psd((r[9]||r[2]||'').trim());if(!d)continue;const amt=parseFloat((r[11]||r[3]||'').replace(/[^0-9.]/g,''));if(!amt||isNaN(amt))continue;const rs=(r[4]||'').trim().toUpperCase();const st=rs==='PAID'?'paid':d<TODAY?'overdue':'notpaid';out.push({desc:'Monthly payment',status:st,amount:amt,dt:fd(d),nd:'',chq:'',principal:parseFloat((r[12]||'').replace(/[^0-9.]/g,''))||0,interest:parseFloat((r[13]||'').replace(/[^0-9.]/g,''))||0,closing:parseFloat((r[14]||'').replace(/[^0-9.]/g,''))||0});}return out;}
-function parseGen(rows,cm,rs){const out=[];for(let i=rs;i<rows.length;i++){const r=rows[i];if(!r)continue;const amt=parseFloat((r[cm.amount]||'').replace(/[^0-9.]/g,''));if(!amt||isNaN(amt))continue;const d=psd(r[cm.date]||'');const rv=(r[cm.status]||'').trim().toUpperCase();const st=rv==='PAID'||rv==='P'?'paid':rv.includes('OVER')||(d&&d<TODAY)?'overdue':'notpaid';out.push({desc:(r[cm.desc]||'').trim()||'Payment',status:st,amount:amt,dt:d?fd(d):'',nd:cm.nd>=0?(psd(r[cm.nd]||'')?fd(psd(r[cm.nd])):''):'',chq:cm.chq>=0?(r[cm.chq]||'').trim():''});}return out;}
 
 let accs=[
-  {id:'nawayef',name:'Nawayef Villa',type:'Installments',principal:5976679,url:'https://docs.google.com/spreadsheets/d/e/2PACX-1vQRfAFTjUTnnOj5W5WXYcNj2KLkAcOW9Q9I10ra25xZloKVItYVx7YDvY7EGDwww0luFcbtTPRFFyrZ/pub?output=csv',parser:'nw',cm:{},rs:3,synced:false,defer:false,pays:[{desc:'ADM fees',status:'paid',amount:117679,dt:'2025-06-15',nd:'',chq:'000041',pct:'2%'},{desc:'Down payment',status:'paid',amount:585900,dt:'2025-06-15',nd:'',chq:'000042',pct:'10%'},{desc:'Commencement of enabling works',status:'paid',amount:292950,dt:'2025-11-30',nd:'',chq:'000043',pct:'5%'},{desc:'Commencement of construction',status:'notpaid',amount:292950,dt:'2026-05-30',nd:'2026-08-30',chq:'000044',pct:'5%'},{desc:'Commencement of townhouses construction',status:'notpaid',amount:585900,dt:'2026-12-30',nd:'2026-03-30',chq:'000045',pct:'10%'},{desc:'Superstructure 100% completion',status:'notpaid',amount:292950,dt:'2027-06-30',nd:'2027-09-30',chq:'000047',pct:'5%'},{desc:'Facade substantial completion',status:'notpaid',amount:292950,dt:'2027-12-30',nd:'2028-03-30',chq:'000048',pct:'5%'},{desc:'Completion/BCC',status:'notpaid',amount:585900,dt:'2028-09-30',nd:'2028-12-30',chq:'000049',pct:'10%'},{desc:'Handover',status:'notpaid',amount:2929500,dt:'2029-01-31',nd:'2029-04-30',chq:'',pct:'50%'}]},
-  {id:'mayar',name:'Mayar M13-03',type:'Installments',principal:3879131,url:'https://docs.google.com/spreadsheets/d/e/2PACX-1vSVa6XzS51M_v2IcvK9f3PRrwziuPF-jj8mzzKZf2sq9JmewM9coaJ_oEcfy19U7WUuXrVt1vHH9l9g/pub?output=csv',parser:'gen',cm:{desc:1,status:2,amount:4,date:6,nd:7,chq:5},rs:3,synced:false,defer:false,pays:[{desc:'On booking',status:'paid',amount:77583,dt:'2024-10-31',nd:'',chq:''},{desc:'Down payment',status:'paid',amount:387913,dt:'2024-10-31',nd:'',chq:''},{desc:'Commencement of construction',status:'paid',amount:387913,dt:'2025-04-30',nd:'',chq:''},{desc:'50% foundation works',status:'overdue',amount:193957,dt:'2025-12-30',nd:'',chq:''},{desc:'50% super structure',status:'notpaid',amount:193957,dt:'2026-06-30',nd:'',chq:''},{desc:'100% super structure',status:'notpaid',amount:193957,dt:'2026-12-30',nd:'',chq:''},{desc:'Completion of super structure',status:'notpaid',amount:193957,dt:'2027-06-30',nd:'',chq:''},{desc:'At completion — BCC',status:'notpaid',amount:2327479,dt:'2027-12-30',nd:'',chq:''}]},
-  {id:'sea',name:'Sea la vie',type:'Installments',principal:6362872,url:'',parser:'nw',cm:{},rs:3,synced:false,defer:false,pays:[{desc:'On booking',status:'paid',amount:127257,dt:'2024-01-23',nd:'',chq:''},{desc:'On booking',status:'paid',amount:318144,dt:'2024-01-23',nd:'',chq:''},{desc:'During construction',status:'paid',amount:318144,dt:'2024-07-01',nd:'',chq:''},{desc:'During construction',status:'overdue',amount:318144,dt:'2024-12-01',nd:'',chq:''},{desc:'During construction',status:'overdue',amount:318144,dt:'2025-05-01',nd:'',chq:''},{desc:'During construction',status:'overdue',amount:318144,dt:'2025-10-01',nd:'',chq:''},{desc:'During construction',status:'overdue',amount:318144,dt:'2026-01-01',nd:'',chq:''},{desc:'On handover',status:'overdue',amount:4454010,dt:'2026-03-30',nd:'',chq:''}]},
-  {id:'bmw',name:'BMW X4',type:'Car Loan',principal:305000,url:'https://docs.google.com/spreadsheets/d/e/2PACX-1vTKanesoYvxZcWzhI4jC3Y8Tnjd7tSQvmqBBbiu-uxbsV0r_bhj3WZaWFhwFgSbS8wkoOwzOotjnhZF/pub?gid=0&single=true&output=csv',parser:'loan',cm:{},rs:12,synced:false,defer:false,pays:Array.from({length:61},(_,i)=>{if(!i)return null;const d=new Date('2023-08-20');d.setMonth(d.getMonth()+(i-1));return{desc:'Monthly car payment',status:d>TODAY?'notpaid':'paid',amount:5765,dt:fd(d),nd:'',chq:''};}).filter(Boolean)},
-  {id:'nbf',name:'Cash Loan NBF',type:'Cash Loan',principal:1000000,url:'https://docs.google.com/spreadsheets/d/e/2PACX-1vRt1t5QMmkctrMJUqGIk10oEHv3ZzyN0dCNmpfa3lqcZQgmD79xPdrMT59Khf3prbeWB4IQsNr_VQVA/pub?gid=73637947&single=true&output=csv',parser:'loan',cm:{},rs:12,synced:false,defer:true,pays:Array.from({length:48},(_,i)=>{const d=new Date('2024-12-10');d.setMonth(d.getMonth()+i);return{desc:'Monthly loan payment',status:d>TODAY?'notpaid':'paid',amount:23081,dt:fd(d),nd:'',chq:'',deferred:false};})},
-  {id:'school',name:'School Fees',type:'School Fees',principal:62200,url:'',parser:'gen',cm:{desc:0,status:2,amount:1,date:2,nd:-1,chq:-1},rs:1,synced:false,defer:false,pays:[{desc:'Term 1',status:'paid',amount:23200,dt:'2025-08-01',nd:'',chq:''},{desc:'Term 2',status:'overdue',amount:19500,dt:'2025-12-12',nd:'',chq:''},{desc:'Term 3',status:'overdue',amount:19500,dt:'2026-03-17',nd:'',chq:''}]},
-  {id:'noya',name:'Noya Villa',type:'Installments',principal:230000,url:'',parser:'nw',cm:{},rs:3,synced:false,defer:false,pays:[{desc:'Commission to broker',status:'overdue',amount:12075,dt:'2025-09-05',nd:'',chq:''},{desc:'1st payment',status:'overdue',amount:57000,dt:'2025-09-05',nd:'',chq:''},{desc:'2nd payment',status:'overdue',amount:57000,dt:'2025-12-05',nd:'',chq:''},{desc:'3rd payment',status:'overdue',amount:57000,dt:'2026-03-05',nd:'',chq:''},{desc:'4th payment',status:'notpaid',amount:57000,dt:'2026-06-05',nd:'',chq:''}]},
-  {id:'ali',name:'Ali Al Gebely',type:'Lender',principal:1090000,url:'',parser:'gen',cm:{},rs:1,synced:false,defer:false,pays:[]}
+  {id:'nawayef',name:'Nawayef Villa',type:'Installments',principal:5976679,defer:false,pays:[
+    {desc:'ADM fees',status:'paid',amount:117679,dt:'2025-06-15',nd:'',chq:'000041'},
+    {desc:'Down payment',status:'paid',amount:585900,dt:'2025-06-15',nd:'',chq:'000042'},
+    {desc:'Commencement of enabling works',status:'paid',amount:292950,dt:'2025-11-30',nd:'',chq:'000043'},
+    {desc:'Commencement of construction',status:'notpaid',amount:292950,dt:'2026-05-30',nd:'2026-08-30',chq:'000044'},
+    {desc:'Commencement of townhouses construction',status:'notpaid',amount:585900,dt:'2026-12-30',nd:'2026-03-30',chq:'000045'},
+    {desc:'Superstructure 100% completion',status:'notpaid',amount:292950,dt:'2027-06-30',nd:'2027-09-30',chq:'000047'},
+    {desc:'Facade substantial completion',status:'notpaid',amount:292950,dt:'2027-12-30',nd:'2028-03-30',chq:'000048'},
+    {desc:'Completion/BCC',status:'notpaid',amount:585900,dt:'2028-09-30',nd:'2028-12-30',chq:'000049'},
+    {desc:'Handover',status:'notpaid',amount:2929500,dt:'2029-01-31',nd:'2029-04-30',chq:''}
+  ]},
+  {id:'mayar',name:'Mayar M13-03',type:'Installments',principal:3879131,defer:false,pays:[
+    {desc:'On booking',status:'paid',amount:77583,dt:'2024-10-31',nd:'',chq:''},
+    {desc:'Down payment',status:'paid',amount:387913,dt:'2024-10-31',nd:'',chq:''},
+    {desc:'Commencement of construction',status:'paid',amount:387913,dt:'2025-04-30',nd:'',chq:''},
+    {desc:'50% foundation works',status:'overdue',amount:193957,dt:'2025-12-30',nd:'',chq:''},
+    {desc:'50% super structure',status:'notpaid',amount:193957,dt:'2026-06-30',nd:'',chq:''},
+    {desc:'100% super structure',status:'notpaid',amount:193957,dt:'2026-12-30',nd:'',chq:''},
+    {desc:'Completion of super structure',status:'notpaid',amount:193957,dt:'2027-06-30',nd:'',chq:''},
+    {desc:'At completion — BCC',status:'notpaid',amount:2327479,dt:'2027-12-30',nd:'',chq:''}
+  ]},
+  {id:'sea',name:'Sea la vie',type:'Installments',principal:6362872,defer:false,pays:[
+    {desc:'On booking',status:'paid',amount:127257,dt:'2024-01-23',nd:'',chq:''},
+    {desc:'On booking',status:'paid',amount:318144,dt:'2024-01-23',nd:'',chq:''},
+    {desc:'During construction',status:'paid',amount:318144,dt:'2024-07-01',nd:'',chq:''},
+    {desc:'During construction',status:'overdue',amount:318144,dt:'2024-12-01',nd:'',chq:''},
+    {desc:'During construction',status:'overdue',amount:318144,dt:'2025-05-01',nd:'',chq:''},
+    {desc:'During construction',status:'overdue',amount:318144,dt:'2025-10-01',nd:'',chq:''},
+    {desc:'During construction',status:'overdue',amount:318144,dt:'2026-01-01',nd:'',chq:''},
+    {desc:'On handover',status:'overdue',amount:4454010,dt:'2026-03-30',nd:'',chq:''}
+  ]},
+  {id:'bmw',name:'BMW X4',type:'Car Loan',principal:305000,defer:false,pays:(()=>{const r=[];for(let i=0;i<61;i++){const d=new Date('2023-08-20');d.setMonth(d.getMonth()+i);r.push({desc:'Monthly car payment',status:d>T?'notpaid':'paid',amount:5765,dt:fd(d),nd:'',chq:''});}return r;})()},
+  {id:'nbf',name:'Cash Loan NBF',type:'Cash Loan',principal:1000000,defer:true,pays:(()=>{const r=[];for(let i=0;i<48;i++){const d=new Date('2024-12-10');d.setMonth(d.getMonth()+i);r.push({desc:'Monthly loan payment',status:d>T?'notpaid':'paid',amount:23081,dt:fd(d),nd:'',chq:''});}return r;})()},
+  {id:'school',name:'School Fees',type:'School Fees',principal:62200,defer:false,pays:[
+    {desc:'Term 1',status:'paid',amount:23200,dt:'2025-08-01',nd:'',chq:''},
+    {desc:'Term 2',status:'overdue',amount:19500,dt:'2025-12-12',nd:'',chq:''},
+    {desc:'Term 3',status:'overdue',amount:19500,dt:'2026-03-17',nd:'',chq:''}
+  ]},
+  {id:'noya',name:'Noya Villa',type:'Installments',principal:230000,defer:false,pays:[
+    {desc:'Commission to broker',status:'overdue',amount:12075,dt:'2025-09-05',nd:'',chq:''},
+    {desc:'1st payment',status:'overdue',amount:57000,dt:'2025-09-05',nd:'',chq:''},
+    {desc:'2nd payment',status:'overdue',amount:57000,dt:'2025-12-05',nd:'',chq:''},
+    {desc:'3rd payment',status:'overdue',amount:57000,dt:'2026-03-05',nd:'',chq:''},
+    {desc:'4th payment',status:'notpaid',amount:57000,dt:'2026-06-05',nd:'',chq:''}
+  ]},
+  {id:'ali',name:'Ali Al Gebely',type:'Lender',principal:1090000,defer:false,pays:[]}
 ];
-let delId=null;
 
-async function syncAcc(a){if(!a.url)return false;try{const proxyUrl="https://api.allorigins.win/raw?url="+encodeURIComponent(a.url);const res=await fetch(proxyUrl);if(!res.ok)throw 0;const rows=Papa.parse(await res.text(),{skipEmptyLines:false}).data;let p=[];if(a.parser==='nw')p=parseNW(rows);else if(a.parser==='loan')p=parseLoan(rows);else p=parseGen(rows,a.cm,a.rs);if(p.length){p.forEach((x,i)=>{if(a.pays[i]&&a.pays[i].deferred)x.deferred=true;});a.pays=p;a.synced=true;return true;}}catch(e){}return false;}
-async function syncAll(){const b=document.querySelector('[onclick="syncAll()"]');if(b){b.innerHTML='<i class="ti ti-loader-2"></i> Syncing...';b.disabled=true;}const r=await Promise.all(accs.filter(a=>a.url).map(a=>syncAcc(a)));document.getElementById('slbl').textContent=`Synced ${r.filter(Boolean).length} · ${new Date().toLocaleTimeString()}`;if(b){b.innerHTML='<i class="ti ti-refresh"></i> Sync all';b.disabled=false;}rAll();}
-async function syncOne(id){const a=accs.find(x=>x.id===id);if(!a)return;const ss=document.getElementById('ss-'+id);if(ss){ss.textContent='syncing…';ss.className='ss ld';}const ok=await syncAcc(a);if(ss){ss.textContent=ok?'✓ synced':'✗ failed';ss.className='ss '+(ok?'ok':'er');}rAll();}
-function autoMark(){let n=0;accs.forEach(a=>{if(a.type==='Car Loan'||a.type==='Cash Loan'){a.pays.forEach(p=>{const d=psd(eff(p));if(p.status==='notpaid'&&d&&d<TODAY){p.status='paid';n++;}});}});alert(n>0?`Marked ${n} loan payment${n>1?'s':''} as paid.`:'No loan payments to auto-mark.');rAll();}
-function deferPay(id,i){const a=accs.find(x=>x.id===id);if(!a||!a.defer)return;const p=a.pays[i];if(!p)return;const d=psd(p.nd||p.dt);if(!d)return;d.setMonth(d.getMonth()+1);p.nd=fd(d);p.status='deferred';p.deferred=true;rAll();alert(`Deferred to ${p.nd}.\nNote: update your Google Sheet to keep sync accurate.`);}
+let delId=null,editId=null,editIdx=null,payId=null;
+
+// Edit payment
+function openEdit(id,i){
+  editId=id;editIdx=i;
+  const a=accs.find(x=>x.id===id);const p=a.pays[i];
+  document.getElementById('ed').value=p.desc;
+  document.getElementById('ea').value=p.amount;
+  document.getElementById('edt').value=p.dt;
+  document.getElementById('end').value=p.nd||'';
+  document.getElementById('ec').value=p.chq||'';
+  document.getElementById('es').value=p.status;
+  document.getElementById('modal-edit').style.display='flex';
+}
+function closeEdit(){document.getElementById('modal-edit').style.display='none';}
+function saveEdit(){
+  const a=accs.find(x=>x.id===editId);
+  a.pays[editIdx]={...a.pays[editIdx],desc:document.getElementById('ed').value,amount:+document.getElementById('ea').value,dt:document.getElementById('edt').value,nd:document.getElementById('end').value,chq:document.getElementById('ec').value,status:document.getElementById('es').value};
+  closeEdit();rAll();
+}
+
+// Add payment
+function openAddPay(id){payId=id;document.getElementById('modal-pay').style.display='flex';}
+function closePay(){document.getElementById('modal-pay').style.display='none';}
+function doAddPay(){
+  const a=accs.find(x=>x.id===payId);
+  a.pays.push({desc:document.getElementById('pd').value||'Payment',amount:+document.getElementById('pa').value||0,dt:document.getElementById('pdt').value||fd(T),nd:'',chq:document.getElementById('pc2').value,status:document.getElementById('ps').value});
+  ['pd','pa','pdt','pc2'].forEach(x=>document.getElementById(x).value='');
+  closePay();rAll();
+}
+
+// Defer
+function deferPay(id,i){
+  const a=accs.find(x=>x.id===id);if(!a||!a.defer)return;
+  const p=a.pays[i];const d=pd(p.nd||p.dt);if(!d)return;
+  d.setMonth(d.getMonth()+1);p.nd=fd(d);p.status='deferred';
+  rAll();alert('Deferred to '+p.nd);
+}
 function markPaid(id,i){const a=accs.find(x=>x.id===id);if(a&&a.pays[i])a.pays[i].status='paid';rAll();}
-function showAddModal(){document.getElementById('addwrap').style.display='block';document.getElementById('delwrap').style.display='none';}
-function hideAddModal(){document.getElementById('addwrap').style.display='none';}
-function doAdd(){const name=document.getElementById('nn').value.trim();if(!name){alert('Enter a name.');return;}const id='a'+Date.now();accs.push({id,name,type:document.getElementById('nt').value,principal:parseFloat(document.getElementById('np').value)||0,url:document.getElementById('nu').value.trim(),parser:'gen',cm:{desc:1,amount:4,status:8,date:6,nd:7,chq:5},rs:3,synced:false,defer:document.getElementById('nd').checked,pays:[]});hideAddModal();['nn','np','nu'].forEach(x=>document.getElementById(x).value='');document.getElementById('nd').checked=false;if(accs[accs.length-1].url)syncOne(id);else rAll();}
-function showDelModal(id){const a=accs.find(x=>x.id===id);if(!a)return;delId=id;document.getElementById('dname').textContent=a.name;document.getElementById('delwrap').style.display='block';document.getElementById('addwrap').style.display='none';}
-function hideDelModal(){document.getElementById('delwrap').style.display='none';}
-function doDel(){accs=accs.filter(x=>x.id!==delId);delId=null;hideDelModal();rAll();}
 
+// Add/delete account
+function openAdd(){document.getElementById('modal-add').style.display='flex';}
+function closeAdd(){document.getElementById('modal-add').style.display='none';}
+function doAdd(){
+  const name=document.getElementById('an').value.trim();if(!name){alert('Enter a name.');return;}
+  accs.push({id:'a'+Date.now(),name,type:document.getElementById('at').value,principal:+document.getElementById('ap').value||0,defer:document.getElementById('ad').checked,pays:[]});
+  closeAdd();document.getElementById('an').value='';document.getElementById('ap').value='';document.getElementById('ad').checked=false;
+  rAll();
+}
+function openDel(id){const a=accs.find(x=>x.id===id);if(!a)return;delId=id;document.getElementById('dn').textContent=a.name;document.getElementById('modal-del').style.display='flex';}
+function closeDel(){document.getElementById('modal-del').style.display='none';}
+function doDel(){accs=accs.filter(x=>x.id!==delId);closeDel();rAll();}
+
+// Charts
 let pi=null,bi=null;
-function renderCharts(){const cats={};accs.forEach(a=>{const d=a.pays.filter(p=>p.status!=='paid').reduce((s,p)=>s+p.amount,0);if(d>0)cats[a.type]=(cats[a.type]||0)+d;});const lb=Object.keys(cats),dt=Object.values(cats);const cl=['#378ADD','#D85A30','#1D9E75','#D4537E','#BA7517','#7F77DD','#E24B4A','#639922'];if(pi)pi.destroy();pi=new Chart(document.getElementById('pc'),{type:'doughnut',data:{labels:lb,datasets:[{data:dt,backgroundColor:cl.slice(0,lb.length),borderWidth:1,borderColor:'rgba(255,255,255,.3)'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>` ${fmt(c.raw)}`}}}}});document.getElementById('pleg').innerHTML=lb.map((l,i)=>`<span style="display:flex;align-items:center;gap:4px"><span style="width:9px;height:9px;border-radius:2px;background:${cl[i]}"></span>${l}</span>`).join('');const mm={};accs.forEach(a=>{a.pays.forEach(p=>{if(p.status==='paid')return;const d=psd(eff(p));if(!d)return;const k=d.getFullYear()+'-'+(d.getMonth()+1).toString().padStart(2,'0');mm[k]=(mm[k]||0)+p.amount;});});const sm=Object.keys(mm).sort().slice(0,14);if(bi)bi.destroy();bi=new Chart(document.getElementById('bc'),{type:'bar',data:{labels:sm.map(m=>{const[y,mo]=m.split('-');return M3[+mo-1]+' '+y.slice(2);}),datasets:[{label:'AED',data:sm.map(k=>mm[k]),backgroundColor:'#378ADD',borderRadius:3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{ticks:{callback:v=>'AED '+(v>=1e6?(v/1e6).toFixed(1)+'M':(v/1000).toFixed(0)+'k'),color:'#9b9b98'},grid:{color:'rgba(128,128,128,.07)'}},x:{ticks:{autoSkip:false,maxRotation:50,font:{size:9},color:'#9b9b98'}}}}}};}
-function renderDash(){let o=0,p=0,ov=0,mo=0;accs.forEach(a=>{a.pays.forEach(x=>{if(x.status==='paid')p+=x.amount;else o+=x.amount;if(x.status==='overdue')ov+=x.amount;const d=psd(eff(x));if(x.status!=='paid'&&d&&d.getFullYear()===2026&&d.getMonth()===4)mo+=x.amount;});});document.getElementById('m1').textContent=fmt(o);document.getElementById('m2').textContent=fmt(p);document.getElementById('m3').textContent=fmt(ov);document.getElementById('m4').textContent=fmt(mo);document.getElementById('m5').textContent=accs.length;renderCharts();const cut=new Date(TODAY);cut.setDate(cut.getDate()+90);const rows=[];accs.forEach(a=>{a.pays.forEach((x,i)=>{const d=psd(eff(x));if(x.status!=='paid'&&d&&d>=TODAY&&d<=cut)rows.push({...x,acc:a.name,aid:a.id,pi:i,_d:d,defer:a.defer});});});rows.sort((a,b)=>a._d-b._d);document.getElementById('utb').innerHTML=rows.slice(0,20).map(r=>{const hn=r.nd&&r.nd.trim();return`<tr><td>${r.acc}</td><td style="font-weight:${hn?'500':'400'}">${eff(r)}</td><td style="color:var(--tx2);${hn?'text-decoration:line-through':''}">${hn?r.dt:''}</td><td style="max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.desc}</td><td style="font-family:var(--m);font-size:11px">${r.chq||'—'}</td><td style="text-align:right;font-weight:500">${fmt(r.amount)}</td><td>${sbdg(r.status)}</td><td style="white-space:nowrap">${r.status!=='paid'?`<button style="font-size:10px;padding:2px 6px" onclick="markPaid('${r.aid}',${r.pi})">✓</button>`:''}${r.defer&&r.status!=='paid'?` <button style="font-size:10px;padding:2px 6px" onclick="deferPay('${r.aid}',${r.pi})">Defer</button>`:''}</td></tr>`;}).join('');}
+function renderCharts(){
+  const cats={};accs.forEach(a=>{const d=a.pays.filter(p=>p.status!=='paid').reduce((s,p)=>s+p.amount,0);if(d>0)cats[a.type]=(cats[a.type]||0)+d;});
+  const lb=Object.keys(cats),dt=Object.values(cats);
+  const cl=['#378ADD','#D85A30','#1D9E75','#D4537E','#BA7517','#7F77DD','#E24B4A','#639922'];
+  if(pi)pi.destroy();
+  pi=new Chart(document.getElementById('pc'),{type:'doughnut',data:{labels:lb,datasets:[{data:dt,backgroundColor:cl.slice(0,lb.length),borderWidth:1,borderColor:'#fff'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>' '+fmt(c.raw)}}}}});
+  document.getElementById('pleg').innerHTML=lb.map((l,i)=>`<span style="display:flex;align-items:center;gap:4px"><span style="width:9px;height:9px;border-radius:2px;background:${cl[i]}"></span>${l}</span>`).join('');
+  const mm={};accs.forEach(a=>{a.pays.forEach(p=>{if(p.status==='paid')return;const d=pd(eff(p));if(!d)return;const k=d.getFullYear()+'-'+(d.getMonth()+1).toString().padStart(2,'0');mm[k]=(mm[k]||0)+p.amount;});});
+  const sm=Object.keys(mm).sort().slice(0,14);
+  if(bi)bi.destroy();
+  bi=new Chart(document.getElementById('bc'),{type:'bar',data:{labels:sm.map(m=>{const[y,mo]=m.split('-');return M3[+mo-1]+' '+y.slice(2);}),datasets:[{data:sm.map(k=>mm[k]),backgroundColor:'#378ADD',borderRadius:3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{ticks:{callback:v=>'AED '+(v>=1e6?(v/1e6).toFixed(1)+'M':(v/1000).toFixed(0)+'k'),color:'#888'},grid:{color:'rgba(0,0,0,.05)'}},x:{ticks:{autoSkip:false,maxRotation:50,font:{size:9},color:'#888'}}}}});
+}
+
+function renderDash(){
+  let o=0,p=0,ov=0,mo=0;
+  accs.forEach(a=>{a.pays.forEach(x=>{if(x.status==='paid')p+=x.amount;else o+=x.amount;if(x.status==='overdue')ov+=x.amount;const d=pd(eff(x));if(x.status!=='paid'&&d&&d.getFullYear()===2026&&d.getMonth()===4)mo+=x.amount;});});
+  document.getElementById('m1').textContent=fmt(o);
+  document.getElementById('m2').textContent=fmt(p);
+  document.getElementById('m3').textContent=fmt(ov);
+  document.getElementById('m4').textContent=fmt(mo);
+  document.getElementById('m5').textContent=accs.length;
+  renderCharts();
+  const cut=new Date(T);cut.setDate(cut.getDate()+90);
+  const rows=[];
+  accs.forEach(a=>{a.pays.forEach((x,i)=>{const d=pd(eff(x));if(x.status!=='paid'&&d&&d>=T&&d<=cut)rows.push({...x,acc:a.name,aid:a.id,pi:i,_d:d,defer:a.defer});});});
+  rows.sort((a,b)=>a._d-b._d);
+  document.getElementById('utb').innerHTML=rows.slice(0,20).map(r=>{
+    const hn=r.nd&&r.nd.trim();
+    return`<tr><td>${r.acc}</td><td style="font-weight:${hn?'500':'400'}">${eff(r)}${hn?`<br><small style="text-decoration:line-through;color:#aaa">${r.dt}</small>`:''}</td><td style="max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.desc}</td><td style="font-size:11px">${r.chq||'—'}</td><td style="text-align:right;font-weight:500">${fmt(r.amount)}</td><td>${sbdg(r.status)}</td><td style="white-space:nowrap"><button style="font-size:10px;padding:2px 6px" onclick="markPaid('${r.aid}',${r.pi})">✓</button>${r.defer?` <button style="font-size:10px;padding:2px 6px" onclick="deferPay('${r.aid}',${r.pi})">Defer</button>`:''} <button style="font-size:10px;padding:2px 6px" onclick="openEdit('${r.aid}',${r.pi})">✎</button></td></tr>`;
+  }).join('');
+}
+
 function ticon(t){return{Installments:'home','Car Loan':'car','Cash Loan':'cash','School Fees':'school',Lender:'user'}[t]||'building-bank';}
-function renderAccs(){document.getElementById('aclist').innerHTML=accs.map(a=>{const debt=a.pays.filter(p=>p.status!=='paid').reduce((s,p)=>s+p.amount,0);const paid=a.pays.filter(p=>p.status==='paid').reduce((s,p)=>s+p.amount,0);const ov=a.pays.filter(p=>p.status==='overdue').reduce((s,p)=>s+p.amount,0);const isL=a.parser==='loan';const sb=a.synced?'<span class="bdg bp" style="font-size:10px">synced</span>':a.url?'<span class="bdg bn" style="font-size:10px">not synced</span>':'';const th=isL?'<tr><th>#</th><th>Date</th><th>Instalment</th><th>Principal</th><th>Interest</th><th>Closing bal</th><th>Status</th><th></th></tr>':'<tr><th>#</th><th>Effective date</th><th>Original</th><th>Description</th><th>Chq</th><th style="text-align:right">Amount</th><th>%</th><th>Status</th><th></th></tr>';const rows=a.pays.map((p,i)=>{const hn=p.nd&&p.nd.trim();const pb=p.status!=='paid'?`<button style="font-size:10px;padding:2px 5px" onclick="markPaid('${a.id}',${i})">✓</button>`:'';const db=a.defer&&p.status!=='paid'?` <button style="font-size:10px;padding:2px 5px" onclick="deferPay('${a.id}',${i})">Defer</button>`:'';if(isL)return`<tr><td>${i+1}</td><td>${p.dt}</td><td>${fmt(p.amount)}</td><td>${p.principal?fmt(p.principal):'—'}</td><td>${p.interest?fmt(p.interest):'—'}</td><td>${p.closing?fmt(p.closing):'—'}</td><td>${sbdg(p.status)}</td><td style="white-space:nowrap">${pb}${db}</td></tr>`;return`<tr><td>${i+1}</td><td style="font-weight:${hn?'500':'400'}">${eff(p)}</td><td style="color:var(--tx2);${hn?'text-decoration:line-through':''}">${hn?p.dt:''}</td><td>${p.desc}</td><td style="font-family:var(--m);font-size:11px">${p.chq||'—'}</td><td style="text-align:right">${fmt(p.amount)}</td><td>${p.pct||''}</td><td>${sbdg(p.status)}</td><td style="white-space:nowrap">${pb}${db}</td></tr>`;}).join('');return`<div class="ar"><div class="ah" onclick="togAcc('d-${a.id}')"><div><div style="font-weight:500;font-size:13px;display:flex;align-items:center;gap:8px"><i class="ti ti-${ticon(a.type)}" style="font-size:15px;color:var(--tx2)"></i>${a.name} ${sb}</div><div style="font-size:11px;color:var(--tx2);margin-top:2px">${a.type} · ${fmt(a.principal)}${a.defer?' · <span style="color:var(--info)">defer on</span>':''}</div></div><div style="text-align:right;flex-shrink:0;margin-left:12px;display:flex;align-items:center;gap:8px"><div><div style="font-weight:500;font-size:13px;color:var(--red)">${fmt(debt)}</div><div style="font-size:11px;color:var(--tx2);margin-top:2px">${fmt(paid)} paid${ov?` · <span style="color:var(--red)">${fmt(ov)} overdue</span>`:''}</div></div><button class="db" onclick="event.stopPropagation();showDelModal('${a.id}')" aria-label="Delete ${a.name}"><i class="ti ti-trash"></i></button></div></div><div class="adet" id="d-${a.id}"><div class="syncbar"><i class="ti ti-table-import" style="font-size:14px;color:var(--tx2)"></i><input type="text" placeholder="Google Sheets CSV URL…" value="${a.url||''}" id="u-${a.id}" onchange="saveUrl('${a.id}',this.value)"><button onclick="syncOne('${a.id}')"><i class="ti ti-refresh"></i> Sync</button><span class="ss" id="ss-${a.id}">${a.url?(a.synced?'✓ synced':'not synced'):'no URL'}</span></div>${a.pays.length?`<div style="overflow-x:auto"><table><thead>${th}</thead><tbody>${rows}</tbody></table></div>`:'<p style="padding:1rem;font-size:12px;color:var(--tx2)">No schedule yet.</p>'}</div></div>`;}).join('');}
-function saveUrl(id,v){const a=accs.find(x=>x.id===id);if(a){a.url=v;renderAccs();}}
+function renderAccs(){
+  document.getElementById('aclist').innerHTML=accs.map(a=>{
+    const debt=a.pays.filter(p=>p.status!=='paid').reduce((s,p)=>s+p.amount,0);
+    const paid=a.pays.filter(p=>p.status==='paid').reduce((s,p)=>s+p.amount,0);
+    const ov=a.pays.filter(p=>p.status==='overdue').reduce((s,p)=>s+p.amount,0);
+    const rows=a.pays.map((p,i)=>{
+      const hn=p.nd&&p.nd.trim();
+      return`<tr><td>${i+1}</td><td style="font-weight:${hn?'500':'400'}">${eff(p)}${hn?`<br><small style="text-decoration:line-through;color:#aaa">${p.dt}</small>`:''}</td><td>${p.desc}</td><td style="font-size:11px">${p.chq||'—'}</td><td style="text-align:right">${fmt(p.amount)}</td><td>${sbdg(p.status)}</td><td style="white-space:nowrap"><button style="font-size:10px;padding:2px 5px" onclick="markPaid('${a.id}',${i})">✓</button>${a.defer&&p.status!=='paid'?` <button style="font-size:10px;padding:2px 5px" onclick="deferPay('${a.id}',${i})">Defer</button>`:''} <button style="font-size:10px;padding:2px 5px" onclick="openEdit('${a.id}',${i})">✎</button></td></tr>`;
+    }).join('');
+    return`<div class="ar">
+      <div class="ah" onclick="togAcc('d-${a.id}')">
+        <div><div style="font-weight:500;font-size:13px;display:flex;align-items:center;gap:8px"><i class="ti ti-${ticon(a.type)}" style="color:#888"></i>${a.name}</div><div style="font-size:11px;color:#888;margin-top:2px">${a.type} · ${fmt(a.principal)}${a.defer?' · <span style="color:#185FA5">defer on</span>':''}</div></div>
+        <div style="text-align:right;display:flex;align-items:center;gap:8px">
+          <div><div style="font-weight:500;color:#A32D2D">${fmt(debt)}</div><div style="font-size:11px;color:#888">${fmt(paid)} paid${ov?` · <span style="color:#A32D2D">${fmt(ov)} overdue</span>`:''}</div></div>
+          <button class="xb" onclick="event.stopPropagation();openDel('${a.id}')"><i class="ti ti-trash"></i></button>
+        </div>
+      </div>
+      <div class="adet" id="d-${a.id}">
+        <div style="padding:8px 14px;border-bottom:1px solid #eee;display:flex;gap:8px">
+          <button class="rb" onclick="openAddPay('${a.id}')"><i class="ti ti-plus"></i> Add payment</button>
+        </div>
+        ${a.pays.length?`<div style="overflow-x:auto"><table><thead><tr><th>#</th><th>Date</th><th>Description</th><th>Chq</th><th style="text-align:right">Amount</th><th>Status</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`:'<p style="padding:1rem;font-size:12px;color:#888">No payments yet. Click Add payment to start.</p>'}
+      </div>
+    </div>`;
+  }).join('');
+}
 function togAcc(id){document.getElementById(id).classList.toggle('on');}
 
 let calY=2026,calM=4;
-function renderCal(){document.getElementById('clbl').textContent=MNS[calM]+' '+calY;const first=new Date(calY,calM,1).getDay(),days=new Date(calY,calM+1,0).getDate(),em={};accs.forEach(a=>{a.pays.forEach(p=>{const d=psd(eff(p));if(d&&d.getFullYear()===calY&&d.getMonth()===calM){const k=d.getDate();if(!em[k])em[k]=[];em[k].push({n:a.name.split(' ')[0],amt:p.amount,st:p.status});}});});let h='';for(let i=0;i<first;i++)h+=`<div class="cc dim"></div>`;for(let d=1;d<=days;d++){const it=calY===TODAY.getFullYear()&&calM===TODAY.getMonth()&&d===TODAY.getDate();h+=`<div class="cc${it?' today':''}"><div class="cnum">${d}</div>${(em[d]||[]).map(e=>`<div class="ce ${e.st}" title="${e.n}: ${fmt(e.amt)}">${e.n}</div>`).join('')}</div>`;}document.getElementById('cg').innerHTML=h;}
-function cm(d){calM+=d;if(calM>11){calM=0;calY++;}if(calM<0){calM=11;calY--;}renderCal();}
+function renderCal(){
+  document.getElementById('clbl').textContent=MNS[calM]+' '+calY;
+  const first=new Date(calY,calM,1).getDay(),days=new Date(calY,calM+1,0).getDate(),em={};
+  accs.forEach(a=>{a.pays.forEach(p=>{const d=pd(eff(p));if(d&&d.getFullYear()===calY&&d.getMonth()===calM){const k=d.getDate();if(!em[k])em[k]=[];em[k].push({n:a.name.split(' ')[0],st:p.status,amt:p.amount});}});});
+  let h='';
+  for(let i=0;i<first;i++)h+='<div class="cc dim"></div>';
+  for(let d=1;d<=days;d++){const it=calY===T.getFullYear()&&calM===T.getMonth()&&d===T.getDate();h+=`<div class="cc${it?' today':''}"><div class="cnum">${d}</div>${(em[d]||[]).map(e=>`<div class="ce ${e.st}" title="${e.n}: ${fmt(e.amt)}">${e.n}</div>`).join('')}</div>`;}
+  document.getElementById('cg').innerHTML=h;
+}
+function calmv(d){calM+=d;if(calM>11){calM=0;calY++;}if(calM<0){calM=11;calY--;}renderCal();}
 
-function remTbl(rows,empty){if(!rows.length)return`<p style="font-size:12px;color:var(--tx2);padding:4px 0">${empty}</p>`;rows.sort((a,b)=>a._d-b._d);return`<div style="overflow-x:auto"><table><thead><tr><th>Account</th><th>Date</th><th>Description</th><th style="text-align:right">Amount</th><th>Status</th></tr></thead><tbody>${rows.map(r=>`<tr><td>${r.acc}</td><td>${eff(r)}</td><td>${r.desc}</td><td style="text-align:right">${fmt(r.amount)}</td><td>${sbdg(r.status)}</td></tr>`).join('')}</tbody></table></div>`;}
-function renderRem(){const d30=new Date(TODAY);d30.setDate(d30.getDate()+30);const d90=new Date(TODAY);d90.setDate(d90.getDate()+90);const ov=[],n30=[],n90=[];accs.forEach(a=>{a.pays.forEach(p=>{const d=psd(eff(p));if(p.status==='overdue')ov.push({...p,acc:a.name,_d:d||TODAY});else if(p.status!=='paid'&&d&&d>=TODAY&&d<=d30)n30.push({...p,acc:a.name,_d:d});else if(p.status!=='paid'&&d&&d>d30&&d<=d90)n90.push({...p,acc:a.name,_d:d});});});document.getElementById('r1').innerHTML=remTbl(ov,'No overdue payments.');document.getElementById('r2').innerHTML=remTbl(n30,'No payments due in the next 30 days.');document.getElementById('r3').innerHTML=remTbl(n90,'No payments due in 31–90 days.');genEmail('30');}
+function remTbl(rows,empty){
+  if(!rows.length)return`<p style="font-size:12px;color:#888;padding:4px 0">${empty}</p>`;
+  rows.sort((a,b)=>a._d-b._d);
+  return`<div style="overflow-x:auto"><table><thead><tr><th>Account</th><th>Date</th><th>Description</th><th style="text-align:right">Amount</th><th>Status</th></tr></thead><tbody>${rows.map(r=>`<tr><td>${r.acc}</td><td>${eff(r)}</td><td>${r.desc}</td><td style="text-align:right">${fmt(r.amount)}</td><td>${sbdg(r.status)}</td></tr>`).join('')}</tbody></table></div>`;
+}
+function renderRem(){
+  const d30=new Date(T);d30.setDate(d30.getDate()+30);
+  const d90=new Date(T);d90.setDate(d90.getDate()+90);
+  const ov=[],n30=[],n90=[];
+  accs.forEach(a=>{a.pays.forEach(p=>{const d=pd(eff(p));if(p.status==='overdue')ov.push({...p,acc:a.name,_d:d||T});else if(p.status!=='paid'&&d&&d>=T&&d<=d30)n30.push({...p,acc:a.name,_d:d});else if(p.status!=='paid'&&d&&d>d30&&d<=d90)n90.push({...p,acc:a.name,_d:d});});});
+  document.getElementById('r1').innerHTML=remTbl(ov,'No overdue payments.');
+  document.getElementById('r2').innerHTML=remTbl(n30,'No payments due in 30 days.');
+  document.getElementById('r3').innerHTML=remTbl(n90,'No payments due in 31–90 days.');
+  genEmail('30');
+}
 let curEmail='';
-function genEmail(range){let pays=[];if(range==='ov'){accs.forEach(a=>{a.pays.forEach(p=>{if(p.status==='overdue')pays.push({...p,acc:a.name,_d:psd(eff(p))||TODAY});});});}else{const cut=new Date(TODAY);cut.setDate(cut.getDate()+parseInt(range));accs.forEach(a=>{a.pays.forEach(p=>{const d=psd(eff(p));if(p.status!=='paid'&&d&&d>=TODAY&&d<=cut)pays.push({...p,acc:a.name,_d:d});});});}pays.sort((a,b)=>a._d-b._d);const lbl=range==='ov'?'Overdue payments':`Payments due — next ${range} days`;const total=pays.reduce((s,p)=>s+p.amount,0);const lines=pays.map(p=>`  • ${p.acc} — ${p.desc}\n    Date: ${eff(p)}  |  Amount: ${fmt(p.amount)}  |  ${p.status.toUpperCase()}${p.chq?' | Chq: '+p.chq:''}`).join('\n\n');curEmail=`Subject: PayTrack Reminder — ${lbl}\n\nHi Raouf,\n\nPayment reminder as of ${fd(TODAY)}.\n\n${lbl.toUpperCase()}\n${'─'.repeat(46)}\n\n${lines||'  None.'}\n\n${'─'.repeat(46)}\nTOTAL: ${fmt(total)}\n\nGenerated by PayTrack.`;document.getElementById('eprev').textContent=curEmail;}
-function doMailto(){if(!curEmail)return;const ls=curEmail.split('\n');window.open(`mailto:?subject=${encodeURIComponent(ls[0].replace('Subject: ',''))}&body=${encodeURIComponent(ls.slice(2).join('\n'))}`);}
+function genEmail(range){
+  let pays=[];
+  if(range==='ov'){accs.forEach(a=>{a.pays.forEach(p=>{if(p.status==='overdue')pays.push({...p,acc:a.name,_d:pd(eff(p))||T});});});}
+  else{const cut=new Date(T);cut.setDate(cut.getDate()+parseInt(range));accs.forEach(a=>{a.pays.forEach(p=>{const d=pd(eff(p));if(p.status!=='paid'&&d&&d>=T&&d<=cut)pays.push({...p,acc:a.name,_d:d});});});}
+  pays.sort((a,b)=>a._d-b._d);
+  const lbl=range==='ov'?'Overdue payments':`Payments due — next ${range} days`;
+  const total=pays.reduce((s,p)=>s+p.amount,0);
+  const lines=pays.map(p=>`  • ${p.acc} — ${p.desc}\n    Date: ${eff(p)}  |  ${fmt(p.amount)}  |  ${p.status.toUpperCase()}${p.chq?' | Chq: '+p.chq:''}`).join('\n\n');
+  curEmail=`Subject: PayTrack Reminder — ${lbl}\n\nHi Raouf,\n\nPayment reminder as of ${fd(T)}.\n\n${lbl.toUpperCase()}\n${'─'.repeat(44)}\n\n${lines||'  None.'}\n\n${'─'.repeat(44)}\nTOTAL: ${fmt(total)}\n\nGenerated by PayTrack.`;
+  document.getElementById('eprev').textContent=curEmail;
+}
+function openMailto(){if(!curEmail)return;const ls=curEmail.split('\n');window.open(`mailto:?subject=${encodeURIComponent(ls[0].replace('Subject: ',''))}&body=${encodeURIComponent(ls.slice(2).join('\n'))}`);}
 
-const ASYS=`Financial assistant for Raouf Andrea. May 28 2026. Outstanding AED 9.5M, Paid AED 2.96M. 8 accounts: Nawayef Villa (Installments AED 5.98M, next AED 293k revised Aug 2026 Chq 000044), Mayar M13-03 (Installments AED 3.88M, AED 194k overdue Dec 2025, AED 2.33M due Dec 2027), Sea la vie (Installments AED 6.36M 5%, AED 5.73M overdue incl AED 4.45M handover), BMW X4 (Car Loan AED 305k AED 5765/mo 34 paid 27 left closes Aug 2028 balance AED 148k), Cash Loan NBF (AED 1M 5% 48mo AED 23081/mo 18 paid 30 left balance AED 690k closes Nov 2028 defer enabled), School Fees (AED 62.2k AED 39k overdue Terms 2-3), Noya Villa (AED 230k AED 183k overdue AED 57k due Jun 2026), Ali Al Gebely (Lender AED 1.09M no schedule). Be concise, AED currency, bullet points.`;
+const ASYS=`Financial assistant for Raouf Andrea. May 28 2026. Outstanding AED 9.5M, Paid AED 2.96M. 8 accounts: Nawayef Villa (Installments AED 5.98M, next AED 293k revised Aug 2026 Chq 000044), Mayar M13-03 (Installments AED 3.88M, AED 194k overdue Dec 2025, AED 2.33M due Dec 2027), Sea la vie (Installments AED 6.36M 5%, AED 5.73M overdue incl AED 4.45M handover), BMW X4 (Car Loan AED 305k AED 5765/mo 34 paid 27 left closes Aug 2028 balance AED 148k), Cash Loan NBF (AED 1M 5% 48mo AED 23081/mo 18 paid 30 left balance AED 690k closes Nov 2028 defer enabled), School Fees (AED 62.2k AED 39k overdue Terms 2-3), Noya Villa (AED 230k AED 183k overdue AED 57k due Jun 2026), Ali Al Gebely (Lender AED 1.09M no schedule). Be concise, AED, bullet points.`;
 const ah=[];
-async function doAI(){const inp=document.getElementById('ain');const q=inp.value.trim();if(!q)return;inp.value='';const ms=document.getElementById('ams');ms.innerHTML+=`<div class="am u">${q}</div>`;const ld=document.createElement('div');ld.className='am a';ld.innerHTML='<span class="ldots" style="color:var(--tx2)">Thinking</span>';ms.appendChild(ld);ms.scrollTop=ms.scrollHeight;ah.push({role:'user',content:q});try{const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,system:ASYS,messages:ah.slice(-10)})});const d=await r.json();const reply=d.content?.[0]?.text||'Error.';ah.push({role:'assistant',content:reply});ld.remove();ms.innerHTML+=`<div class="am a">${reply.replace(/\n/g,'<br>').replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')}</div>`;ms.scrollTop=ms.scrollHeight;}catch(e){ld.remove();ms.innerHTML+=`<div class="am a">Error. Please try again.</div>`;}}
+async function doAI(){
+  const inp=document.getElementById('ain');const q=inp.value.trim();if(!q)return;inp.value='';
+  const ms=document.getElementById('ams');ms.innerHTML+=`<div class="am u">${q}</div>`;
+  const ld=document.createElement('div');ld.className='am a';ld.innerHTML='<span class="ldots" style="color:#888">Thinking</span>';ms.appendChild(ld);ms.scrollTop=ms.scrollHeight;
+  ah.push({role:'user',content:q});
+  try{
+    const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,system:ASYS,messages:ah.slice(-10)})});
+    const d=await r.json();const reply=d.content?.[0]?.text||'Error.';
+    ah.push({role:'assistant',content:reply});ld.remove();
+    ms.innerHTML+=`<div class="am a">${reply.replace(/\n/g,'<br>').replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')}</div>`;ms.scrollTop=ms.scrollHeight;
+  }catch(e){ld.remove();ms.innerHTML+=`<div class="am a">Error. Please try again.</div>`;}
+}
 function askC(q){document.getElementById('ain').value=q;doAI();}
 
-function nav(pg,el){document.querySelectorAll('.pg').forEach(p=>p.classList.remove('on'));document.querySelectorAll('.ni').forEach(n=>n.classList.remove('on'));document.getElementById('p-'+pg).classList.add('on');if(el)el.classList.add('on');if(pg==='cal')renderCal();if(pg==='accs'){renderAccs();document.getElementById('addwrap').style.display='none';document.getElementById('delwrap').style.display='none';}if(pg==='rem')renderRem();}
-function rAll(){renderDash();if(document.getElementById('p-accs').classList.contains('on'))renderAccs();if(document.getElementById('p-rem').classList.contains('on'))renderRem();}
+function nav(pg,el){
+  document.querySelectorAll('.pg').forEach(p=>p.classList.remove('on'));
+  document.querySelectorAll('.ni').forEach(n=>n.classList.remove('on'));
+  document.getElementById('p-'+pg).classList.add('on');
+  if(el)el.classList.add('on');
+  if(pg==='cal')renderCal();
+  if(pg==='accs')renderAccs();
+  if(pg==='rem')renderRem();
+}
+function rAll(){
+  renderDash();
+  if(document.getElementById('p-accs').classList.contains('on'))renderAccs();
+  if(document.getElementById('p-rem').classList.contains('on'))renderRem();
+}
 
-renderDash();
-Promise.all([syncOne('nawayef'),syncOne('bmw'),syncOne('nbf')]).then(()=>rAll());
+window.onload=function(){renderDash();};
 </script>
 </body>
 </html>
