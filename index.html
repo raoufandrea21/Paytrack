@@ -1,6 +1,3 @@
-bash
-
-cat > /mnt/user-data/outputs/index.html << 'ENDOFFILE'
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -332,6 +329,8 @@ var accs=[
   {id:'ali',name:'Ali Al Gebely',type:'Lender',principal:1090000,url:'',defer:false,remDays:7,pays:[]}
 ];
 var stocks=[];
+function saveState(){try{localStorage.setItem('pt_accs',JSON.stringify(accs));localStorage.setItem('pt_stk',JSON.stringify(stocks));}catch(e){}}
+function loadState(){try{var a=localStorage.getItem('pt_accs');if(a)accs=JSON.parse(a);var s=localStorage.getItem('pt_stk');if(s)stocks=JSON.parse(s);}catch(e){}}
 var delId=null,editId=null,editIdx=null,payId=null;
 
 async function syncAcc(a){
@@ -594,10 +593,10 @@ function closeStock(){cM('m-stk');}
 function doAddStk(){
   var t=document.getElementById('s-t').value.trim().toUpperCase();if(!t){alert('Enter ticker.');return;}
   stocks.push({ticker:t,name:document.getElementById('s-n').value||t,mkt:document.getElementById('s-m').value,cur:document.getElementById('s-cur').value,qty:+document.getElementById('s-q').value||0,bp:+document.getElementById('s-b').value||0,cp:+document.getElementById('s-p').value||0,broker:document.getElementById('s-br').value});
-  cM('m-stk');['s-t','s-n','s-q','s-b','s-p','s-br'].forEach(function(x){document.getElementById(x).value='';});
+  cM('m-stk');saveState();['s-t','s-n','s-q','s-b','s-p','s-br'].forEach(function(x){document.getElementById(x).value='';});
   renderStocks();
 }
-function delStk(i){if(confirm('Delete?')){stocks.splice(i,1);renderStocks();}}
+function delStk(i){if(confirm('Delete?')){stocks.splice(i,1);saveState();renderStocks();}}
 function expStocks(){
   if(!stocks.length){alert('No stocks to export.');return;}
   var wb=XLSX.utils.book_new();
@@ -626,7 +625,7 @@ function expOneExcel(id){
 }
 function expPDF(){
   var w=window.open('','_blank');
-  var html='<!DOCTYPE html><html><head><meta charset="UTF-8"><title>PayTrack Report</title><style>body{font-family:Arial,sans-serif;font-size:12px;color:#1a1a1a;margin:2cm}h1{font-size:22px}h2{font-size:15px;margin:20px 0 8px;border-bottom:2px solid #eee;padding-bottom:4px}h3{font-size:13px;margin:14px 0 6px}table{width:100%;border-collapse:collapse;margin-bottom:10px}th{background:#f5f5f3;text-align:left;padding:6px 8px;font-size:11px;border:1px solid #ddd}td{padding:6px 8px;border:1px solid #ddd;font-size:11px}.r{color:#A32D2D}.g{color:#3B6D11}.am{color:#854F0B}@media print{body{margin:1cm}}</style></head><body>';
+  var html='<!DOCTYPE html><html><head><meta charset="UTF-8"><title>PayTrack Report</title><style>body{font-family:Arial,sans-serif;font-size:12px;color:#1a1a1a;margin:2cm}h1{font-size:22px}h2{font-size:15px;margin:20px 0 8px;border-bottom:2px solid #eee;padding-bottom:4px}h3{font-size:13px;margin:14px 0 6px}table{width:100%;border-collapse:collapse;margin-bottom:10px}th{background:#f5f5f3;text-align:left;padding:6px 8px;font-size:11px;border:1px solid #ddd}td{padding:6px 8px;border:1px solid #ddd;font-size:11px}.r{color:#A32D2D}.g{color:#3B6D11}.am{color:#854F0B}@media print{body{margin:1cm}}<\/style><\/head><body>';
   html+='<h1>PayTrack Financial Report</h1><p style="color:#666;font-size:11px">Generated: '+fd(TODAY)+' | Raouf Andrea</p>';
   var o=0,p=0,ov=0;accs.forEach(function(a){a.pays.forEach(function(x){if(x.status==='paid')p+=x.amount;else o+=x.amount;if(x.status==='overdue')ov+=x.amount;});});
   html+='<h2>Summary</h2><table><tr><th>Metric</th><th>Value</th></tr><tr><td>Total outstanding</td><td class="r"><strong>'+fmt(o)+'</strong></td></tr><tr><td>Total paid</td><td class="g">'+fmt(p)+'</td></tr><tr><td>Total overdue</td><td class="r">'+fmt(ov)+'</td></tr><tr><td>Active accounts</td><td>'+accs.length+'</td></tr></table>';
@@ -638,19 +637,19 @@ function expPDF(){
     html+='<p style="font-size:11px;color:#666;margin-bottom:6px">Outstanding: <strong class="r">'+fmt(debt)+'</strong> | Paid: <strong class="g">'+fmt(paid)+'</strong></p>';
     html+='<table><tr><th>#</th><th>Description</th><th>Due Date</th><th>Revised</th><th>Amount</th><th>Chq</th><th>Status</th></tr>';
     a.pays.forEach(function(p,i){html+='<tr><td>'+(i+1)+'</td><td>'+p.desc+'</td><td>'+p.dt+'</td><td>'+(p.nd||'—')+'</td><td>'+fmt(p.amount)+'</td><td>'+(p.chq||'—')+'</td><td class="'+(p.status==='paid'?'g':p.status==='overdue'?'r':'am')+'">'+p.status+'</td></tr>';});
-    html+='</table>';
+    html+='<\/table>';
   });
-  html+='</body></html>';
+  html+='<\/body><\/html>';
   w.document.write(html);w.document.close();setTimeout(function(){w.print();},600);
 }
 
-function mkPaid(id,i){var a=accs.find(function(x){return x.id===id;});if(a&&a.pays[i])a.pays[i].status='paid';rAll();}
+function mkPaid(id,i){var a=accs.find(function(x){return x.id===id;});if(a&&a.pays[i])a.pays[i].status='paid';saveState();rAll();}
 function deferP(id,i){
   var a=accs.find(function(x){return x.id===id;});if(!a||!a.defer)return;
   var p=a.pays[i];if(!p)return;
   var d=pd(p.nd||p.dt);if(!d)return;
   d.setMonth(d.getMonth()+1);p.nd=fd(d);p.status='deferred';
-  rAll();alert('Deferred to '+p.nd);
+  saveState();rAll();alert('Deferred to '+p.nd);
 }
 var eId=null,eIdx=null,pId=null;
 function opEdit(id,i){
@@ -667,24 +666,24 @@ function opEdit(id,i){
 function saveEdit(){
   var a=accs.find(function(x){return x.id===eId;});
   a.pays[eIdx]=Object.assign({},a.pays[eIdx],{desc:document.getElementById('e-d').value,amount:+document.getElementById('e-a').value,dt:document.getElementById('e-dt').value,nd:document.getElementById('e-nd').value,chq:document.getElementById('e-c').value,status:document.getElementById('e-s').value});
-  cM('m-edit');rAll();
+  cM('m-edit');saveState();rAll();
 }
 function opAddPay(id){pId=id;oM('m-pay');}
 function doAddPay(){
   var a=accs.find(function(x){return x.id===pId;});
   a.pays.push({desc:document.getElementById('p-d').value||'Payment',amount:+document.getElementById('p-a').value||0,dt:document.getElementById('p-dt').value||fd(TODAY),nd:'',chq:document.getElementById('p-c').value||'',pct:document.getElementById('p-pct').value||'',status:document.getElementById('p-s').value});
   ['p-d','p-a','p-dt','p-c','p-pct'].forEach(function(x){document.getElementById(x).value='';});
-  cM('m-pay');rAll();
+  cM('m-pay');saveState();rAll();
 }
 function openAdd(){oM('m-add');}
 function doAdd(){
   var name=document.getElementById('a-n').value.trim();if(!name){alert('Enter a name.');return;}
   accs.push({id:'a'+Date.now(),name:name,type:document.getElementById('a-t').value,principal:+document.getElementById('a-p').value||0,url:'',defer:document.getElementById('a-d').checked,remDays:7,pays:[]});
-  cM('m-add');document.getElementById('a-n').value='';document.getElementById('a-p').value='';document.getElementById('a-d').checked=false;
+  cM('m-add');saveState();document.getElementById('a-n').value='';document.getElementById('a-p').value='';document.getElementById('a-d').checked=false;
   rAll();
 }
 function opDel(id){var a=accs.find(function(x){return x.id===id;});if(!a)return;delId=id;document.getElementById('d-n').textContent=a.name;oM('m-del');}
-function doDel(){accs=accs.filter(function(x){return x.id!==delId;});cM('m-del');rAll();}
+function doDel(){accs=accs.filter(function(x){return x.id!==delId;});cM('m-del');saveState();rAll();}
 
 var ASYS='Financial assistant for Raouf Andrea. May 28 2026. Outstanding AED 9.5M, Paid AED 2.96M. 8 accounts: Nawayef Villa (Installments AED 5.98M, next AED 293k revised Aug 2026 Chq 000044), Mayar M13-03 (Installments AED 3.88M, AED 194k overdue Dec 2025, AED 2.33M due Dec 2027), Sea la vie (Installments AED 6.36M 5%, AED 5.73M overdue incl AED 4.45M handover), BMW X4 (Car Loan AED 305k AED 5765/mo 34 paid 27 left closes Aug 2028 balance AED 148k), Cash Loan NBF (AED 1M 5% 48mo AED 23081/mo 18 paid 30 left balance AED 690k closes Nov 2028 defer enabled), School Fees (AED 62.2k AED 39k overdue Terms 2-3), Noya Villa (AED 230k AED 183k overdue AED 57k due Jun 2026), Ali Al Gebely (Lender AED 1.09M no schedule). Be concise, AED, bullet points.';
 var ah=[];
@@ -728,9 +727,8 @@ function rAll(){
 }
 function tick(){document.getElementById('clk').textContent=new Date().toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short',year:'numeric'})+' · '+new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});}
 setInterval(tick,1000);tick();
+loadState();
 renderDash();
 </script>
 </body>
 </html>
-ENDOFFILE
-echo "Done: $(wc -c < /mnt/user-data/outputs/index.html) bytes"
