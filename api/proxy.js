@@ -1,17 +1,19 @@
-export default async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
-  if (req.method === 'OPTIONS') return res.status(200).end();
-  const { url } = req.query;
-  if (!url) return res.status(400).json({ error: 'No URL' });
+export const config = { runtime: 'edge' };
+
+export default async function handler(req) {
+  const headers = {
+    'Access-Control-Allow-Origin': '*',
+    'Content-Type': 'text/plain; charset=utf-8'
+  };
+  if (req.method === 'OPTIONS') return new Response(null, { status: 200, headers });
+  const { searchParams } = new URL(req.url);
+  const url = searchParams.get('url');
+  if (!url) return new Response('No URL', { status: 400 });
   try {
     const response = await fetch(decodeURIComponent(url));
-    if (!response.ok) throw new Error('Fetch failed: ' + response.status);
     const text = await response.text();
-    res.setHeader('Content-Type', 'text/plain; charset=utf-8');
-    res.setHeader('Cache-Control', 'no-cache');
-    res.status(200).send(text);
+    return new Response(text, { status: 200, headers });
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    return new Response(JSON.stringify({ error: e.message }), { status: 500, headers });
   }
 }
