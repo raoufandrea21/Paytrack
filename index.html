@@ -847,6 +847,7 @@ function editStk(i){
   document.getElementById('es-b').value=s.bp;
   document.getElementById('es-p').value=s.cp;
   document.getElementById('es-br').value=s.broker||'';
+  document.getElementById('es-yf').value=s.yfSym||'';
   document.getElementById('es-cur').value=s.cur||'AED';
   document.getElementById('es-m').value=s.mkt||'DFM';
   oM('m-stk-edit');
@@ -862,7 +863,8 @@ function saveStk(){
     cp:+document.getElementById('es-p').value||0,
     broker:document.getElementById('es-br').value,
     cur:document.getElementById('es-cur').value,
-    mkt:document.getElementById('es-m').value
+    mkt:document.getElementById('es-m').value,
+    yfSym:document.getElementById('es-yf').value.trim()||null
   });
   cM('m-stk-edit');
   saveState();
@@ -1011,7 +1013,7 @@ setInterval(tick,1000);tick();
 setInterval(function(){
   if(!stocks.length)return;
   var ps=stocks.map(function(s,i){
-    return fetchLivePrice(s.ticker,s.mkt).then(function(live){
+    return fetchLivePrice(s.yfSym||s.ticker,s.mkt).then(function(live){
       if(live&&live.price){stocks[i].cp=live.price;stocks[i].livePrice=live.price;stocks[i].prevClose=live.prev||stocks[i].prevClose;}
     }).catch(function(){});
   });
@@ -1026,7 +1028,7 @@ go=function(pg,el){
   _origGo(pg,el);
   if(pg==='stk'){setTimeout(function(){
     if(!stocks.length)return;
-    var ps=stocks.map(function(s,i){return fetchLivePrice(s.ticker,s.mkt).then(function(live){if(live&&live.price){stocks[i].cp=live.price;stocks[i].livePrice=live.price;stocks[i].prevClose=live.prev||stocks[i].prevClose;}}).catch(function(){});});
+    var ps=stocks.map(function(s,i){return fetchLivePrice(s.yfSym||s.ticker,s.mkt).then(function(live){if(live&&live.price){stocks[i].cp=live.price;stocks[i].livePrice=live.price;stocks[i].prevClose=live.prev||stocks[i].prevClose;}}).catch(function(){});});
     Promise.all(ps).then(function(){saveState();renderStocks();});
   },500);}
 };
@@ -1037,55 +1039,53 @@ window.addEventListener('load', function() {
 // Fallback in case load already fired
 if(document.readyState === 'complete') {
   try { loadState(); renderDash(); } catch(e) {}
-}async function fetchLivePrice(ticker,market){
-  // Try multiple sources for UAE stocks
+}// UAE ticker aliases for Yahoo Finance (for tickers that start with numbers or were renamed)
+var UAE_ALIASES={
+  '2POINTZERO':'MULTIPLY.AE',
+  'GHITHA':'GHITHA.AE'
+};
+
+async function fetchLivePrice(ticker,market){
   var isUAE=(market==='DFM'||market==='ADX');
-  // Source 1: ticker.ae API (best for UAE stocks including ones starting with numbers)
+  // Check alias map first
+  var yfSym=null;
   if(isUAE){
+    if(UAE_ALIASES[ticker.toUpperCase()]){
+      yfSym=UAE_ALIASES[ticker.toUpperCase()];
+    } else if(!/^[0-9]/.test(ticker)){
+      yfSym=ticker+'.AE';
+    }
+  } else {
+    yfSym=ticker;
+  }
+  // Try Yahoo Finance if we have a valid symbol
+  if(yfSym){
     try{
-      var url='https://ticker.ae/api/v2/quotes/'+ticker+'?exchange='+(market==='DFM'?'DFM':'ADX');
+      var url='https://query1.finance.yahoo.com/v8/finance/chart/'+yfSym+'?interval=1d&range=1d';
       var res=await fetch('/api/proxy?url='+encodeURIComponent(url));
       if(res.ok){
         var txt=await res.text();
-        if(!txt.trim().startsWith('<')&&!txt.trim().startsWith('{')==false){
+        if(!txt.trim().startsWith('<')&&txt.length>50){
           var d=JSON.parse(txt);
-          if(d&&d.last_price){
-            return{price:parseFloat(d.last_price),prev:parseFloat(d.previous_close)||null,currency:'AED',name:d.name||ticker};
+          var meta=d.chart&&d.chart.result&&d.chart.result[0]&&d.chart.result[0].meta;
+          if(meta&&meta.regularMarketPrice&&meta.regularMarketPrice>0){
+            return{price:meta.regularMarketPrice,prev:meta.previousClose||null,currency:meta.currency||'AED',name:meta.shortName||ticker};
           }
         }
       }
     }catch(e){}
   }
-  // Source 2: Yahoo Finance (works for most listed stocks, not numbers-starting)
-  try{
-    var yfTicker=isUAE?(ticker+'.AE'):ticker;
-    // Skip if ticker starts with number (Yahoo doesn't support)
-    if(!/^[0-9]/.test(ticker)){
-      var url2='https://query1.finance.yahoo.com/v8/finance/chart/'+yfTicker+'?interval=1d&range=1d';
+  // Try ticker.ae for UAE stocks
+  if(isUAE){
+    try{
+      var url2='https://ticker.ae/api/v2/quotes/'+encodeURIComponent(ticker)+'?exchange='+market;
       var res2=await fetch('/api/proxy?url='+encodeURIComponent(url2));
       if(res2.ok){
         var txt2=await res2.text();
-        if(!txt2.trim().startsWith('<')){
+        if(txt2&&!txt2.trim().startsWith('<')&&txt2.trim().startsWith('{')){
           var d2=JSON.parse(txt2);
-          var meta=d2.chart&&d2.chart.result&&d2.chart.result[0]&&d2.chart.result[0].meta;
-          if(meta&&meta.regularMarketPrice){
-            return{price:meta.regularMarketPrice,prev:meta.previousClose||null,currency:meta.currency||'AED',name:meta.shortName||ticker};
-          }
-        }
-      }
-    }
-  }catch(e){}
-  // Source 3: investing.com via proxy (last resort for UAE stocks)
-  if(isUAE){
-    try{
-      var url3='https://api.investing.com/api/search/v2/search?q='+encodeURIComponent(ticker)+'&limit=1&type=equities';
-      var res3=await fetch('/api/proxy?url='+encodeURIComponent(url3));
-      if(res3.ok){
-        var txt3=await res3.text();
-        if(!txt3.trim().startsWith('<')){
-          var d3=JSON.parse(txt3);
-          if(d3&&d3.quotes&&d3.quotes[0]&&d3.quotes[0].last){
-            return{price:parseFloat(d3.quotes[0].last),prev:parseFloat(d3.quotes[0].previous_close)||null,currency:'AED',name:d3.quotes[0].description||ticker};
+          if(d2&&d2.last_price&&parseFloat(d2.last_price)>0){
+            return{price:parseFloat(d2.last_price),prev:parseFloat(d2.previous_close)||null,currency:'AED',name:d2.name||ticker};
           }
         }
       }
@@ -1104,6 +1104,7 @@ if(document.readyState === 'complete') {
     <div class="fr2"><div><label>Market</label><select id="es-m"><option>DFM</option><option>ADX</option><option>NYSE</option><option>NASDAQ</option><option>LSE</option><option>Other</option></select></div><div><label>Currency</label><select id="es-cur"><option>AED</option><option>USD</option><option>GBP</option><option>EUR</option></select></div></div>
     <div class="fr2"><div><label>Quantity</label><input type="number" id="es-q"></div><div><label>Avg buy price</label><input type="number" id="es-b" step="0.01"></div></div>
     <div class="fr2"><div><label>Current price (manual)</label><input type="number" id="es-p" step="0.01"></div><div><label>Broker</label><input id="es-br"></div></div>
+    <div class="fr"><label>Yahoo Finance symbol (optional, for price fetch)</label><input id="es-yf" placeholder="e.g. MULTIPLY.AE or AAPL"></div>
     <div class="fa"><button onclick="cM('m-stk-edit')">Cancel</button><button class="btn-p" onclick="saveStk()">✓ Save</button></div>
   </div>
 </div>
