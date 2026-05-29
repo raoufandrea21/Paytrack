@@ -285,22 +285,12 @@ label{display:block;font-size:11px;color:var(--t2);margin-bottom:4px;font-weight
   <div class="sh"><div class="st">Stock portfolio</div><div style="display:flex;gap:8px;flex-wrap:wrap">
   <button id="refresh-prices-btn" onclick="refreshAllPrices()" style="background:rgba(62,207,142,0.15);color:var(--green);border-color:rgba(62,207,142,0.3)">↻ Refresh prices</button>
   <button id="od-btn" onclick="syncOneDrive()" style="background:rgba(91,156,246,0.15);color:var(--blue);border-color:rgba(91,156,246,0.3)">📊 Sync Excel</button>
-  <button id="excel-view-btn" onclick="toggleExcelView()" style="background:rgba(167,139,250,0.15);color:var(--purple);border-color:rgba(167,139,250,0.3)">👁 View Excel</button>
+  <button id="excel-view-btn" onclick="toggleExcelView()" style="background:rgba(167,139,250,0.15);color:var(--purple);border-color:rgba(167,139,250,0.3)">↗ Open Excel</button>
   <button onclick="openAddStk()">+ Add stock</button>
   <button onclick="expStocks()">↓ Export</button>
 </div></div>
-<div id="excel-embed" style="display:none;margin-bottom:1.25rem">
-  <div class="card" style="padding:0;overflow:hidden">
-    <div style="padding:10px 14px;border-bottom:1px solid var(--b1);display:flex;align-items:center;justify-content:space-between">
-      <div style="font-size:12px;font-weight:600;color:var(--t2)">📊 Raouf UAE Stocks — Live Excel</div>
-      <button onclick="toggleExcelView()" style="font-size:11px">✕ Hide</button>
-    </div>
-    <iframe width="100%" height="420" frameborder="0" scrolling="no"
-      src="https://1drv.ms/x/c/8cf8e5e8e2210ac9/IQSSrEMMCUFjR40vBNQPm1wHARsxZ9sbw4yrfu5FL-FMrs4?em=2&wdAllowInteractivity=False&Item='Raouf%20UAE%20Stocks'!A14%3AI29&wdHideGridlines=True&wdDownloadButton=True"
-      style="display:block;background:var(--bg1)">
-    </iframe>
-  </div>
-</div>
+
+
   <div class="mg" style="margin-bottom:1.25rem">
     <div class="mc bb"><div class="mc-ic b">💼</div><div class="mc-lbl">Total value</div><div class="mc-val" id="st1">AED 0</div></div>
     <div class="mc gb"><div class="mc-ic g">↑</div><div class="mc-lbl">Total gain/loss</div><div class="mc-val" id="st2">AED 0</div></div>
@@ -953,10 +943,7 @@ function renderStocks(){
 
 
 function toggleExcelView(){
-  var el=document.getElementById('excel-embed');
-  var btn=document.getElementById('excel-view-btn');
-  if(el.style.display==='none'){el.style.display='block';btn.textContent='Hide Excel';}
-  else{el.style.display='none';btn.textContent='View Excel';}
+  window.open('https://1drv.ms/x/c/8cf8e5e8e2210ac9/IQSSrEMMCUFjR40vBNQPm1wHARsxZ9sbw4yrfu5FL-FMrs4','_blank');
 }
 function parseCSVRow(line){
   var result=[],cur='',inQ=false;
@@ -1211,14 +1198,7 @@ setInterval(function(){
   });
 },60000);
 
-window.addEventListener('load', function() {
-  try { loadState(); } catch(e) { console.log('loadState error:', e); }
-  try { renderDash(); } catch(e) { console.log('renderDash error:', e); }
-});
-// Fallback in case load already fired
-if(document.readyState === 'complete') {
-  try { loadState(); renderDash(); } catch(e) {}
-}// UAE ticker aliases for Yahoo Finance (for tickers that start with numbers or were renamed)
+// UAE ticker aliases for Yahoo Finance (for tickers that start with numbers or were renamed)
 var UAE_ALIASES={
   '2POINTZERO':'MULTIPLY.AE',
   'GHITHA':'GHITHA.AE'
@@ -1316,7 +1296,16 @@ setInterval(function(){
 
 
 
-</script>
+
+
+window.addEventListener('load', function() {
+  try { loadState(); } catch(e) { console.log('loadState error:', e); }
+  try { renderDash(); } catch(e) { console.log('renderDash error:', e); }
+});
+// Fallback in case load already fired
+if(document.readyState === 'complete') {
+  try { loadState(); renderDash(); } catch(e) {}
+}</script>
 <div class="ovlay" id="m-stk-edit" style="display:none">
   <div class="modal">
     <div class="modal-t">✎ Edit stock</div>
