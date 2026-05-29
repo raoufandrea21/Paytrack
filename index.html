@@ -350,27 +350,42 @@ var stocks=[];
 function saveState(){try{localStorage.setItem('pt_accs',JSON.stringify(accs));localStorage.setItem('pt_stk',JSON.stringify(stocks));}catch(e){}}
 function loadState(){
   try{
-    var ver=localStorage.getItem('pt_ver');
-    if(ver!=='v10'){
-      // Version mismatch - clear old data, keep hardcoded accounts
-      localStorage.removeItem('pt_accs');
-      localStorage.removeItem('pt_stk');
-      localStorage.setItem('pt_ver','v10');
-      return;
-    }
     var a=localStorage.getItem('pt_accs');
     if(a){
       var parsed=JSON.parse(a);
-      // Only use saved data if it's valid and has accounts with payments
-      if(parsed&&parsed.length>0&&parsed[0].pays){
-        accs=parsed;
+      if(parsed&&parsed.length>0&&parsed[0]&&parsed[0].pays){
+        // Keep saved data (user edits, deletions, status changes)
+        // but preserve sheet URLs and remDays from saved if they exist
+        accs.forEach(function(def){
+          var saved=parsed.find(function(x){return x.id===def.id;});
+          if(saved){
+            // Merge: use saved pays/status but keep hardcoded structure
+            def.pays=saved.pays&&saved.pays.length?saved.pays:def.pays;
+            def.url=saved.url||def.url;
+            def.defer=saved.defer!==undefined?saved.defer:def.defer;
+            def.remDays=saved.remDays||def.remDays;
+            def.synced=saved.synced||false;
+          }
+        });
+        // Add any user-added accounts (not in hardcoded list)
+        var defaultIds=['nawayef','mayar','sea','bmw','nbf','school','noya','ali'];
+        parsed.forEach(function(saved){
+          if(defaultIds.indexOf(saved.id)===-1){
+            accs.push(saved);
+          }
+        });
+        // Remove accounts user deleted (not in saved and not a default)
+        // Keep all defaults, remove user-added ones not in saved
+        accs=accs.filter(function(a){
+          if(defaultIds.indexOf(a.id)!==-1)return true;
+          return parsed.find(function(x){return x.id===a.id;});
+        });
       }
     }
     var s=localStorage.getItem('pt_stk');
     if(s){var ps=JSON.parse(s);if(ps&&Array.isArray(ps))stocks=ps;}
   }catch(e){
-    localStorage.removeItem('pt_accs');
-    localStorage.removeItem('pt_stk');
+    console.log('State load error:',e);
   }
 }
 var delId=null,editId=null,editIdx=null,payId=null;
