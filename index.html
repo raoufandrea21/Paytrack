@@ -820,6 +820,57 @@ function renderStocks(){
 }
 
 
+function toggleExcelView(){
+  var el=document.getElementById('excel-embed');
+  var btn=document.getElementById('excel-view-btn');
+  if(el.style.display==='none'){el.style.display='block';btn.textContent='Hide Excel';}
+  else{el.style.display='none';btn.textContent='View Excel';}
+}
+function parseCSVRow(line){
+  var result=[],cur='',inQ=false;
+  for(var i=0;i<line.length;i++){
+    var ch=line[i];
+    if(ch==='"'){inQ=!inQ;}
+    else if((ch===','||ch==='\t')&&!inQ){result.push(cur.trim());cur='';}
+    else{cur+=ch;}
+  }
+  result.push(cur.trim());
+  return result;
+}
+async function syncOneDrive(){
+  var btn=document.getElementById('od-btn');
+  btn.textContent='Syncing...';btn.disabled=true;
+  try{
+    var dlUrl='https://1drv.ms/x/c/8cf8e5e8e2210ac9/IQSSrEMMCUFjR40vBNQPm1wHARsxZ9sbw4yrfu5FL-FMrs4?download=1';
+    var res=await fetch('/api/proxy?url='+encodeURIComponent(dlUrl));
+    if(!res.ok)throw new Error('Fetch failed: '+res.status);
+    var txt=await res.text();
+    if(txt.trim().startsWith('<')||txt.length<10)throw new Error('Got HTML not data');
+    var rows=txt.split(/\r?\n/).filter(function(r){return r.trim();});
+    var updated=0;
+    rows.forEach(function(row){
+      var cols=parseCSVRow(row);
+      if(cols.length<3)return;
+      var ticker=(cols[0]||'').trim().toUpperCase();
+      if(!ticker||ticker==='TICKER'||ticker==='STOCK'||ticker==='#'||ticker==='NAME')return;
+      var stk=stocks.find(function(s){return s.ticker.toUpperCase()===ticker;});
+      if(!stk)return;
+      var price=parseFloat((cols[2]||cols[3]||'').replace(/[^0-9.]/g,''));
+      var qty=parseFloat((cols[1]||'').replace(/[^0-9.]/g,''));
+      var buyPrice=parseFloat((cols[4]||'').replace(/[^0-9.]/g,''));
+      if(price>0){stk.cp=price;stk.livePrice=price;updated++;}
+      if(qty>0)stk.qty=qty;
+      if(buyPrice>0)stk.bp=buyPrice;
+    });
+    saveState();renderStocks();
+    btn.disabled=false;
+    if(updated>0){btn.textContent='Synced '+updated+'!';setTimeout(function(){btn.textContent='Sync Excel';},3000);}
+    else{btn.textContent='Sync Excel';alert('No matching tickers found. Make sure tickers in Excel match your stock cards (e.g. 2POINTZERO, GULFNAV).');}
+  }catch(e){
+    btn.textContent='Sync Excel';btn.disabled=false;
+    alert('Could not read Excel.\nMake sure OneDrive sharing is set to Anyone can view.\nError: '+e.message);
+  }
+}
 function openAddStk(){oM('m-stk');}
 function closeStock(){cM('m-stk');}
 function doAddStk(){
