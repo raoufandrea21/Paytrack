@@ -752,7 +752,7 @@ function renderStocks(){
   document.getElementById('stk-grid').style.display='grid';document.getElementById('stk-empty').style.display='none';
   document.getElementById('stk-grid').innerHTML=stocks.map(function(s,i){
     var val=s.qty*s.cp,gl2=s.qty*(s.cp-s.bp),pct=s.bp>0?((s.cp-s.bp)/s.bp*100):0;
-    return'<div class="stk-card"><div style="display:flex;justify-content:space-between;align-items:flex-start"><div><div style="font-size:14px;font-weight:700;font-family:var(--m)">'+s.ticker+'</div><div style="font-size:11px;color:var(--t2);margin-top:2px">'+s.name+'</div></div><div style="display:flex;gap:6px"><span style="background:rgba(91,156,246,.1);color:var(--blue);font-size:10px;padding:2px 6px;border-radius:4px;font-weight:600">'+s.mkt+'</span><button class="btn-s btn-d" onclick="delStk('+i+')">Delete</button></div></div><div style="display:flex;align-items:baseline;gap:6px;margin-top:.875rem"><div style="font-size:18px;font-weight:600;font-family:var(--m)">'+s.cur+' '+s.cp.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})+'</div><span style="background:'+(pct>=0?'rgba(62,207,142,.12)':'rgba(242,107,107,.12)')+';color:'+(pct>=0?'var(--green)':'var(--red)')+';font-size:11px;padding:2px 6px;border-radius:5px;font-family:var(--m)">'+(pct>=0?'+':'')+pct.toFixed(2)+'%</span></div><div style="display:flex;gap:16px;margin-top:.75rem"><div><div style="font-size:10px;color:var(--t3)">Qty</div><div style="font-size:12px;font-weight:500;font-family:var(--m)">'+s.qty.toLocaleString()+'</div></div><div><div style="font-size:10px;color:var(--t3)">Avg buy</div><div style="font-size:12px;font-weight:500;font-family:var(--m)">'+s.cur+' '+s.bp.toFixed(2)+'</div></div><div><div style="font-size:10px;color:var(--t3)">Value</div><div style="font-size:12px;font-weight:500;font-family:var(--m)">'+fmt(val)+'</div></div><div><div style="font-size:10px;color:var(--t3)">G/L</div><div style="font-size:12px;font-weight:500;font-family:var(--m);color:'+(gl2>=0?'var(--green)':'var(--red)')+'"> '+(gl2>=0?'+':'')+fmt(gl2)+'</div></div></div>'+(s.broker?'<div style="font-size:10px;color:var(--t3);margin-top:8px">'+s.broker+'</div>':'')+'</div>';
+    return'<div class="stk-card"><div style="display:flex;justify-content:space-between;align-items:flex-start"><div><div style="font-size:14px;font-weight:700;font-family:var(--m)">'+s.ticker+'</div><div style="font-size:11px;color:var(--t2);margin-top:2px">'+s.name+'</div></div><div style="display:flex;gap:6px"><span style="background:rgba(91,156,246,.1);color:var(--blue);font-size:10px;padding:2px 6px;border-radius:4px;font-weight:600">'+s.mkt+'</span><button class="btn-s" onclick="editStk('+i+')">✎ Edit</button> <button class="btn-s btn-d" onclick="delStk('+i+')">Delete</button></div></div><div style="display:flex;align-items:baseline;gap:6px;margin-top:.875rem"><div style="font-size:18px;font-weight:600;font-family:var(--m)">'+s.cur+' '+s.cp.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})+'</div><span style="background:'+(pct>=0?'rgba(62,207,142,.12)':'rgba(242,107,107,.12)')+';color:'+(pct>=0?'var(--green)':'var(--red)')+';font-size:11px;padding:2px 6px;border-radius:5px;font-family:var(--m)">'+(pct>=0?'+':'')+pct.toFixed(2)+'%</span></div><div style="display:flex;gap:16px;margin-top:.75rem"><div><div style="font-size:10px;color:var(--t3)">Qty</div><div style="font-size:12px;font-weight:500;font-family:var(--m)">'+s.qty.toLocaleString()+'</div></div><div><div style="font-size:10px;color:var(--t3)">Avg buy</div><div style="font-size:12px;font-weight:500;font-family:var(--m)">'+s.cur+' '+s.bp.toFixed(2)+'</div></div><div><div style="font-size:10px;color:var(--t3)">Value</div><div style="font-size:12px;font-weight:500;font-family:var(--m)">'+fmt(val)+'</div></div><div><div style="font-size:10px;color:var(--t3)">G/L</div><div style="font-size:12px;font-weight:500;font-family:var(--m);color:'+(gl2>=0?'var(--green)':'var(--red)')+'"> '+(gl2>=0?'+':'')+fmt(gl2)+'</div></div></div>'+(s.broker?'<div style="font-size:10px;color:var(--t3);margin-top:8px">'+s.broker+'</div>':'')+'</div>';
   }).join('');
 }
 async function fetchLivePrice(ticker, market) {
@@ -805,6 +805,36 @@ function doAddStk(){
   var t=document.getElementById('s-t').value.trim().toUpperCase();if(!t){alert('Enter ticker.');return;}
   stocks.push({ticker:t,name:document.getElementById('s-n').value||t,mkt:document.getElementById('s-m').value,cur:document.getElementById('s-cur').value,qty:+document.getElementById('s-q').value||0,bp:+document.getElementById('s-b').value||0,cp:+document.getElementById('s-p').value||0,broker:document.getElementById('s-br').value});
   cM('m-stk');saveState();['s-t','s-n','s-q','s-b','s-p','s-br'].forEach(function(x){document.getElementById(x).value='';});
+  renderStocks();
+}
+function editStk(i){
+  var s=stocks[i];
+  document.getElementById('es-i').value=i;
+  document.getElementById('es-t').value=s.ticker;
+  document.getElementById('es-n').value=s.name;
+  document.getElementById('es-q').value=s.qty;
+  document.getElementById('es-b').value=s.bp;
+  document.getElementById('es-p').value=s.cp;
+  document.getElementById('es-br').value=s.broker||'';
+  document.getElementById('es-cur').value=s.cur||'AED';
+  document.getElementById('es-m').value=s.mkt||'DFM';
+  oM('m-stk-edit');
+}
+function saveStk(){
+  var i=+document.getElementById('es-i').value;
+  var orig=stocks[i]||{};
+  stocks[i]=Object.assign({},orig,{
+    ticker:document.getElementById('es-t').value.trim().toUpperCase(),
+    name:document.getElementById('es-n').value,
+    qty:+document.getElementById('es-q').value||0,
+    bp:+document.getElementById('es-b').value||0,
+    cp:+document.getElementById('es-p').value||0,
+    broker:document.getElementById('es-br').value,
+    cur:document.getElementById('es-cur').value,
+    mkt:document.getElementById('es-m').value
+  });
+  cM('m-stk-edit');
+  saveState();
   renderStocks();
 }
 function delStk(i){if(confirm('Delete?')){stocks.splice(i,1);saveState();renderStocks();}}
@@ -956,5 +986,16 @@ if(document.readyState === 'complete') {
   try { loadState(); renderDash(); } catch(e) {}
 }
 </script>
+<div class="ovlay" id="m-stk-edit" style="display:none">
+  <div class="modal">
+    <div class="modal-t">✎ Edit stock</div>
+    <input type="hidden" id="es-i">
+    <div class="fr2"><div><label>Ticker</label><input id="es-t"></div><div><label>Company name</label><input id="es-n"></div></div>
+    <div class="fr2"><div><label>Market</label><select id="es-m"><option>DFM</option><option>ADX</option><option>NYSE</option><option>NASDAQ</option><option>LSE</option><option>Other</option></select></div><div><label>Currency</label><select id="es-cur"><option>AED</option><option>USD</option><option>GBP</option><option>EUR</option></select></div></div>
+    <div class="fr2"><div><label>Quantity</label><input type="number" id="es-q"></div><div><label>Avg buy price</label><input type="number" id="es-b" step="0.01"></div></div>
+    <div class="fr2"><div><label>Current price (manual)</label><input type="number" id="es-p" step="0.01"></div><div><label>Broker</label><input id="es-br"></div></div>
+    <div class="fa"><button onclick="cM('m-stk-edit')">Cancel</button><button class="btn-p" onclick="saveStk()">✓ Save</button></div>
+  </div>
+</div>
 </body>
 </html>
