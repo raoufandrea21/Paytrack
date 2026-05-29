@@ -339,7 +339,17 @@ async function syncAcc(a){
     var res=await fetch('/api/proxy?url='+encodeURIComponent(a.url));
     if(!res.ok)throw 0;
     var txt=await res.text();
-    var rows=txt.split('\n').map(function(r){return r.split(',').map(function(c){return c.replace(/^"|"$/g,'').trim();});});
+    var rows=txt.split('\n').map(function(line){
+      var result=[],cur='',inQ=false;
+      for(var ci=0;ci<line.length;ci++){
+        var ch=line[ci];
+        if(ch==='"'){inQ=!inQ;}
+        else if(ch===','&&!inQ){result.push(cur.trim());cur='';}
+        else{cur+=ch;}
+      }
+      result.push(cur.trim());
+      return result;
+    });
     var parsed=[];
     for(var i=0;i<rows.length;i++){
       var r=rows[i];
