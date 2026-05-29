@@ -742,62 +742,83 @@ function testReminder(){
 function copyEmail(){if(!curEmail)genEmail();navigator.clipboard.writeText(curEmail).then(function(){alert('Copied!');});}
 
 function renderStocks(){
-  var total=stocks.reduce(function(s,x){return s+x.qty*x.cp;},0);
-  var gl=stocks.reduce(function(s,x){return s+x.qty*(x.cp-x.bp);},0);
+  var total=stocks.reduce(function(s,x){return s+x.qty*(x.cp||0);},0);
+  var gl=stocks.reduce(function(s,x){return s+x.qty*((x.cp||0)-(x.bp||0));},0);
   document.getElementById('st1').textContent=total>0?fmt(total):'AED 0';
-  document.getElementById('st2').innerHTML=gl===0?'AED 0':'<span style="color:'+(gl>=0?'var(--green)':'var(--red)')+'"> '+(gl>=0?'+':'')+fmt(gl)+'</span>';
+  var glEl=document.getElementById('st2');
+  glEl.innerHTML=gl===0?'AED 0':'<span style="color:'+(gl>=0?'var(--green)':'var(--red)')+'"> '+(gl>=0?'+':'')+fmt(gl)+'</span>';
   document.getElementById('st3').textContent=stocks.length;
-  document.getElementById('m6').textContent=total>0?fmt(total):'—';
-  if(!stocks.length){document.getElementById('stk-grid').style.display='none';document.getElementById('stk-empty').style.display='block';return;}
-  document.getElementById('stk-grid').style.display='grid';document.getElementById('stk-empty').style.display='none';
-  document.getElementById('stk-grid').innerHTML=stocks.map(function(s,i){
-    var val=s.qty*s.cp,gl2=s.qty*(s.cp-s.bp),pct=s.bp>0?((s.cp-s.bp)/s.bp*100):0;
-    return'<div class="stk-card"><div style="display:flex;justify-content:space-between;align-items:flex-start"><div><div style="font-size:14px;font-weight:700;font-family:var(--m)">'+s.ticker+'</div><div style="font-size:11px;color:var(--t2);margin-top:2px">'+s.name+'</div></div><div style="display:flex;gap:6px"><span style="background:rgba(91,156,246,.1);color:var(--blue);font-size:10px;padding:2px 6px;border-radius:4px;font-weight:600">'+s.mkt+'</span><button class="btn-s" style="background:rgba(91,156,246,0.15);color:var(--blue)" onclick="openChart(s.ticker,s.mkt)">Chart</button> <button class="btn-s" onclick="editStk('+i+')">✎ Edit</button> <button class="btn-s btn-d" onclick="delStk('+i+')">Delete</button></div></div><div style="display:flex;align-items:baseline;gap:6px;margin-top:.875rem"><div style="font-size:18px;font-weight:600;font-family:var(--m)">'+s.cur+' '+s.cp.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})+'</div><span style="background:'+(pct>=0?'rgba(62,207,142,.12)':'rgba(242,107,107,.12)')+';color:'+(pct>=0?'var(--green)':'var(--red)')+';font-size:11px;padding:2px 6px;border-radius:5px;font-family:var(--m)">'+(pct>=0?'+':'')+pct.toFixed(2)+'%</span></div><div style="display:flex;gap:16px;margin-top:.75rem"><div><div style="font-size:10px;color:var(--t3)">Qty</div><div style="font-size:12px;font-weight:500;font-family:var(--m)">'+s.qty.toLocaleString()+'</div></div><div><div style="font-size:10px;color:var(--t3)">Avg buy</div><div style="font-size:12px;font-weight:500;font-family:var(--m)">'+s.cur+' '+s.bp.toFixed(2)+'</div></div><div><div style="font-size:10px;color:var(--t3)">Value</div><div style="font-size:12px;font-weight:500;font-family:var(--m)">'+fmt(val)+'</div></div><div><div style="font-size:10px;color:var(--t3)">G/L</div><div style="font-size:12px;font-weight:500;font-family:var(--m);color:'+(gl2>=0?'var(--green)':'var(--red)')+'"> '+(gl2>=0?'+':'')+fmt(gl2)+'</div></div></div>'+(s.broker?'<div style="font-size:10px;color:var(--t3);margin-top:8px">'+s.broker+'</div>':'')+'</div>';
-  }).join('');
-}
-async function fetchLivePrice(ticker, market) {
-  try {
-    var sym = ticker;
-    if(market==='DFM'||market==='ADX') sym = ticker+'.AE';
-    var url = 'https://query1.finance.yahoo.com/v8/finance/chart/'+sym+'?interval=1d&range=1d';
-    var res = await fetch('/api/proxy?url='+encodeURIComponent(url));
-    if(!res.ok) return null;
-    var txt = await res.text();
-    // Check if HTML returned (blocked)
-    if(txt.trim().startsWith('<')) return null;
-    var d = JSON.parse(txt);
-    var meta = d.chart&&d.chart.result&&d.chart.result[0]&&d.chart.result[0].meta;
-    if(!meta) return null;
-    return {
-      price: meta.regularMarketPrice||meta.previousClose||null,
-      prev: meta.previousClose||null,
-      currency: meta.currency||'AED',
-      name: meta.shortName||meta.longName||ticker
-    };
-  } catch(e) { return null; }
+  document.getElementById('m6').textContent=total>0?fmt(total):'--';
+  var grid=document.getElementById('stk-grid');
+  var empty=document.getElementById('stk-empty');
+  if(!stocks.length){grid.style.display='none';empty.style.display='block';return;}
+  grid.style.display='grid';empty.style.display='none';
+  grid.innerHTML='';
+  stocks.forEach(function(s,i){
+    var val=s.qty*(s.cp||0);
+    var gl2=s.qty*((s.cp||0)-(s.bp||0));
+    var pct=s.bp>0?((s.cp||0)-s.bp)/s.bp*100:0;
+    var dayChg=s.prevClose&&s.cp?(s.cp-s.prevClose)/s.prevClose*100:null;
+    var card=document.createElement('div');
+    card.className='stk-card';
+    card.style.cssText='display:flex;flex-direction:column;gap:0';
+    // header
+    var hdr=document.createElement('div');
+    hdr.style.cssText='display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:.875rem';
+    hdr.innerHTML='<div><div style="font-size:15px;font-weight:700;font-family:var(--m)">'
+      +s.ticker+'</div><div style="font-size:11px;color:var(--t2);margin-top:2px">'
+      +s.name+'</div><span style="display:inline-block;background:rgba(91,156,246,0.12);color:var(--blue);font-size:10px;padding:1px 7px;border-radius:4px;font-weight:600;margin-top:4px">'
+      +s.mkt+'</span></div>'
+      +'<div>'+(s.livePrice?'<span style="font-size:9px;background:rgba(62,207,142,0.15);color:var(--green);padding:2px 7px;border-radius:3px;font-weight:600">● LIVE</span>':'<span style="font-size:9px;color:var(--t3)">manual</span>')+'</div>';
+    card.appendChild(hdr);
+    // price
+    var priceRow=document.createElement('div');
+    priceRow.style.cssText='display:flex;align-items:baseline;gap:8px;margin-bottom:.75rem;flex-wrap:wrap';
+    priceRow.innerHTML='<div style="font-size:22px;font-weight:700;font-family:var(--m)">'
+      +s.cur+' '+(s.cp||0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})+'</div>'
+      +'<span style="font-size:12px;font-weight:600;padding:2px 8px;border-radius:6px;font-family:var(--m);background:'
+      +(pct>=0?'rgba(62,207,142,0.12)':'rgba(242,107,107,0.12)')+';color:'+(pct>=0?'var(--green)':'var(--red)')+'"> '
+      +(pct>=0?'+':'')+pct.toFixed(2)+'%</span>'
+      +(dayChg!==null?'<span style="font-size:11px;color:var(--t2)">'+(dayChg>=0?'▲':'▼')+Math.abs(dayChg).toFixed(2)+'% day</span>':'');
+    card.appendChild(priceRow);
+    // stats
+    var stats=document.createElement('div');
+    stats.style.cssText='display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:8px';
+    stats.innerHTML=[
+      ['Qty',s.qty.toLocaleString(),'var(--t1)'],
+      ['Avg buy',s.cur+' '+(s.bp||0).toFixed(2),'var(--t1)'],
+      ['Value',fmt(val),'var(--t1)'],
+      ['G/L',(gl2>=0?'+':'')+fmt(gl2),(gl2>=0?'var(--green)':'var(--red)')],
+      s.broker?['Broker',s.broker,'var(--t2)']:null,
+      dayChg!==null?['Day chg',(dayChg>=0?'+':'')+dayChg.toFixed(2)+'%',(dayChg>=0?'var(--green)':'var(--red)')]:null
+    ].filter(Boolean).map(function(x){
+      return '<div style="background:var(--bg1);border-radius:8px;padding:7px 10px">'
+        +'<div style="font-size:10px;color:var(--t3);margin-bottom:2px">'+x[0]+'</div>'
+        +'<div style="font-size:12px;font-weight:600;font-family:var(--m);color:'+x[2]+'">'+x[1]+'</div></div>';
+    }).join('');
+    card.appendChild(stats);
+    // buttons
+    var btns=document.createElement('div');
+    btns.style.cssText='display:flex;gap:6px;margin-top:4px';
+    var bChart=document.createElement('button');
+    bChart.textContent='Chart';
+    bChart.style.cssText='flex:1;background:rgba(91,156,246,0.12);color:var(--blue);border-color:rgba(91,156,246,0.3);font-size:11px;justify-content:center';
+    bChart.onclick=(function(t,m){return function(){openChart(t,m);};})(s.ticker,s.mkt);
+    var bEdit=document.createElement('button');
+    bEdit.textContent='Edit';
+    bEdit.style.cssText='flex:1;font-size:11px;justify-content:center';
+    bEdit.onclick=(function(idx){return function(){editStk(idx);};})(i);
+    var bDel=document.createElement('button');
+    bDel.textContent='Delete';
+    bDel.className='btn-d';
+    bDel.style.cssText='flex:1;font-size:11px;justify-content:center';
+    bDel.onclick=(function(idx){return function(){delStk(idx);};})(i);
+    btns.appendChild(bChart);btns.appendChild(bEdit);btns.appendChild(bDel);
+    card.appendChild(btns);
+    grid.appendChild(card);
+  });
 }
 
-async function refreshAllPrices() {
-  if(!stocks.length) return;
-  var btn = document.getElementById('refresh-prices-btn');
-  if(btn) { btn.textContent='↻ Refreshing...'; btn.disabled=true; }
-  var updated = 0;
-  for(var i=0;i<stocks.length;i++){
-    var s=stocks[i];
-    var live = await fetchLivePrice(s.ticker, s.mkt);
-    if(live && live.price) {
-      stocks[i].cp = live.price;
-      stocks[i].livePrice = live.price;
-      stocks[i].prevClose = live.prev;
-      updated++;
-    }
-  }
-  saveState();
-  renderStocks();
-  if(btn) { btn.textContent='↻ Refresh prices'; btn.disabled=false; }
-  if(updated>0) alert('Updated '+updated+' stock price'+(updated>1?'s':'')+' from Yahoo Finance.');
-  else alert('Could not fetch live prices. Check ticker symbols (UAE stocks need .AE suffix or select DFM/ADX market).');
-}
 
 function openAddStk(){oM('m-stk');}
 function closeStock(){cM('m-stk');}
@@ -808,12 +829,14 @@ function doAddStk(){
   renderStocks();
 }
 function openChart(ticker,market){
-  var pfx={DFM:"DFM",ADX:"ADX",NYSE:"NYSE",NASDAQ:"NASDAQ",LSE:"LSE"};
-  var sym=(pfx[market]?pfx[market]+":":"")+ticker;
-  document.getElementById("tv-title").textContent=sym+" Live Chart";
-  var url="https://www.tradingview.com/widgetembed/?frameElementId=tv-frame&symbol="+encodeURIComponent(sym)+"&interval=D&theme=dark&style=1&timezone=Asia%2FDubai&withdateranges=1&locale=en&hidesidetoolbar=0";
-  document.getElementById("tv-frame").src=url;
-  oM("m-tv");
+  var pfx={DFM:'DFM',ADX:'ADX',NYSE:'NYSE',NASDAQ:'NASDAQ',LSE:'LSE'};
+  var sym=(pfx[market]?pfx[market]+':':'')+ticker;
+  document.getElementById('tv-title').textContent=sym+' — Live Chart';
+  var frame=document.getElementById('tv-frame');
+  frame.src='https://s.tradingview.com/widgetembed/?frameElementId=tv-frame&symbol='
+    +encodeURIComponent(sym)
+    +'&interval=D&theme=dark&style=1&timezone=Asia%2FDubai&withdateranges=1&locale=en&hidesidetoolbar=0&allow_symbol_change=1&save_image=0';
+  oM('m-tv');
 }
 function editStk(i){
   var s=stocks[i];
@@ -985,6 +1008,28 @@ function rAll(){
 }
 function tick(){document.getElementById('clk').textContent=new Date().toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short',year:'numeric'})+' · '+new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});}
 setInterval(tick,1000);tick();
+setInterval(function(){
+  if(!stocks.length)return;
+  var ps=stocks.map(function(s,i){
+    return fetchLivePrice(s.ticker,s.mkt).then(function(live){
+      if(live&&live.price){stocks[i].cp=live.price;stocks[i].livePrice=live.price;stocks[i].prevClose=live.prev||stocks[i].prevClose;}
+    }).catch(function(){});
+  });
+  Promise.all(ps).then(function(){
+    var pg=document.getElementById('p-stk');
+    if(pg&&pg.classList.contains('on')){saveState();renderStocks();}
+    else{saveState();}
+  });
+},60000);
+var _origGo=go;
+go=function(pg,el){
+  _origGo(pg,el);
+  if(pg==='stk'){setTimeout(function(){
+    if(!stocks.length)return;
+    var ps=stocks.map(function(s,i){return fetchLivePrice(s.ticker,s.mkt).then(function(live){if(live&&live.price){stocks[i].cp=live.price;stocks[i].livePrice=live.price;stocks[i].prevClose=live.prev||stocks[i].prevClose;}}).catch(function(){});});
+    Promise.all(ps).then(function(){saveState();renderStocks();});
+  },500);}
+};
 window.addEventListener('load', function() {
   try { loadState(); } catch(e) { console.log('loadState error:', e); }
   try { renderDash(); } catch(e) { console.log('renderDash error:', e); }
