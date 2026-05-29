@@ -221,7 +221,7 @@ label{display:block;font-size:11px;color:var(--t2);margin-bottom:4px;font-weight
   <div id="rem-em" style="display:none">
     <div class="card"><div class="card-t">Email reminder</div>
       <div class="fr2"><div><label>Send to</label><input type="email" id="em-to" value="mr.raouf@gmail.com"></div><div><label>Range</label><select id="em-rng"><option value="7">Next 7 days</option><option value="30" selected>Next 30 days</option><option value="90">Next 90 days</option><option value="ov">Overdue only</option><option value="all">All pending</option></select></div></div>
-      <div style="display:flex;gap:8px;margin-bottom:12px"><button onclick="genEmail()">👁 Preview</button><button class="btn-p" onclick="sendEmail()">✉ Open in mail</button><button onclick="testEmail()" style="background:rgba(62,207,142,0.15);color:var(--green);border-color:var(--green)">✓ Send test email</button><button onclick="copyEmail()">⎘ Copy</button></div>
+      <div style="display:flex;gap:8px;margin-bottom:12px"><button onclick="genEmail()">👁 Preview</button><button class="btn-p" onclick="sendEmail()">✉ Open in mail</button><button onclick="testEmail()" style="background:rgba(62,207,142,0.15);color:var(--green);border-color:var(--green)">✓ Send test email</button><button onclick="testReminder()" style="background:rgba(167,139,250,0.15);color:var(--purple);border-color:var(--purple)">🔔 Test auto-reminder</button><button onclick="copyEmail()">⎘ Copy</button></div>
       <div class="eprev" id="eprev">Click Preview to generate.</div>
     </div>
   </div>
@@ -347,7 +347,23 @@ var accs=[
   {id:'ali',name:'Ali Al Gebely',type:'Lender',principal:1090000,url:'',defer:false,remDays:7,pays:[]}
 ];
 var stocks=[];
-function saveState(){try{localStorage.setItem('pt_accs',JSON.stringify(accs));localStorage.setItem('pt_stk',JSON.stringify(stocks));}catch(e){}}
+function saveState(){
+  try{
+    localStorage.setItem('pt_accs',JSON.stringify(accs));
+    localStorage.setItem('pt_stk',JSON.stringify(stocks));
+  }catch(e){}
+  // Sync to server so reminders always have latest data
+  syncToServer();
+}
+function syncToServer(){
+  try{
+    fetch('/api/save',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({accs:accs,stocks:stocks})
+    }).catch(function(){});
+  }catch(e){}
+}
 function loadState(){
   try{
     var a=localStorage.getItem('pt_accs');
@@ -708,6 +724,16 @@ function testEmail(){
   var body='TEST EMAIL from PayTrack\n\nThis is a test reminder email sent on '+new Date().toLocaleString()+'\n\n'+ls.slice(2).join('\n');
   window.open('mailto:'+to+'?subject=TEST: '+encodeURIComponent((subj||'PayTrack Reminder').replace('Subject: ',''))+'&body='+encodeURIComponent(body));
   alert('Test email opened in your mail app.\nTo: '+to);
+}
+function testReminder(){
+  fetch('/api/remind?test=1')
+    .then(function(r){return r.json();})
+    .then(function(d){
+      if(d.success)alert('✓ Reminder email sent to '+d.sent_to+'\n\nOverdue: '+d.overdue+'\nUpcoming: '+d.upcoming);
+      else if(d.message)alert('Info: '+d.message+(d.preview?'\n\nPreview:\n'+d.preview:''));
+      else alert('Error: '+JSON.stringify(d));
+    })
+    .catch(function(e){alert('Error: '+e.message);});
 }
 function copyEmail(){if(!curEmail)genEmail();navigator.clipboard.writeText(curEmail).then(function(){alert('Copied!');});}
 
