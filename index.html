@@ -348,7 +348,7 @@ label{display:block;font-size:11px;color:var(--t2);margin-bottom:4px;font-weight
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
-var TODAY=new Date('28-05-2026');
+var TODAY=new Date();
 var MNS=['January','February','March','April','May','June','July','August','September','October','November','December'];
 var M3=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 function fd(d){if(!d)return'';if(typeof d==='string')return d;return d.getDate().toString().padStart(2,'0')+'-'+(d.getMonth()+1).toString().padStart(2,'0')+'-'+d.getFullYear();}
@@ -406,8 +406,8 @@ var accs=[
     {desc:'During construction',status:'overdue',amount:318144,dt:'01-01-2026',nd:'',chq:''},
     {desc:'On handover',status:'overdue',amount:4454010,dt:'30-03-2026',nd:'',chq:''}
   ]},
-  {id:'bmw',name:'BMW X4',type:'Car Loan',principal:305000,url:'',defer:false,remDays:7,pays:(function(){var r=[];for(var i=0;i<61;i++){var d=new Date('20-08-2023');d.setMonth(d.getMonth()+i);r.push({desc:'Monthly car payment',status:d>TODAY?'notpaid':'paid',amount:5765,dt:fd(d),nd:'',chq:''});}return r;})()},
-  {id:'nbf',name:'Cash Loan NBF',type:'Cash Loan',principal:1000000,url:'',defer:true,remDays:7,pays:(function(){var r=[];for(var i=0;i<48;i++){var d=new Date('10-12-2024');d.setMonth(d.getMonth()+i);r.push({desc:'Monthly loan payment',status:d>TODAY?'notpaid':'paid',amount:23081,dt:fd(d),nd:'',chq:''});}return r;})()},
+  {id:'bmw',name:'BMW X4',type:'Car Loan',principal:305000,url:'',defer:false,remDays:7,pays:(function(){var r=[];for(var i=0;i<61;i++){var d=new Date('2023-08-20');d.setMonth(d.getMonth()+i);r.push({desc:'Monthly car payment',status:d>TODAY?'notpaid':'paid',amount:5765,dt:fd(d),nd:'',chq:''});}return r;})()},
+  {id:'nbf',name:'Cash Loan NBF',type:'Cash Loan',principal:1000000,url:'',defer:true,remDays:7,pays:(function(){var r=[];for(var i=0;i<48;i++){var d=new Date('2024-12-10');d.setMonth(d.getMonth()+i);r.push({desc:'Monthly loan payment',status:d>TODAY?'notpaid':'paid',amount:23081,dt:fd(d),nd:'',chq:''});}return r;})()},
   {id:'school',name:'School Fees',type:'School Fees',principal:62200,url:'',defer:false,remDays:7,pays:[
     {desc:'Term 1',status:'paid',amount:23200,dt:'01-08-2025',nd:'',chq:''},
     {desc:'Term 2',status:'overdue',amount:19500,dt:'12-12-2025',nd:'',chq:''},
@@ -459,6 +459,7 @@ function convertDates(accsArr){
   return accsArr;
 }
 function loadState(){
+  localStorage.setItem('pt_ver','v11');
   try{
     var a=localStorage.getItem('pt_accs');
     if(a){
@@ -1182,7 +1183,11 @@ function go(pg,el){
   if(pg==='accs')renderAccs();
   if(pg==='monthly')renderMonthly();
   if(pg==='rem')renderRem();
-  if(pg==='stk')renderStocks();
+  if(pg==='stk'){renderStocks();setTimeout(function(){
+    if(!stocks.length)return;
+    var ps=stocks.map(function(s,i){return fetchLivePrice(s.yfSym||s.ticker,s.mkt).then(function(live){if(live&&live.price&&live.price>0){stocks[i].cp=live.price;stocks[i].livePrice=live.price;stocks[i].prevClose=live.prev||stocks[i].prevClose;}}).catch(function(){});});
+    Promise.all(ps).then(function(){saveState();renderStocks();});
+  },800);}
   if(pg==='exp')renderExport();
 }
 function rAll(){
@@ -1205,15 +1210,7 @@ setInterval(function(){
     else{saveState();}
   });
 },60000);
-var _origGo=go;
-go=function(pg,el){
-  _origGo(pg,el);
-  if(pg==='stk'){setTimeout(function(){
-    if(!stocks.length)return;
-    var ps=stocks.map(function(s,i){return fetchLivePrice(s.yfSym||s.ticker,s.mkt).then(function(live){if(live&&live.price){stocks[i].cp=live.price;stocks[i].livePrice=live.price;stocks[i].prevClose=live.prev||stocks[i].prevClose;}}).catch(function(){});});
-    Promise.all(ps).then(function(){saveState();renderStocks();});
-  },500);}
-};
+
 window.addEventListener('load', function() {
   try { loadState(); } catch(e) { console.log('loadState error:', e); }
   try { renderDash(); } catch(e) { console.log('renderDash error:', e); }
@@ -1275,6 +1272,48 @@ async function fetchLivePrice(ticker,market){
   }
   return null;
 }
+
+async function refreshAllPrices(){
+  if(!stocks.length)return;
+  var btn=document.getElementById('refresh-prices-btn');
+  if(btn){btn.textContent='Refreshing...';btn.disabled=true;}
+  var updated=0;
+  var promises=stocks.map(function(s,i){
+    var sym=s.yfSym||s.ticker;
+    return fetchLivePrice(sym,s.mkt).then(function(live){
+      if(live&&live.price&&live.price>0){
+        stocks[i].cp=live.price;
+        stocks[i].livePrice=live.price;
+        stocks[i].prevClose=live.prev||stocks[i].prevClose;
+        updated++;
+      }
+    }).catch(function(){});
+  });
+  Promise.all(promises).then(function(){
+    saveState();renderStocks();
+    if(btn){btn.textContent='↻ Refresh prices';btn.disabled=false;}
+    if(updated>0)alert('Updated '+updated+' stock'+(updated>1?'s':'')+' from live data.');
+    else if(stocks.length>0)alert('No live prices found. Check ticker symbols or try again later.');
+  });
+}
+
+// Auto refresh prices every 60 seconds when on stocks page
+setInterval(function(){
+  if(!stocks.length)return;
+  if(!document.getElementById('p-stk').classList.contains('on'))return;
+  stocks.forEach(function(s,i){
+    fetchLivePrice(s.yfSym||s.ticker,s.mkt).then(function(live){
+      if(live&&live.price&&live.price>0){
+        stocks[i].cp=live.price;
+        stocks[i].livePrice=live.price;
+        stocks[i].prevClose=live.prev||stocks[i].prevClose;
+      }
+    }).catch(function(){});
+  });
+  setTimeout(function(){saveState();renderStocks();},3000);
+},60000);
+
+
 
 
 </script>
