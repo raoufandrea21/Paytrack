@@ -1037,7 +1037,64 @@ window.addEventListener('load', function() {
 // Fallback in case load already fired
 if(document.readyState === 'complete') {
   try { loadState(); renderDash(); } catch(e) {}
+}async function fetchLivePrice(ticker,market){
+  // Try multiple sources for UAE stocks
+  var isUAE=(market==='DFM'||market==='ADX');
+  // Source 1: ticker.ae API (best for UAE stocks including ones starting with numbers)
+  if(isUAE){
+    try{
+      var url='https://ticker.ae/api/v2/quotes/'+ticker+'?exchange='+(market==='DFM'?'DFM':'ADX');
+      var res=await fetch('/api/proxy?url='+encodeURIComponent(url));
+      if(res.ok){
+        var txt=await res.text();
+        if(!txt.trim().startsWith('<')&&!txt.trim().startsWith('{')==false){
+          var d=JSON.parse(txt);
+          if(d&&d.last_price){
+            return{price:parseFloat(d.last_price),prev:parseFloat(d.previous_close)||null,currency:'AED',name:d.name||ticker};
+          }
+        }
+      }
+    }catch(e){}
+  }
+  // Source 2: Yahoo Finance (works for most listed stocks, not numbers-starting)
+  try{
+    var yfTicker=isUAE?(ticker+'.AE'):ticker;
+    // Skip if ticker starts with number (Yahoo doesn't support)
+    if(!/^[0-9]/.test(ticker)){
+      var url2='https://query1.finance.yahoo.com/v8/finance/chart/'+yfTicker+'?interval=1d&range=1d';
+      var res2=await fetch('/api/proxy?url='+encodeURIComponent(url2));
+      if(res2.ok){
+        var txt2=await res2.text();
+        if(!txt2.trim().startsWith('<')){
+          var d2=JSON.parse(txt2);
+          var meta=d2.chart&&d2.chart.result&&d2.chart.result[0]&&d2.chart.result[0].meta;
+          if(meta&&meta.regularMarketPrice){
+            return{price:meta.regularMarketPrice,prev:meta.previousClose||null,currency:meta.currency||'AED',name:meta.shortName||ticker};
+          }
+        }
+      }
+    }
+  }catch(e){}
+  // Source 3: investing.com via proxy (last resort for UAE stocks)
+  if(isUAE){
+    try{
+      var url3='https://api.investing.com/api/search/v2/search?q='+encodeURIComponent(ticker)+'&limit=1&type=equities';
+      var res3=await fetch('/api/proxy?url='+encodeURIComponent(url3));
+      if(res3.ok){
+        var txt3=await res3.text();
+        if(!txt3.trim().startsWith('<')){
+          var d3=JSON.parse(txt3);
+          if(d3&&d3.quotes&&d3.quotes[0]&&d3.quotes[0].last){
+            return{price:parseFloat(d3.quotes[0].last),prev:parseFloat(d3.quotes[0].previous_close)||null,currency:'AED',name:d3.quotes[0].description||ticker};
+          }
+        }
+      }
+    }catch(e){}
+  }
+  return null;
 }
+
+
 </script>
 <div class="ovlay" id="m-stk-edit" style="display:none">
   <div class="modal">
