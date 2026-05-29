@@ -348,7 +348,31 @@ var accs=[
 ];
 var stocks=[];
 function saveState(){try{localStorage.setItem('pt_accs',JSON.stringify(accs));localStorage.setItem('pt_stk',JSON.stringify(stocks));}catch(e){}}
-function loadState(){try{var a=localStorage.getItem('pt_accs');if(a)accs=JSON.parse(a);var s=localStorage.getItem('pt_stk');if(s)stocks=JSON.parse(s);}catch(e){}}
+function loadState(){
+  try{
+    var ver=localStorage.getItem('pt_ver');
+    if(ver!=='v10'){
+      // Version mismatch - clear old data, keep hardcoded accounts
+      localStorage.removeItem('pt_accs');
+      localStorage.removeItem('pt_stk');
+      localStorage.setItem('pt_ver','v10');
+      return;
+    }
+    var a=localStorage.getItem('pt_accs');
+    if(a){
+      var parsed=JSON.parse(a);
+      // Only use saved data if it's valid and has accounts with payments
+      if(parsed&&parsed.length>0&&parsed[0].pays){
+        accs=parsed;
+      }
+    }
+    var s=localStorage.getItem('pt_stk');
+    if(s){var ps=JSON.parse(s);if(ps&&Array.isArray(ps))stocks=ps;}
+  }catch(e){
+    localStorage.removeItem('pt_accs');
+    localStorage.removeItem('pt_stk');
+  }
+}
 var delId=null,editId=null,editIdx=null,payId=null;
 
 async function syncAcc(a){
@@ -806,8 +830,14 @@ function rAll(){
 }
 function tick(){document.getElementById('clk').textContent=new Date().toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short',year:'numeric'})+' · '+new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});}
 setInterval(tick,1000);tick();
-loadState();
-renderDash();
+window.addEventListener('load', function() {
+  try { loadState(); } catch(e) { console.log('loadState error:', e); }
+  try { renderDash(); } catch(e) { console.log('renderDash error:', e); }
+});
+// Fallback in case load already fired
+if(document.readyState === 'complete') {
+  try { loadState(); renderDash(); } catch(e) {}
+}
 </script>
 </body>
 </html>
