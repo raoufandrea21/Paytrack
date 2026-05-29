@@ -228,7 +228,25 @@ label{display:block;font-size:11px;color:var(--t2);margin-bottom:4px;font-weight
 </div>
 
 <div id="p-stk" class="pg">
-  <div class="sh"><div class="st">Stock portfolio</div><div style="display:flex;gap:8px"><button id="refresh-prices-btn" onclick="refreshAllPrices()" style="background:rgba(62,207,142,0.15);color:var(--green);border-color:var(--green)">↻ Refresh prices</button><button onclick="openAddStk()">+ Add stock</button><button onclick="expStocks()">↓ Export</button></div></div>
+  <div class="sh"><div class="st">Stock portfolio</div><div style="display:flex;gap:8px;flex-wrap:wrap">
+  <button id="refresh-prices-btn" onclick="refreshAllPrices()" style="background:rgba(62,207,142,0.15);color:var(--green);border-color:rgba(62,207,142,0.3)">↻ Refresh prices</button>
+  <button id="od-btn" onclick="syncOneDrive()" style="background:rgba(91,156,246,0.15);color:var(--blue);border-color:rgba(91,156,246,0.3)">📊 Sync Excel</button>
+  <button id="excel-view-btn" onclick="toggleExcelView()" style="background:rgba(167,139,250,0.15);color:var(--purple);border-color:rgba(167,139,250,0.3)">👁 View Excel</button>
+  <button onclick="openAddStk()">+ Add stock</button>
+  <button onclick="expStocks()">↓ Export</button>
+</div></div>
+<div id="excel-embed" style="display:none;margin-bottom:1.25rem">
+  <div class="card" style="padding:0;overflow:hidden">
+    <div style="padding:10px 14px;border-bottom:1px solid var(--b1);display:flex;align-items:center;justify-content:space-between">
+      <div style="font-size:12px;font-weight:600;color:var(--t2)">📊 Raouf UAE Stocks — Live Excel</div>
+      <button onclick="toggleExcelView()" style="font-size:11px">✕ Hide</button>
+    </div>
+    <iframe width="100%" height="420" frameborder="0" scrolling="no"
+      src="https://1drv.ms/x/c/8cf8e5e8e2210ac9/IQSSrEMMCUFjR40vBNQPm1wHARsxZ9sbw4yrfu5FL-FMrs4?em=2&wdAllowInteractivity=False&Item='Raouf%20UAE%20Stocks'!A14%3AI29&wdHideGridlines=True&wdDownloadButton=True"
+      style="display:block;background:var(--bg1)">
+    </iframe>
+  </div>
+</div>
   <div class="mg" style="margin-bottom:1.25rem">
     <div class="mc bb"><div class="mc-ic b">💼</div><div class="mc-lbl">Total value</div><div class="mc-val" id="st1">AED 0</div></div>
     <div class="mc gb"><div class="mc-ic g">↑</div><div class="mc-lbl">Total gain/loss</div><div class="mc-val" id="st2">AED 0</div></div>
@@ -276,16 +294,20 @@ label{display:block;font-size:11px;color:var(--t2);margin-bottom:4px;font-weight
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
-var TODAY=new Date('2026-05-28');
+var TODAY=new Date('28-05-2026');
 var MNS=['January','February','March','April','May','June','July','August','September','October','November','December'];
 var M3=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-function fd(d){if(!d)return'';if(typeof d==='string')return d;return d.getFullYear()+'-'+(d.getMonth()+1).toString().padStart(2,'0')+'-'+d.getDate().toString().padStart(2,'0');}
+function fd(d){if(!d)return'';if(typeof d==='string')return d;return d.getDate().toString().padStart(2,'0')+'-'+(d.getMonth()+1).toString().padStart(2,'0')+'-'+d.getFullYear();}
 function pd(s){
   if(!s)return null;if(s instanceof Date)return s;
   s=s.trim();
-  var a=s.match(/^(\d{4})-(\d{2})-(\d{2})$/);if(a)return new Date(+a[1],+a[2]-1,+a[3]);
-  var b=s.match(/^(\d{2})-(\d{2})-(\d{4})$/);if(b)return new Date(+b[3],+b[2]-1,+b[1]);
+  // DD-MM-YYYY (primary format)
+  var a=s.match(/^(\d{2})-(\d{2})-(\d{4})$/);if(a)return new Date(+a[3],+a[2]-1,+a[1]);
+  // YYYY-MM-DD (legacy stored data)
+  var b=s.match(/^(\d{4})-(\d{2})-(\d{2})$/);if(b)return new Date(+b[1],+b[2]-1,+b[3]);
+  // DD.MM.YYYY (dots)
   var c=s.match(/^(\d{2})\.(\d{2})\.(\d{4})$/);if(c)return new Date(+c[3],+c[2]-1,+c[1]);
+  // DD-Mon-YYYY
   var mo={Jan:0,Feb:1,Mar:2,Apr:3,May:4,Jun:5,Jul:6,Aug:7,Sep:8,Oct:9,Nov:10,Dec:11};
   var d=s.match(/^(\d{1,2})-([A-Za-z]{3})-(\d{2,4})$/);if(d){var yr=d[3].length===2?2000+ +d[3]:+d[3];return new Date(yr,mo[d[2]],+d[1]);}
   return null;
@@ -300,49 +322,49 @@ function cM(id){document.getElementById(id).style.display='none';}
 
 var accs=[
   {id:'nawayef',name:'Nawayef Villa',type:'Installments',principal:5976679,url:'',defer:false,remDays:7,pays:[
-    {desc:'ADM fees',status:'paid',amount:117679,dt:'2025-06-15',nd:'',chq:'000041',pct:'2%'},
-    {desc:'Down payment',status:'paid',amount:585900,dt:'2025-06-15',nd:'',chq:'000042',pct:'10%'},
-    {desc:'Commencement of enabling works',status:'paid',amount:292950,dt:'2025-11-30',nd:'',chq:'000043',pct:'5%'},
-    {desc:'Commencement of construction',status:'notpaid',amount:292950,dt:'2026-05-30',nd:'2026-08-30',chq:'000044',pct:'5%'},
-    {desc:'Commencement of townhouses construction',status:'notpaid',amount:585900,dt:'2026-12-30',nd:'2026-03-30',chq:'000045',pct:'10%'},
-    {desc:'Superstructure 100% completion',status:'notpaid',amount:292950,dt:'2027-06-30',nd:'2027-09-30',chq:'000047',pct:'5%'},
-    {desc:'Facade substantial completion',status:'notpaid',amount:292950,dt:'2027-12-30',nd:'2028-03-30',chq:'000048',pct:'5%'},
-    {desc:'Completion/BCC',status:'notpaid',amount:585900,dt:'2028-09-30',nd:'2028-12-30',chq:'000049',pct:'10%'},
-    {desc:'Handover',status:'notpaid',amount:2929500,dt:'2029-01-31',nd:'2029-04-30',chq:'',pct:'50%'}
+    {desc:'ADM fees',status:'paid',amount:117679,dt:'15-06-2025',nd:'',chq:'000041',pct:'2%'},
+    {desc:'Down payment',status:'paid',amount:585900,dt:'15-06-2025',nd:'',chq:'000042',pct:'10%'},
+    {desc:'Commencement of enabling works',status:'paid',amount:292950,dt:'30-11-2025',nd:'',chq:'000043',pct:'5%'},
+    {desc:'Commencement of construction',status:'notpaid',amount:292950,dt:'30-05-2026',nd:'30-08-2026',chq:'000044',pct:'5%'},
+    {desc:'Commencement of townhouses construction',status:'notpaid',amount:585900,dt:'30-12-2026',nd:'30-03-2026',chq:'000045',pct:'10%'},
+    {desc:'Superstructure 100% completion',status:'notpaid',amount:292950,dt:'30-06-2027',nd:'30-09-2027',chq:'000047',pct:'5%'},
+    {desc:'Facade substantial completion',status:'notpaid',amount:292950,dt:'30-12-2027',nd:'30-03-2028',chq:'000048',pct:'5%'},
+    {desc:'Completion/BCC',status:'notpaid',amount:585900,dt:'30-09-2028',nd:'30-12-2028',chq:'000049',pct:'10%'},
+    {desc:'Handover',status:'notpaid',amount:2929500,dt:'31-01-2029',nd:'30-04-2029',chq:'',pct:'50%'}
   ]},
   {id:'mayar',name:'Mayar M13-03',type:'Installments',principal:3879131,url:'',defer:false,remDays:7,pays:[
-    {desc:'On booking',status:'paid',amount:77583,dt:'2024-10-31',nd:'',chq:''},
-    {desc:'Down payment',status:'paid',amount:387913,dt:'2024-10-31',nd:'',chq:''},
-    {desc:'Commencement of construction',status:'paid',amount:387913,dt:'2025-04-30',nd:'',chq:''},
-    {desc:'50% foundation works',status:'overdue',amount:193957,dt:'2025-12-30',nd:'',chq:''},
-    {desc:'50% super structure',status:'notpaid',amount:193957,dt:'2026-06-30',nd:'',chq:''},
-    {desc:'100% super structure',status:'notpaid',amount:193957,dt:'2026-12-30',nd:'',chq:''},
-    {desc:'Completion of super structure',status:'notpaid',amount:193957,dt:'2027-06-30',nd:'',chq:''},
-    {desc:'At completion BCC',status:'notpaid',amount:2327479,dt:'2027-12-30',nd:'',chq:''}
+    {desc:'On booking',status:'paid',amount:77583,dt:'31-10-2024',nd:'',chq:''},
+    {desc:'Down payment',status:'paid',amount:387913,dt:'31-10-2024',nd:'',chq:''},
+    {desc:'Commencement of construction',status:'paid',amount:387913,dt:'30-04-2025',nd:'',chq:''},
+    {desc:'50% foundation works',status:'overdue',amount:193957,dt:'30-12-2025',nd:'',chq:''},
+    {desc:'50% super structure',status:'notpaid',amount:193957,dt:'30-06-2026',nd:'',chq:''},
+    {desc:'100% super structure',status:'notpaid',amount:193957,dt:'30-12-2026',nd:'',chq:''},
+    {desc:'Completion of super structure',status:'notpaid',amount:193957,dt:'30-06-2027',nd:'',chq:''},
+    {desc:'At completion BCC',status:'notpaid',amount:2327479,dt:'30-12-2027',nd:'',chq:''}
   ]},
   {id:'sea',name:'Sea la vie',type:'Installments',principal:6362872,url:'',defer:false,remDays:7,pays:[
-    {desc:'On booking',status:'paid',amount:127257,dt:'2024-01-23',nd:'',chq:''},
-    {desc:'On booking',status:'paid',amount:318144,dt:'2024-01-23',nd:'',chq:''},
-    {desc:'During construction',status:'paid',amount:318144,dt:'2024-07-01',nd:'',chq:''},
-    {desc:'During construction',status:'overdue',amount:318144,dt:'2024-12-01',nd:'',chq:''},
-    {desc:'During construction',status:'overdue',amount:318144,dt:'2025-05-01',nd:'',chq:''},
-    {desc:'During construction',status:'overdue',amount:318144,dt:'2025-10-01',nd:'',chq:''},
-    {desc:'During construction',status:'overdue',amount:318144,dt:'2026-01-01',nd:'',chq:''},
-    {desc:'On handover',status:'overdue',amount:4454010,dt:'2026-03-30',nd:'',chq:''}
+    {desc:'On booking',status:'paid',amount:127257,dt:'23-01-2024',nd:'',chq:''},
+    {desc:'On booking',status:'paid',amount:318144,dt:'23-01-2024',nd:'',chq:''},
+    {desc:'During construction',status:'paid',amount:318144,dt:'01-07-2024',nd:'',chq:''},
+    {desc:'During construction',status:'overdue',amount:318144,dt:'01-12-2024',nd:'',chq:''},
+    {desc:'During construction',status:'overdue',amount:318144,dt:'01-05-2025',nd:'',chq:''},
+    {desc:'During construction',status:'overdue',amount:318144,dt:'01-10-2025',nd:'',chq:''},
+    {desc:'During construction',status:'overdue',amount:318144,dt:'01-01-2026',nd:'',chq:''},
+    {desc:'On handover',status:'overdue',amount:4454010,dt:'30-03-2026',nd:'',chq:''}
   ]},
-  {id:'bmw',name:'BMW X4',type:'Car Loan',principal:305000,url:'',defer:false,remDays:7,pays:(function(){var r=[];for(var i=0;i<61;i++){var d=new Date('2023-08-20');d.setMonth(d.getMonth()+i);r.push({desc:'Monthly car payment',status:d>TODAY?'notpaid':'paid',amount:5765,dt:fd(d),nd:'',chq:''});}return r;})()},
-  {id:'nbf',name:'Cash Loan NBF',type:'Cash Loan',principal:1000000,url:'',defer:true,remDays:7,pays:(function(){var r=[];for(var i=0;i<48;i++){var d=new Date('2024-12-10');d.setMonth(d.getMonth()+i);r.push({desc:'Monthly loan payment',status:d>TODAY?'notpaid':'paid',amount:23081,dt:fd(d),nd:'',chq:''});}return r;})()},
+  {id:'bmw',name:'BMW X4',type:'Car Loan',principal:305000,url:'',defer:false,remDays:7,pays:(function(){var r=[];for(var i=0;i<61;i++){var d=new Date('20-08-2023');d.setMonth(d.getMonth()+i);r.push({desc:'Monthly car payment',status:d>TODAY?'notpaid':'paid',amount:5765,dt:fd(d),nd:'',chq:''});}return r;})()},
+  {id:'nbf',name:'Cash Loan NBF',type:'Cash Loan',principal:1000000,url:'',defer:true,remDays:7,pays:(function(){var r=[];for(var i=0;i<48;i++){var d=new Date('10-12-2024');d.setMonth(d.getMonth()+i);r.push({desc:'Monthly loan payment',status:d>TODAY?'notpaid':'paid',amount:23081,dt:fd(d),nd:'',chq:''});}return r;})()},
   {id:'school',name:'School Fees',type:'School Fees',principal:62200,url:'',defer:false,remDays:7,pays:[
-    {desc:'Term 1',status:'paid',amount:23200,dt:'2025-08-01',nd:'',chq:''},
-    {desc:'Term 2',status:'overdue',amount:19500,dt:'2025-12-12',nd:'',chq:''},
-    {desc:'Term 3',status:'overdue',amount:19500,dt:'2026-03-17',nd:'',chq:''}
+    {desc:'Term 1',status:'paid',amount:23200,dt:'01-08-2025',nd:'',chq:''},
+    {desc:'Term 2',status:'overdue',amount:19500,dt:'12-12-2025',nd:'',chq:''},
+    {desc:'Term 3',status:'overdue',amount:19500,dt:'17-03-2026',nd:'',chq:''}
   ]},
   {id:'noya',name:'Noya Villa',type:'Installments',principal:230000,url:'',defer:false,remDays:7,pays:[
-    {desc:'Commission to broker',status:'overdue',amount:12075,dt:'2025-09-05',nd:'',chq:''},
-    {desc:'1st payment',status:'overdue',amount:57000,dt:'2025-09-05',nd:'',chq:''},
-    {desc:'2nd payment',status:'overdue',amount:57000,dt:'2025-12-05',nd:'',chq:''},
-    {desc:'3rd payment',status:'overdue',amount:57000,dt:'2026-03-05',nd:'',chq:''},
-    {desc:'4th payment',status:'notpaid',amount:57000,dt:'2026-06-05',nd:'',chq:''}
+    {desc:'Commission to broker',status:'overdue',amount:12075,dt:'05-09-2025',nd:'',chq:''},
+    {desc:'1st payment',status:'overdue',amount:57000,dt:'05-09-2025',nd:'',chq:''},
+    {desc:'2nd payment',status:'overdue',amount:57000,dt:'05-12-2025',nd:'',chq:''},
+    {desc:'3rd payment',status:'overdue',amount:57000,dt:'05-03-2026',nd:'',chq:''},
+    {desc:'4th payment',status:'notpaid',amount:57000,dt:'05-06-2026',nd:'',chq:''}
   ]},
   {id:'ali',name:'Ali Al Gebely',type:'Lender',principal:1090000,url:'',defer:false,remDays:7,pays:[]}
 ];
