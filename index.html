@@ -222,7 +222,7 @@ label{display:block;font-size:11px;color:var(--t2);margin-bottom:4px;font-weight
   <div class="sh"><div class="st">Stock portfolio</div><div style="display:flex;gap:8px"><button onclick="openAddStk()">+ Add stock</button><button onclick="expStocks()">↓ Export</button></div></div>
   <div class="mg" style="margin-bottom:1.25rem">
     <div class="mc bb"><div class="mc-ic b">💼</div><div class="mc-lbl">Total value</div><div class="mc-val" id="st1">AED 0</div></div>
-    <div class="mc gb"><div class="mc-ic g">📈</div><div class="mc-lbl">Total gain/loss</div><div class="mc-val" id="st2">AED 0</div></div>
+    <div class="mc gb"><div class="mc-ic g">↑</div><div class="mc-lbl">Total gain/loss</div><div class="mc-val" id="st2">AED 0</div></div>
     <div class="mc pb"><div class="mc-ic p">▤</div><div class="mc-lbl">Positions</div><div class="mc-val" id="st3">0</div></div>
   </div>
   <div id="stk-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(255px,1fr));gap:12px"></div>
@@ -336,7 +336,7 @@ var delId=null,editId=null,editIdx=null,payId=null;
 async function syncAcc(a){
   if(!a.url)return false;
   try{
-    var res=await fetch('https://api.allorigins.win/raw?url='+encodeURIComponent(a.url));
+    var res=await fetch('/api/proxy?url='+encodeURIComponent(a.url));
     if(!res.ok)throw 0;
     var txt=await res.text();
     var rows=txt.split('\n').map(function(r){return r.split(',').map(function(c){return c.replace(/^"|"$/g,'').trim();});});
@@ -533,7 +533,7 @@ function rtab(id,el){
   if(el)el.classList.add('on');
 }
 function remTbl(rows,empty){
-  if(!rows.length)return'<p style="font-size:12px;color:var(--t2);padding:.5rem 0;display:flex;align-items:center;gap:6px"><i class="ti ti-circle-check" style="color:var(--green)"></i>'+empty+'</p>';
+  if(!rows.length)return'<p style="font-size:12px;color:var(--t2);padding:.5rem 0;display:flex;align-items:center;gap:6px">✓'+empty+'</p>';
   rows.sort(function(a,b){return a._d-b._d;});
   return'<div style="overflow-x:auto"><table><thead><tr><th>Account</th><th>Date</th><th>Description</th><th style="text-align:right">Amount</th><th>Status</th></tr></thead><tbody>'+rows.map(function(r){return'<tr><td style="font-weight:500">'+r.acc+'</td><td style="font-family:var(--m);font-size:11px">'+eff(r)+'</td><td style="color:var(--t2)">'+r.desc+'</td><td style="text-align:right;font-family:var(--m);font-weight:600">'+fmt(r.amount)+'</td><td>'+sbdg(r.status)+'</td></tr>';}).join('')+'</tbody></table></div>';
 }
@@ -695,7 +695,7 @@ async function doAI(){
   ms.appendChild(ld);ms.scrollTop=ms.scrollHeight;
   ah.push({role:'user',content:q});
   try{
-    var r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1024,system:ASYS,messages:ah.slice(-10)})});
+    var r=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1024,system:ASYS,messages:ah.slice(-10)})});
     var d=await r.json();
     var reply=(d.content&&d.content[0]&&d.content[0].text)||'Error.';
     ah.push({role:'assistant',content:reply});ld.remove();
