@@ -1,6 +1,6 @@
 {
-  "rewrites": [
-    { "source": "/api/chat", "destination": "/api/chat" },
-    { "source": "/api/proxy", "destination": "/api/proxy" }
-  ]
+  "functions": {
+    "api/chat.js": { "runtime": "edge" },
+    "api/proxy.js": { "runtime": "edge" }
+  }
 }
