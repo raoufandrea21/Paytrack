@@ -4,7 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>PayTrack</title>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.11.0/tabler-icons.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css">
+<style>
+.ti{font-family:"tabler-icons"!important;font-style:normal;font-weight:400}
+</style>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
@@ -129,19 +132,19 @@ label{display:block;font-size:11px;color:var(--t2);margin-bottom:4px;font-weight
 <body>
 <div class="app">
 <div class="sb">
-  <div class="logo"><div class="logo-icon"><i class="ti ti-wallet"></i></div><div><div class="logo-text">PayTrack</div><div class="logo-sub">Financial OS</div></div></div>
+  <div class="logo"><div class="logo-icon">💳</div><div><div class="logo-text">PayTrack</div><div class="logo-sub">Financial OS</div></div></div>
   <div class="nl">Overview</div>
-  <div class="ni on" onclick="go('dash',this)"><i class="ti ti-layout-dashboard"></i><span>Dashboard</span></div>
+  <div class="ni on" onclick="go('dash',this)">▣<span>Dashboard</span></div>
   <div class="nl">Finance</div>
-  <div class="ni" onclick="go('accs',this)"><i class="ti ti-building-bank"></i><span>Accounts</span></div>
-  <div class="ni" onclick="go('monthly',this)"><i class="ti ti-calendar-stats"></i><span>Monthly view</span></div>
-  <div class="ni" onclick="go('cal',this)"><i class="ti ti-calendar"></i><span>Calendar</span></div>
-  <div class="ni" onclick="go('rem',this)"><i class="ti ti-bell"></i><span>Reminders</span><span class="dot" id="ov-dot">0</span></div>
+  <div class="ni" onclick="go('accs',this)">🏦<span>Accounts</span></div>
+  <div class="ni" onclick="go('monthly',this)">📊<span>Monthly view</span></div>
+  <div class="ni" onclick="go('cal',this)">📅<span>Calendar</span></div>
+  <div class="ni" onclick="go('rem',this)">🔔<span>Reminders</span><span class="dot" id="ov-dot">0</span></div>
   <div class="nl">Investments</div>
-  <div class="ni" onclick="go('stk',this)"><i class="ti ti-chart-line"></i><span>Stocks</span></div>
+  <div class="ni" onclick="go('stk',this)">📈<span>Stocks</span></div>
   <div class="nl">Tools</div>
-  <div class="ni" onclick="go('ai',this)"><i class="ti ti-robot"></i><span>AI assistant</span></div>
-  <div class="ni" onclick="go('exp',this)"><i class="ti ti-download"></i><span>Export</span></div>
+  <div class="ni" onclick="go('ai',this)">🤖<span>AI assistant</span></div>
+  <div class="ni" onclick="go('exp',this)">↓<span>Export</span></div>
   <div class="sb-foot"><div class="av">RA</div><div><div style="font-size:13px;font-weight:500">Raouf Andrea</div><div style="font-size:10px;color:var(--t2)">mr.raouf@gmail.com</div></div></div>
 </div>
 
@@ -149,32 +152,38 @@ label{display:block;font-size:11px;color:var(--t2);margin-bottom:4px;font-weight
 <div class="topbar">
   <div class="tb-title" id="pg-title">Dashboard</div>
   <div class="tb-clock" id="clk"></div>
-  <button onclick="go('exp',null)"><i class="ti ti-download"></i> Export</button>
-  <button onclick="syncAll()" id="sync-btn"><i class="ti ti-refresh"></i> Sync</button>
+  <button onclick="go('exp',null)">↓ Export</button>
+  <button onclick="syncAll()" id="sync-btn">↻ Sync</button>
 </div>
 <div class="ct">
 
 <div id="p-dash" class="pg on">
   <div class="mg">
-    <div class="mc rb" onclick="go('accs',null)"><div class="mc-ic r"><i class="ti ti-alert-circle"></i></div><div class="mc-lbl">Total outstanding</div><div class="mc-val" id="m1">—</div><div class="mc-sub">Click to view accounts</div></div>
-    <div class="mc gb" onclick="go('accs',null)"><div class="mc-ic g"><i class="ti ti-circle-check"></i></div><div class="mc-lbl">Total paid</div><div class="mc-val" id="m2">—</div><div class="mc-sub">All time</div></div>
-    <div class="mc rb" onclick="go('rem',null)"><div class="mc-ic r"><i class="ti ti-clock-exclamation"></i></div><div class="mc-lbl">Overdue now</div><div class="mc-val" id="m3">—</div><div class="mc-sub" id="m3s">Requires action</div></div>
-    <div class="mc ab" onclick="go('monthly',null)"><div class="mc-ic a"><i class="ti ti-calendar-due"></i></div><div class="mc-lbl">This month</div><div class="mc-val" id="m4">—</div><div class="mc-sub">May 2026</div></div>
-    <div class="mc bb" onclick="go('accs',null)"><div class="mc-ic b"><i class="ti ti-building-bank"></i></div><div class="mc-lbl">Active accounts</div><div class="mc-val" id="m5">—</div><div class="mc-sub">Click to manage</div></div>
-    <div class="mc pb" onclick="go('stk',null)"><div class="mc-ic p"><i class="ti ti-chart-line"></i></div><div class="mc-lbl">Portfolio value</div><div class="mc-val" id="m6">—</div><div class="mc-sub">Click to view stocks</div></div>
+    <div class="mc rb" onclick="go('accs',null)"><div class="mc-ic r">⚠</div><div class="mc-lbl">Total outstanding</div><div class="mc-val" id="m1">—</div><div class="mc-sub">Click to view accounts</div></div>
+    <div class="mc gb" onclick="go('accs',null)"><div class="mc-ic g">✓</div><div class="mc-lbl">Total paid</div><div class="mc-val" id="m2">—</div><div class="mc-sub">All time</div></div>
+    <div class="mc rb" onclick="go('rem',null)"><div class="mc-ic r">⏰</div><div class="mc-lbl">Overdue now</div><div class="mc-val" id="m3">—</div><div class="mc-sub" id="m3s">Requires action</div></div>
+    <div class="mc ab" onclick="go('monthly',null)"><div class="mc-ic a">📅</div><div class="mc-lbl">This month</div><div class="mc-val" id="m4">—</div><div class="mc-sub">May 2026</div></div>
+    <div class="mc bb" onclick="go('accs',null)"><div class="mc-ic b">🏦</div><div class="mc-lbl">Active accounts</div><div class="mc-val" id="m5">—</div><div class="mc-sub">Click to manage</div></div>
+    <div class="mc pb" onclick="go('stk',null)"><div class="mc-ic p">📈</div><div class="mc-lbl">Portfolio value</div><div class="mc-val" id="m6">—</div><div class="mc-sub">Click to view stocks</div></div>
   </div>
   <div class="g2">
     <div class="card"><div class="card-t">Debt breakdown</div><div style="position:relative;height:195px"><canvas id="pc"></canvas></div><div id="pleg" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;font-size:11px;color:var(--t2)"></div></div>
     <div class="card"><div class="card-t">Monthly obligations (AED)</div><div style="position:relative;height:195px"><canvas id="bc"></canvas></div></div>
   </div>
+  <!-- Monthly summary strip -->
+  <div class="card" style="margin-bottom:1.25rem">
+    <div class="sh"><div class="st">Monthly obligations summary</div><button class="btn-s" onclick="go('monthly',null)">Full breakdown →</button></div>
+    <div id="mo-strip" style="display:flex;gap:8px;overflow-x:auto;padding-bottom:4px"></div>
+  </div>
+
   <div class="g3">
-    <div class="card"><div class="sh"><div class="st">Upcoming — next 90 days</div><button class="btn-s" onclick="go('monthly',null)">View all <i class="ti ti-arrow-right"></i></button></div><div style="overflow-x:auto"><table><thead><tr><th>Account</th><th>Date</th><th>Description</th><th>Chq</th><th style="text-align:right">Amount</th><th>Status</th><th></th></tr></thead><tbody id="utb"></tbody></table></div></div>
+    <div class="card"><div class="sh"><div class="st">Upcoming — next 90 days</div><button class="btn-s" onclick="go('monthly',null)">View all →</button></div><div style="overflow-x:auto"><table><thead><tr><th>Account</th><th>Date</th><th>Description</th><th>Chq</th><th style="text-align:right">Amount</th><th>Status</th><th></th></tr></thead><tbody id="utb"></tbody></table></div></div>
     <div class="card"><div class="sh"><div class="st">Recent activity</div></div><div id="act-feed"></div></div>
   </div>
 </div>
 
 <div id="p-accs" class="pg">
-  <div class="sh"><div class="st">Accounts</div><div style="display:flex;gap:8px"><button onclick="openAdd()"><i class="ti ti-plus"></i> Add account</button><button onclick="go('exp',null)"><i class="ti ti-download"></i> Export</button></div></div>
+  <div class="sh"><div class="st">Accounts</div><div style="display:flex;gap:8px"><button onclick="openAdd()">+ Add account</button><button onclick="go('exp',null)">↓ Export</button></div></div>
   <div id="aclist"></div>
 </div>
 
@@ -185,9 +194,9 @@ label{display:block;font-size:11px;color:var(--t2);margin-bottom:4px;font-weight
 
 <div id="p-cal" class="pg">
   <div style="display:flex;align-items:center;gap:10px;margin-bottom:1.25rem">
-    <button onclick="cmv(-1)"><i class="ti ti-chevron-left"></i></button>
+    <button onclick="cmv(-1)">‹</button>
     <div style="font-size:16px;font-weight:600" id="cal-lbl"></div>
-    <button onclick="cmv(1)"><i class="ti ti-chevron-right"></i></button>
+    <button onclick="cmv(1)">›</button>
     <button class="btn-s" onclick="calY=2026;calM=4;renderCal()">Today</button>
   </div>
   <div class="cal-dow"><div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div></div>
@@ -201,29 +210,29 @@ label{display:block;font-size:11px;color:var(--t2);margin-bottom:4px;font-weight
     <div class="tab" onclick="rtab('em',this)">Email</div>
   </div>
   <div id="rem-ov">
-    <div class="card" style="margin-bottom:1rem"><div class="card-t" style="color:var(--red)"><i class="ti ti-alert-circle"></i> Overdue now</div><div id="r1"></div></div>
-    <div class="card" style="margin-bottom:1rem"><div class="card-t"><i class="ti ti-clock"></i> Due in 30 days</div><div id="r2"></div></div>
-    <div class="card"><div class="card-t"><i class="ti ti-calendar"></i> Due in 31–90 days</div><div id="r3"></div></div>
+    <div class="card" style="margin-bottom:1rem"><div class="card-t" style="color:var(--red)">⚠ Overdue now</div><div id="r1"></div></div>
+    <div class="card" style="margin-bottom:1rem"><div class="card-t">⏱ Due in 30 days</div><div id="r2"></div></div>
+    <div class="card"><div class="card-t">📅 Due in 31–90 days</div><div id="r3"></div></div>
   </div>
   <div id="rem-set" style="display:none">
-    <div class="card" style="margin-bottom:1rem"><div class="card-t">Default settings</div><div class="fr2"><div><label>Reminder email</label><input type="email" id="rem-email" value="mr.raouf@gmail.com"></div><div><label>Days before due</label><input type="number" id="rem-days" value="7"></div></div><button class="btn-p" onclick="alert('Settings saved.')"><i class="ti ti-check"></i> Save</button></div>
+    <div class="card" style="margin-bottom:1rem"><div class="card-t">Default settings</div><div class="fr2"><div><label>Reminder email</label><input type="email" id="rem-email" value="mr.raouf@gmail.com"></div><div><label>Days before due</label><input type="number" id="rem-days" value="7"></div></div><button class="btn-p" onclick="alert('Settings saved.')">✓ Save</button></div>
     <div id="rem-accs"></div>
   </div>
   <div id="rem-em" style="display:none">
     <div class="card"><div class="card-t">Email reminder</div>
       <div class="fr2"><div><label>Send to</label><input type="email" id="em-to" value="mr.raouf@gmail.com"></div><div><label>Range</label><select id="em-rng"><option value="7">Next 7 days</option><option value="30" selected>Next 30 days</option><option value="90">Next 90 days</option><option value="ov">Overdue only</option><option value="all">All pending</option></select></div></div>
-      <div style="display:flex;gap:8px;margin-bottom:12px"><button onclick="genEmail()"><i class="ti ti-eye"></i> Preview</button><button class="btn-p" onclick="sendEmail()"><i class="ti ti-send"></i> Open in mail</button><button onclick="copyEmail()"><i class="ti ti-copy"></i> Copy</button></div>
+      <div style="display:flex;gap:8px;margin-bottom:12px"><button onclick="genEmail()">👁 Preview</button><button class="btn-p" onclick="sendEmail()">✉ Open in mail</button><button onclick="copyEmail()">⎘ Copy</button></div>
       <div class="eprev" id="eprev">Click Preview to generate.</div>
     </div>
   </div>
 </div>
 
 <div id="p-stk" class="pg">
-  <div class="sh"><div class="st">Stock portfolio</div><div style="display:flex;gap:8px"><button onclick="openAddStk()"><i class="ti ti-plus"></i> Add stock</button><button onclick="expStocks()"><i class="ti ti-download"></i> Export</button></div></div>
+  <div class="sh"><div class="st">Stock portfolio</div><div style="display:flex;gap:8px"><button onclick="openAddStk()">+ Add stock</button><button onclick="expStocks()">↓ Export</button></div></div>
   <div class="mg" style="margin-bottom:1.25rem">
-    <div class="mc bb"><div class="mc-ic b"><i class="ti ti-briefcase"></i></div><div class="mc-lbl">Total value</div><div class="mc-val" id="st1">AED 0</div></div>
-    <div class="mc gb"><div class="mc-ic g"><i class="ti ti-trending-up"></i></div><div class="mc-lbl">Total gain/loss</div><div class="mc-val" id="st2">AED 0</div></div>
-    <div class="mc pb"><div class="mc-ic p"><i class="ti ti-stack"></i></div><div class="mc-lbl">Positions</div><div class="mc-val" id="st3">0</div></div>
+    <div class="mc bb"><div class="mc-ic b">💼</div><div class="mc-lbl">Total value</div><div class="mc-val" id="st1">AED 0</div></div>
+    <div class="mc gb"><div class="mc-ic g">↑</div><div class="mc-lbl">Total gain/loss</div><div class="mc-val" id="st2">AED 0</div></div>
+    <div class="mc pb"><div class="mc-ic p">▤</div><div class="mc-lbl">Positions</div><div class="mc-val" id="st3">0</div></div>
   </div>
   <div id="stk-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(255px,1fr));gap:12px"></div>
   <div id="stk-empty" style="text-align:center;padding:3rem;color:var(--t2)"><i class="ti ti-chart-line" style="font-size:48px;opacity:.25;display:block;margin-bottom:1rem"></i>No stocks yet. Click Add stock to begin.</div>
@@ -234,15 +243,15 @@ label{display:block;font-size:11px;color:var(--t2);margin-bottom:4px;font-weight
     <div class="card-t"><i class="ti ti-robot" style="color:var(--blue);margin-right:5px"></i>AI financial assistant</div>
     <div class="ams" id="ams" style="flex:1"><div class="am a">Hi Raouf! I have full visibility into all your accounts and obligations. Ask me anything.</div></div>
     <div style="margin-bottom:8px"><span class="chip" onclick="askC('What is my total overdue and which accounts?')">Overdue summary</span><span class="chip" onclick="askC('Biggest payments next 6 months?')">Next 6 months</span><span class="chip" onclick="askC('NBF loan remaining balance and end date?')">NBF status</span><span class="chip" onclick="askC('Summarize 2027 obligations')">2027</span><span class="chip" onclick="askC('What should I prioritize paying this month?')">Priority</span></div>
-    <div style="display:flex;gap:8px"><input type="text" id="ai-in" placeholder="Ask about your finances..." onkeydown="if(event.key==='Enter')doAI()" style="flex:1"><button class="btn-p" onclick="doAI()">Ask <i class="ti ti-arrow-right"></i></button></div>
+    <div style="display:flex;gap:8px"><input type="text" id="ai-in" placeholder="Ask about your finances..." onkeydown="if(event.key==='Enter')doAI()" style="flex:1"><button class="btn-p" onclick="doAI()">Ask →</button></div>
   </div>
 </div>
 
 <div id="p-exp" class="pg">
   <div class="st" style="margin-bottom:1.25rem">Export data</div>
   <div class="g2">
-    <div class="card"><div class="card-t"><i class="ti ti-table" style="color:var(--green);margin-right:5px"></i>Export to Excel</div><p style="font-size:12px;color:var(--t2);margin-bottom:1rem;line-height:1.7">All accounts + schedules. Each account gets its own sheet.</p><button class="btn-p" style="margin-bottom:8px" onclick="expAllExcel()"><i class="ti ti-file-spreadsheet"></i> Export all accounts</button><div style="font-size:11px;color:var(--t3);margin:6px 0">Individual accounts:</div><div id="exp-acc" style="display:flex;flex-direction:column;gap:6px"></div></div>
-    <div class="card"><div class="card-t"><i class="ti ti-file-text" style="color:var(--red);margin-right:5px"></i>Export to PDF</div><p style="font-size:12px;color:var(--t2);margin-bottom:1rem;line-height:1.7">Full PDF report with all accounts and payment schedules.</p><button class="btn-p" onclick="expPDF()"><i class="ti ti-file-text"></i> Generate PDF report</button></div>
+    <div class="card"><div class="card-t"><i class="ti ti-table" style="color:var(--green);margin-right:5px"></i>Export to Excel</div><p style="font-size:12px;color:var(--t2);margin-bottom:1rem;line-height:1.7">All accounts + schedules. Each account gets its own sheet.</p><button class="btn-p" style="margin-bottom:8px" onclick="expAllExcel()">📊 Export all accounts</button><div style="font-size:11px;color:var(--t3);margin:6px 0">Individual accounts:</div><div id="exp-acc" style="display:flex;flex-direction:column;gap:6px"></div></div>
+    <div class="card"><div class="card-t"><i class="ti ti-file-text" style="color:var(--red);margin-right:5px"></i>Export to PDF</div><p style="font-size:12px;color:var(--t2);margin-bottom:1rem;line-height:1.7">Full PDF report with all accounts and payment schedules.</p><button class="btn-p" onclick="expPDF()">📄 Generate PDF report</button></div>
   </div>
   <div class="card"><div class="card-t"><i class="ti ti-table-import" style="color:var(--blue);margin-right:5px"></i>Google Sheets sync</div><p style="font-size:12px;color:var(--t2);margin-bottom:1rem;line-height:1.7">Connect each account to its Google Sheets CSV URL (File → Share → Publish to web → CSV).</p><div id="exp-sync"></div></div>
 </div>
@@ -252,17 +261,17 @@ label{display:block;font-size:11px;color:var(--t2);margin-bottom:4px;font-weight
 </div>
 
 <!-- MODALS -->
-<div class="ovlay" id="m-add" style="display:none"><div class="modal"><div class="modal-t"><i class="ti ti-plus"></i>Add account</div><div class="fr"><label>Name</label><input id="a-n" placeholder="e.g. Marina Villa"></div><div class="fr2"><div><label>Type</label><select id="a-t"><option>Installments</option><option>Car Loan</option><option>Cash Loan</option><option>School Fees</option><option>Mortgage</option><option>Lender</option><option>Other</option></select></div><div><label>Principal (AED)</label><input type="number" id="a-p" placeholder="0"></div></div><div class="fr"><label style="display:flex;align-items:center;gap:6px"><input type="checkbox" id="a-d" style="width:auto">Enable defer option (loans)</label></div><div class="fa"><button onclick="cM('m-add')">Cancel</button><button class="btn-p" onclick="doAdd()"><i class="ti ti-check"></i> Add</button></div></div></div>
+<div class="ovlay" id="m-add" style="display:none"><div class="modal"><div class="modal-t">+Add account</div><div class="fr"><label>Name</label><input id="a-n" placeholder="e.g. Marina Villa"></div><div class="fr2"><div><label>Type</label><select id="a-t"><option>Installments</option><option>Car Loan</option><option>Cash Loan</option><option>School Fees</option><option>Mortgage</option><option>Lender</option><option>Other</option></select></div><div><label>Principal (AED)</label><input type="number" id="a-p" placeholder="0"></div></div><div class="fr"><label style="display:flex;align-items:center;gap:6px"><input type="checkbox" id="a-d" style="width:auto">Enable defer option (loans)</label></div><div class="fa"><button onclick="cM('m-add')">Cancel</button><button class="btn-p" onclick="doAdd()">✓ Add</button></div></div></div>
 
-<div class="ovlay" id="m-del" style="display:none"><div class="modal"><div class="modal-t" style="color:var(--red)"><i class="ti ti-trash"></i>Delete account</div><p style="font-size:13px;color:var(--t2);margin-bottom:1rem">Delete <strong id="d-n" style="color:var(--t1)"></strong>? This cannot be undone.</p><div class="fa"><button onclick="cM('m-del')">Cancel</button><button class="btn-d" onclick="doDel()"><i class="ti ti-trash"></i> Delete</button></div></div></div>
+<div class="ovlay" id="m-del" style="display:none"><div class="modal"><div class="modal-t" style="color:var(--red)">🗑Delete account</div><p style="font-size:13px;color:var(--t2);margin-bottom:1rem">Delete <strong id="d-n" style="color:var(--t1)"></strong>? This cannot be undone.</p><div class="fa"><button onclick="cM('m-del')">Cancel</button><button class="btn-d" onclick="doDel()">🗑 Delete</button></div></div></div>
 
-<div class="ovlay" id="m-edit" style="display:none"><div class="modal"><div class="modal-t"><i class="ti ti-edit"></i>Edit payment</div><div class="fr"><label>Description</label><input id="e-d"></div><div class="fr2"><div><label>Amount (AED)</label><input type="number" id="e-a"></div><div><label>Cheque #</label><input id="e-c"></div></div><div class="fr2"><div><label>Due date</label><input type="date" id="e-dt"></div><div><label>Revised date</label><input type="date" id="e-nd"></div></div><div class="fr"><label>Status</label><select id="e-s"><option value="paid">Paid</option><option value="notpaid">Not paid</option><option value="overdue">Overdue</option><option value="deferred">Deferred</option></select></div><div class="fa"><button onclick="cM('m-edit')">Cancel</button><button class="btn-p" onclick="saveEdit()"><i class="ti ti-check"></i> Save</button></div></div></div>
+<div class="ovlay" id="m-edit" style="display:none"><div class="modal"><div class="modal-t">✎Edit payment</div><div class="fr"><label>Description</label><input id="e-d"></div><div class="fr2"><div><label>Amount (AED)</label><input type="number" id="e-a"></div><div><label>Cheque #</label><input id="e-c"></div></div><div class="fr2"><div><label>Due date</label><input type="date" id="e-dt"></div><div><label>Revised date</label><input type="date" id="e-nd"></div></div><div class="fr"><label>Status</label><select id="e-s"><option value="paid">Paid</option><option value="notpaid">Not paid</option><option value="overdue">Overdue</option><option value="deferred">Deferred</option></select></div><div class="fa"><button onclick="cM('m-edit')">Cancel</button><button class="btn-p" onclick="saveEdit()">✓ Save</button></div></div></div>
 
-<div class="ovlay" id="m-pay" style="display:none"><div class="modal"><div class="modal-t"><i class="ti ti-plus"></i>Add payment</div><div class="fr"><label>Description</label><input id="p-d" placeholder="e.g. 5th instalment"></div><div class="fr2"><div><label>Amount (AED)</label><input type="number" id="p-a" placeholder="0"></div><div><label>Cheque #</label><input id="p-c" placeholder="optional"></div></div><div class="fr2"><div><label>Due date</label><input type="date" id="p-dt"></div><div><label>%</label><input id="p-pct" placeholder="e.g. 5%"></div></div><div class="fr"><label>Status</label><select id="p-s"><option value="notpaid">Not paid</option><option value="paid">Paid</option><option value="overdue">Overdue</option></select></div><div class="fa"><button onclick="cM('m-pay')">Cancel</button><button class="btn-p" onclick="doAddPay()"><i class="ti ti-check"></i> Add</button></div></div></div>
+<div class="ovlay" id="m-pay" style="display:none"><div class="modal"><div class="modal-t">+Add payment</div><div class="fr"><label>Description</label><input id="p-d" placeholder="e.g. 5th instalment"></div><div class="fr2"><div><label>Amount (AED)</label><input type="number" id="p-a" placeholder="0"></div><div><label>Cheque #</label><input id="p-c" placeholder="optional"></div></div><div class="fr2"><div><label>Due date</label><input type="date" id="p-dt"></div><div><label>%</label><input id="p-pct" placeholder="e.g. 5%"></div></div><div class="fr"><label>Status</label><select id="p-s"><option value="notpaid">Not paid</option><option value="paid">Paid</option><option value="overdue">Overdue</option></select></div><div class="fa"><button onclick="cM('m-pay')">Cancel</button><button class="btn-p" onclick="doAddPay()">✓ Add</button></div></div></div>
 
-<div class="ovlay" id="m-stk" style="display:none"><div class="modal"><div class="modal-t"><i class="ti ti-chart-line"></i>Add stock</div><div class="fr2"><div><label>Ticker</label><input id="s-t" placeholder="e.g. EMAAR"></div><div><label>Company name</label><input id="s-n" placeholder="e.g. Emaar Properties"></div></div><div class="fr2"><div><label>Market</label><select id="s-m"><option>DFM</option><option>ADX</option><option>NYSE</option><option>NASDAQ</option><option>LSE</option><option>Other</option></select></div><div><label>Currency</label><select id="s-cur"><option>AED</option><option>USD</option><option>GBP</option><option>EUR</option></select></div></div><div class="fr2"><div><label>Quantity</label><input type="number" id="s-q" placeholder="0"></div><div><label>Avg buy price</label><input type="number" id="s-b" placeholder="0.00" step="0.01"></div></div><div class="fr2"><div><label>Current price</label><input type="number" id="s-p" placeholder="0.00" step="0.01"></div><div><label>Broker</label><input id="s-br" placeholder="e.g. BHM Capital"></div></div><div class="fa"><button onclick="cM('m-stk')">Cancel</button><button class="btn-p" onclick="doAddStk()"><i class="ti ti-check"></i> Add</button></div></div></div>
+<div class="ovlay" id="m-stk" style="display:none"><div class="modal"><div class="modal-t">📈Add stock</div><div class="fr2"><div><label>Ticker</label><input id="s-t" placeholder="e.g. EMAAR"></div><div><label>Company name</label><input id="s-n" placeholder="e.g. Emaar Properties"></div></div><div class="fr2"><div><label>Market</label><select id="s-m"><option>DFM</option><option>ADX</option><option>NYSE</option><option>NASDAQ</option><option>LSE</option><option>Other</option></select></div><div><label>Currency</label><select id="s-cur"><option>AED</option><option>USD</option><option>GBP</option><option>EUR</option></select></div></div><div class="fr2"><div><label>Quantity</label><input type="number" id="s-q" placeholder="0"></div><div><label>Avg buy price</label><input type="number" id="s-b" placeholder="0.00" step="0.01"></div></div><div class="fr2"><div><label>Current price</label><input type="number" id="s-p" placeholder="0.00" step="0.01"></div><div><label>Broker</label><input id="s-br" placeholder="e.g. BHM Capital"></div></div><div class="fa"><button onclick="cM('m-stk')">Cancel</button><button class="btn-p" onclick="doAddStk()">✓ Add</button></div></div></div>
 
-<div class="ovlay" id="m-cal" style="display:none"><div class="modal"><div class="modal-t"><i class="ti ti-calendar-event"></i><span id="cal-dt">Payments</span></div><div id="cal-dc"></div><div class="fa"><button onclick="cM('m-cal')">Close</button></div></div></div>
+<div class="ovlay" id="m-cal" style="display:none"><div class="modal"><div class="modal-t">📅<span id="cal-dt">Payments</span></div><div id="cal-dc"></div><div class="fa"><button onclick="cM('m-cal')">Close</button></div></div></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -271,7 +280,16 @@ var TODAY=new Date('2026-05-28');
 var MNS=['January','February','March','April','May','June','July','August','September','October','November','December'];
 var M3=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 function fd(d){if(!d)return'';if(typeof d==='string')return d;return d.getFullYear()+'-'+(d.getMonth()+1).toString().padStart(2,'0')+'-'+d.getDate().toString().padStart(2,'0');}
-function pd(s){if(!s)return null;if(s instanceof Date)return s;var a=s.match(/^(\d{4})-(\d{2})-(\d{2})$/);if(a)return new Date(+a[1],+a[2]-1,+a[3]);var b=s.match(/^(\d{2})-(\d{2})-(\d{4})$/);if(b)return new Date(+b[3],+b[2]-1,+b[1]);return null;}
+function pd(s){
+  if(!s)return null;if(s instanceof Date)return s;
+  s=s.trim();
+  var a=s.match(/^(\d{4})-(\d{2})-(\d{2})$/);if(a)return new Date(+a[1],+a[2]-1,+a[3]);
+  var b=s.match(/^(\d{2})-(\d{2})-(\d{4})$/);if(b)return new Date(+b[3],+b[2]-1,+b[1]);
+  var c=s.match(/^(\d{2})\.(\d{2})\.(\d{4})$/);if(c)return new Date(+c[3],+c[2]-1,+c[1]);
+  var mo={Jan:0,Feb:1,Mar:2,Apr:3,May:4,Jun:5,Jul:6,Aug:7,Sep:8,Oct:9,Nov:10,Dec:11};
+  var d=s.match(/^(\d{1,2})-([A-Za-z]{3})-(\d{2,4})$/);if(d){var yr=d[3].length===2?2000+ +d[3]:+d[3];return new Date(yr,mo[d[2]],+d[1]);}
+  return null;
+}
 function fmt(n){return'AED '+Math.round(n).toLocaleString();}
 function eff(p){return(p.nd&&p.nd.trim())?p.nd:p.dt;}
 function sbdg(s){var m={paid:'Paid',overdue:'Overdue',notpaid:'Not paid',deferred:'Deferred'};var c={paid:'bp',overdue:'bo',notpaid:'bn',deferred:'bd'};return'<span class="bdg '+(c[s]||'bn')+'">'+(m[s]||s)+'</span>';}
@@ -356,8 +374,10 @@ async function syncAcc(a){
       var amt=parseFloat((r[4]||r[3]||'').replace(/[^0-9.]/g,''));
       if(!amt||isNaN(amt)||amt<100)continue;
       var d=pd(r[6]||r[2]||'');if(!d)continue;
-      var rs=(r[8]||'').trim().toUpperCase();
-      var st=rs==='PAID'?'paid':d<TODAY?'overdue':'notpaid';
+      var rs=(r[8]||r[4]||'').trim().toUpperCase();
+      var st='notpaid';
+      if(rs==='PAID'||rs==='P')st='paid';
+      else if(d<TODAY)st='overdue';
       parsed.push({desc:(r[1]||r[0]||'Payment').trim(),status:st,amount:amt,dt:fd(d),nd:pd(r[7])?fd(pd(r[7])):'',chq:(r[5]||'').trim(),pct:(r[3]||'').trim()});
     }
     if(parsed.length>0){a.pays=parsed;a.synced=true;return true;}
@@ -365,11 +385,11 @@ async function syncAcc(a){
 }
 async function syncAll(){
   var b=document.getElementById('sync-btn');
-  b.innerHTML='<i class="ti ti-loader-2"></i> Syncing...';b.disabled=true;
+  b.innerHTML='↻ Syncing...';b.disabled=true;
   var ps=accs.filter(function(a){return a.url;}).map(function(a){return syncAcc(a);});
   var rs=await Promise.all(ps);
   var n=rs.filter(Boolean).length;
-  b.innerHTML='<i class="ti ti-refresh"></i> Sync';b.disabled=false;
+  b.innerHTML='↻ Sync';b.disabled=false;
   rAll();
   if(n>0)alert('Synced '+n+' account'+(n>1?'s':'')+'.');
 }
@@ -408,7 +428,55 @@ function renderCharts(){
   bi=new Chart(document.getElementById('bc'),{type:'bar',data:{labels:sm.map(function(m){var p=m.split('-');return M3[+p[1]-1]+' '+p[0].slice(2);}),datasets:[{data:sm.map(function(k){return mm[k];}),backgroundColor:sm.map(function(k){var p=k.split('-');return(+p[0]===2026&&+p[1]-1===4)?'#5b9cf6':'rgba(91,156,246,.4)';}),borderRadius:4,borderSkipped:false}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return' '+fmt(c.raw);}},backgroundColor:'#22222e',titleColor:'#eeeef5',bodyColor:'#8888a0',borderColor:'rgba(255,255,255,.1)',borderWidth:1}},scales:{y:{ticks:{callback:function(v){return'AED '+(v>=1e6?(v/1e6).toFixed(1)+'M':(v/1000).toFixed(0)+'k');},color:'#44445a',font:{size:10}},grid:{color:'rgba(255,255,255,.04)'},border:{display:false}},x:{ticks:{autoSkip:false,maxRotation:50,font:{size:9},color:'#44445a'},grid:{display:false},border:{display:false}}}}});
 }
 
-function renderDash(){
+function renderMoStrip(){
+  var mm={};
+  var now=TODAY;
+  // Show next 12 months
+  for(var mi=0;mi<12;mi++){
+    var dt=new Date(now.getFullYear(),now.getMonth()+mi,1);
+    var k=dt.getFullYear()+'-'+(dt.getMonth()+1).toString().padStart(2,'0');
+    mm[k]={total:0,paid:0,overdue:0,count:0,yr:dt.getFullYear(),mo:dt.getMonth()};
+  }
+  accs.forEach(function(a){
+    a.pays.forEach(function(p){
+      var d=pd(eff(p));if(!d)return;
+      var k=d.getFullYear()+'-'+(d.getMonth()+1).toString().padStart(2,'0');
+      if(!mm[k])return;
+      if(p.status!=='paid')mm[k].total+=p.amount;
+      if(p.status==='paid')mm[k].paid+=p.amount;
+      if(p.status==='overdue')mm[k].overdue+=p.amount;
+      if(p.status!=='paid')mm[k].count++;
+    });
+  });
+  var M3=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  var keys=Object.keys(mm).sort();
+  var isCurrentMo=function(k){var p=k.split('-');return +p[0]===TODAY.getFullYear()&&+p[1]-1===TODAY.getMonth();};
+  document.getElementById('mo-strip').innerHTML=keys.map(function(k){
+    var m=mm[k];
+    var isCur=isCurrentMo(k);
+    var hasData=m.total>0||m.paid>0;
+    var bg=isCur?'rgba(91,156,246,0.15)':'var(--bg3)';
+    var border=isCur?'1px solid var(--blue)':'1px solid var(--b1)';
+    var clr=m.overdue>0?'var(--red)':m.total>0?'var(--amber)':'var(--green)';
+    return'<div onclick="go('monthly',null)" style="flex-shrink:0;min-width:110px;background:'+bg+';border:'+border+';border-radius:10px;padding:10px 12px;cursor:pointer;transition:background .12s" onmouseover="this.style.background='var(--bg4)'" onmouseout="this.style.background=''+bg+''">'
+      +'<div style="font-size:11px;font-weight:600;color:var(--t2);margin-bottom:4px">'+M3[m.mo]+' '+m.yr+(isCur?' <span style="background:var(--blue);color:#fff;font-size:9px;padding:1px 5px;border-radius:3px">NOW</span>':'')+'</div>'
+      +(hasData
+        ?'<div style="font-size:14px;font-weight:700;font-family:var(--m);color:'+clr+'">'+fmt(m.total)+'</div>'
+        +'<div style="font-size:10px;color:var(--t3);margin-top:3px">'+m.count+' payment'+(m.count!==1?'s':'')+(m.overdue>0?' · <span style="color:var(--red)">'+fmt(m.overdue)+' overdue</span>':'')+'</div>'
+        :'<div style="font-size:13px;color:var(--t3)">—</div><div style="font-size:10px;color:var(--t3);margin-top:3px">No payments</div>')
+      +'</div>';
+  }).join('');
+}
+
+function renderDash(){  // Auto-flag overdue: any notpaid payment past today
+  accs.forEach(function(a){
+    a.pays.forEach(function(p){
+      if(p.status==='notpaid'){
+        var d=pd(eff(p));
+        if(d&&d<TODAY)p.status='overdue';
+      }
+    });
+  });
   var o=0,p=0,ov=0,mo=0;
   accs.forEach(function(a){
     a.pays.forEach(function(x){
@@ -429,6 +497,7 @@ function renderDash(){
   document.getElementById('m6').textContent=sv>0?fmt(sv):'—';
   document.getElementById('ov-dot').textContent=ovc;
   renderCharts();
+  renderMoStrip();
   var cut=new Date(TODAY);cut.setDate(cut.getDate()+90);
   var rows=[];
   accs.forEach(function(a){
@@ -440,7 +509,7 @@ function renderDash(){
   rows.sort(function(a,b){return a._d-b._d;});
   document.getElementById('utb').innerHTML=rows.slice(0,15).map(function(r){
     var hn=r.nd&&r.nd.trim();
-    return'<tr><td style="font-weight:500">'+r.acc+'</td><td style="font-family:var(--m);font-size:11px">'+eff(r)+(hn?'<br><span style="font-size:10px;color:var(--t3);text-decoration:line-through">'+r.dt+'</span>':'')+'</td><td style="max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--t2)">'+r.desc+'</td><td style="font-family:var(--m);font-size:10px;color:var(--t3)">'+(r.chq||'—')+'</td><td style="text-align:right;font-weight:600;font-family:var(--m)">'+fmt(r.amount)+'</td><td>'+sbdg(r.status)+'</td><td style="white-space:nowrap"><button class="btn-s" onclick="mkPaid(\''+r.aid+'\','+r.pi+')"><i class="ti ti-check"></i></button>'+(r.defer?' <button class="btn-s" onclick="deferP(\''+r.aid+'\','+r.pi+')">Defer</button>':'')+' <button class="btn-s" onclick="opEdit(\''+r.aid+'\','+r.pi+')"><i class="ti ti-edit"></i></button></td></tr>';
+    return'<tr><td style="font-weight:500">'+r.acc+'</td><td style="font-family:var(--m);font-size:11px">'+eff(r)+(hn?'<br><span style="font-size:10px;color:var(--t3);text-decoration:line-through">'+r.dt+'</span>':'')+'</td><td style="max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--t2)">'+r.desc+'</td><td style="font-family:var(--m);font-size:10px;color:var(--t3)">'+(r.chq||'—')+'</td><td style="text-align:right;font-weight:600;font-family:var(--m)">'+fmt(r.amount)+'</td><td>'+sbdg(r.status)+'</td><td style="white-space:nowrap"><button class="btn-s" onclick="mkPaid(\''+r.aid+'\','+r.pi+')" style="color:#3ecf8e">✓ Paid</button>'+(r.defer?' <button class="btn-s" onclick="deferP(\''+r.aid+'\','+r.pi+')">Defer</button>':'')+' <button class="btn-s" onclick="opEdit(\''+r.aid+'\','+r.pi+')">✎ Edit</button></td></tr>';
   }).join('');
   var activity=[];
   accs.forEach(function(a){
@@ -465,10 +534,10 @@ function renderAccs(){
     var tot=paid+debt,pct=tot>0?Math.round(paid/tot*100):0;
     var rows=a.pays.map(function(p,i){
       var hn=p.nd&&p.nd.trim();
-      return'<tr><td style="color:var(--t3);font-family:var(--m);font-size:10px">'+(i+1)+'</td><td style="font-family:var(--m);font-size:11px">'+eff(p)+(hn?'<br><span style="font-size:10px;color:var(--t3);text-decoration:line-through">'+p.dt+'</span>':'')+'</td><td style="color:var(--t2)">'+p.desc+'</td><td style="font-family:var(--m);font-size:10px;color:var(--t3)">'+(p.chq||'—')+'</td><td style="text-align:right;font-family:var(--m);font-weight:600">'+fmt(p.amount)+'</td><td style="color:var(--t3);font-size:11px">'+(p.pct||'')+'</td><td>'+sbdg(p.status)+'</td><td style="white-space:nowrap"><button class="btn-s" onclick="mkPaid(\''+a.id+'\','+i+')"><i class="ti ti-check"></i></button>'+(a.defer&&p.status!=='paid'?' <button class="btn-s" onclick="deferP(\''+a.id+'\','+i+')">Defer</button>':'')+' <button class="btn-s" onclick="opEdit(\''+a.id+'\','+i+')"><i class="ti ti-edit"></i></button></td></tr>';
+      return'<tr><td style="color:var(--t3);font-family:var(--m);font-size:10px">'+(i+1)+'</td><td style="font-family:var(--m);font-size:11px">'+eff(p)+(hn?'<br><span style="font-size:10px;color:var(--t3);text-decoration:line-through">'+p.dt+'</span>':'')+'</td><td style="color:var(--t2)">'+p.desc+'</td><td style="font-family:var(--m);font-size:10px;color:var(--t3)">'+(p.chq||'—')+'</td><td style="text-align:right;font-family:var(--m);font-weight:600">'+fmt(p.amount)+'</td><td style="color:var(--t3);font-size:11px">'+(p.pct||'')+'</td><td>'+sbdg(p.status)+'</td><td style="white-space:nowrap"><button class="btn-s" onclick="mkPaid(\''+a.id+'\','+i+')" style="color:#3ecf8e">✓ Paid</button>'+(a.defer&&p.status!=='paid'?' <button class="btn-s" onclick="deferP(\''+a.id+'\','+i+')">Defer</button>':'')+' <button class="btn-s" onclick="opEdit(\''+a.id+'\','+i+')">✎ Edit</button></td></tr>';
     }).join('');
     var sb=a.synced?'<span style="background:rgba(62,207,142,.12);color:var(--green);font-size:10px;padding:1px 6px;border-radius:4px;font-weight:500">synced</span>':'';
-    return'<div class="ar"><div class="ah" onclick="togAcc(\'d-'+a.id+'\')"><div style="display:flex;align-items:center;gap:12px"><div style="width:36px;height:36px;border-radius:10px;background:rgba(91,156,246,.1);color:'+tcl(a.type)+';display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0"><i class="ti ti-'+tic(a.type)+'"></i></div><div><div style="font-weight:600;font-size:14px">'+a.name+' '+sb+'</div><div style="font-size:11px;color:var(--t2);margin-top:2px">'+a.type+' · Principal: '+fmt(a.principal)+(a.defer?' · <span style="color:var(--blue)">defer on</span>':'')+'</div><div class="prog"><div class="prog-f" style="width:'+pct+'%"></div></div><div style="font-size:10px;color:var(--t3);margin-top:2px">'+pct+'% paid</div></div></div><div style="text-align:right;display:flex;align-items:center;gap:12px"><div><div style="font-weight:600;font-size:15px;font-family:var(--m);color:var(--red)">'+fmt(debt)+'</div><div style="font-size:11px;color:var(--t2);margin-top:2px">'+fmt(paid)+' paid'+(ov?' · <span style="color:var(--red)">'+fmt(ov)+' overdue</span>':'')+'</div></div><button class="btn-d btn-s" onclick="event.stopPropagation();opDel(\''+a.id+'\')"><i class="ti ti-trash"></i></button></div></div><div class="adet" id="d-'+a.id+'"><div class="syncbar"><i class="ti ti-table-import" style="color:var(--t3)"></i><input type="text" placeholder="Google Sheets CSV URL…" value="'+(a.url||'')+'" id="u-'+a.id+'" onchange="accs.find(function(x){return x.id===\''+a.id+'\';}).url=this.value" style="font-size:11px;padding:4px 8px"><button class="btn-s" onclick="syncOne(\''+a.id+'\')"><i class="ti ti-refresh"></i> Sync</button><span class="ss" id="ss-'+a.id+'">'+(a.url?(a.synced?'✓ synced':'not synced'):'no URL')+'</span></div><div style="padding:8px 14px;border-bottom:1px solid var(--b1)"><button class="btn-s" onclick="opAddPay(\''+a.id+'\')"><i class="ti ti-plus"></i> Add payment</button></div>'+(a.pays.length?'<div style="overflow-x:auto"><table><thead><tr><th>#</th><th>Date</th><th>Description</th><th>Chq</th><th style="text-align:right">Amount</th><th>%</th><th>Status</th><th></th></tr></thead><tbody>'+rows+'</tbody></table></div>':'<p style="padding:1rem;font-size:12px;color:var(--t2)">No payments yet.</p>')+'</div></div>';
+    return'<div class="ar"><div class="ah" onclick="togAcc(\'d-'+a.id+'\')"><div style="display:flex;align-items:center;gap:12px"><div style="width:36px;height:36px;border-radius:10px;background:rgba(91,156,246,.1);color:'+tcl(a.type)+';display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0"><i class="ti ti-'+tic(a.type)+'"></i></div><div><div style="font-weight:600;font-size:14px">'+a.name+' '+sb+'</div><div style="font-size:11px;color:var(--t2);margin-top:2px">'+a.type+' · Principal: '+fmt(a.principal)+(a.defer?' · <span style="color:var(--blue)">defer on</span>':'')+'</div><div class="prog"><div class="prog-f" style="width:'+pct+'%"></div></div><div style="font-size:10px;color:var(--t3);margin-top:2px">'+pct+'% paid</div></div></div><div style="text-align:right;display:flex;align-items:center;gap:12px"><div><div style="font-weight:600;font-size:15px;font-family:var(--m);color:var(--red)">'+fmt(debt)+'</div><div style="font-size:11px;color:var(--t2);margin-top:2px">'+fmt(paid)+' paid'+(ov?' · <span style="color:var(--red)">'+fmt(ov)+' overdue</span>':'')+'</div></div><button class="btn-d btn-s" onclick="event.stopPropagation();opDel(\''+a.id+'\')">Delete</button></div></div><div class="adet" id="d-'+a.id+'"><div class="syncbar"><i class="ti ti-table-import" style="color:var(--t3)"></i><input type="text" placeholder="Google Sheets CSV URL…" value="'+(a.url||'')+'" id="u-'+a.id+'" onchange="accs.find(function(x){return x.id===\''+a.id+'\';}).url=this.value;saveState()" style="font-size:11px;padding:4px 8px"><button class="btn-s" onclick="syncOne(\''+a.id+'\')">↻ Sync</button><span class="ss" id="ss-'+a.id+'">'+(a.url?(a.synced?'✓ synced':'not synced'):'no URL')+'</span></div><div style="padding:8px 14px;border-bottom:1px solid var(--b1)"><button class="btn-s" onclick="opAddPay(\''+a.id+'\')">+ Add payment</button></div>'+(a.pays.length?'<div style="overflow-x:auto"><table><thead><tr><th>#</th><th>Date</th><th>Description</th><th>Chq</th><th style="text-align:right">Amount</th><th>%</th><th>Status</th><th></th></tr></thead><tbody>'+rows+'</tbody></table></div>':'<p style="padding:1rem;font-size:12px;color:var(--t2)">No payments yet.</p>')+'</div></div>';
   }).join('');
 }
 function togAcc(id){document.getElementById(id).classList.toggle('on');}
@@ -493,7 +562,7 @@ function renderMonthly(){
     var ovc=pays.filter(function(p){return p.status==='overdue';}).length;
     var rows=pays.map(function(p){
       var hn=p.nd&&p.nd.trim();
-      return'<tr><td style="font-weight:500">'+p.acc+'</td><td style="font-family:var(--m);font-size:11px">'+eff(p)+(hn?'<br><span style="font-size:10px;color:var(--t3);text-decoration:line-through">'+p.dt+'</span>':'')+'</td><td style="color:var(--t2)">'+p.desc+'</td><td style="font-family:var(--m);font-size:10px;color:var(--t3)">'+(p.chq||'—')+'</td><td style="text-align:right;font-family:var(--m);font-weight:600">'+fmt(p.amount)+'</td><td>'+sbdg(p.status)+'</td><td style="white-space:nowrap"><button class="btn-s" onclick="mkPaid(\''+p.aid+'\','+p.pi+')"><i class="ti ti-check"></i></button>'+(p.defer&&p.status!=='paid'?' <button class="btn-s" onclick="deferP(\''+p.aid+'\','+p.pi+')">Defer</button>':'')+' <button class="btn-s" onclick="opEdit(\''+p.aid+'\','+p.pi+')"><i class="ti ti-edit"></i></button></td></tr>';
+      return'<tr><td style="font-weight:500">'+p.acc+'</td><td style="font-family:var(--m);font-size:11px">'+eff(p)+(hn?'<br><span style="font-size:10px;color:var(--t3);text-decoration:line-through">'+p.dt+'</span>':'')+'</td><td style="color:var(--t2)">'+p.desc+'</td><td style="font-family:var(--m);font-size:10px;color:var(--t3)">'+(p.chq||'—')+'</td><td style="text-align:right;font-family:var(--m);font-weight:600">'+fmt(p.amount)+'</td><td>'+sbdg(p.status)+'</td><td style="white-space:nowrap"><button class="btn-s" onclick="mkPaid(\''+p.aid+'\','+p.pi+')" style="color:#3ecf8e">✓ Paid</button>'+(p.defer&&p.status!=='paid'?' <button class="btn-s" onclick="deferP(\''+p.aid+'\','+p.pi+')">Defer</button>':'')+' <button class="btn-s" onclick="opEdit(\''+p.aid+'\','+p.pi+')">✎ Edit</button></td></tr>';
     }).join('');
     return'<div class="ar" style="margin-bottom:10px"><div class="mh" onclick="this.nextElementSibling.classList.toggle(\'on\')"><div style="display:flex;align-items:center;gap:10px"><div style="width:36px;height:36px;background:rgba(91,156,246,.1);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--blue)">'+M3[m]+'</div><div><div style="font-size:13px;font-weight:600">'+MNS[m]+' '+yr+'<span class="mbadge">'+pays.length+' payments</span></div><div style="font-size:11px;color:var(--t2);margin-top:2px">'+fmt(paid)+' paid · '+(ovc>0?'<span style="color:var(--red)">'+ovc+' overdue</span>':'all on track')+'</div></div></div><div style="font-size:13px;font-weight:600;color:var(--amber);font-family:var(--m)">'+fmt(total)+'</div></div><div class="mb"><div style="overflow-x:auto"><table><thead><tr><th>Account</th><th>Date</th><th>Description</th><th>Chq</th><th style="text-align:right">Amount</th><th>Status</th><th></th></tr></thead><tbody>'+rows+'</tbody></table></div></div></div>';
   }).join('');
@@ -531,7 +600,7 @@ function showCalDet(y,m,d){
     });
   });
   document.getElementById('cal-dt').textContent=d+' '+MNS[m]+' '+y+' — '+evts.length+' payment'+(evts.length!==1?'s':'');
-  document.getElementById('cal-dc').innerHTML=evts.length?'<div style="overflow-x:auto"><table><thead><tr><th>Account</th><th>Description</th><th style="text-align:right">Amount</th><th>Status</th><th></th></tr></thead><tbody>'+evts.map(function(e){return'<tr><td style="font-weight:500">'+e.acc+'</td><td style="color:var(--t2)">'+e.desc+'</td><td style="text-align:right;font-family:var(--m);font-weight:600">'+fmt(e.amount)+'</td><td>'+sbdg(e.status)+'</td><td><button class="btn-s" onclick="mkPaid(\''+e.aid+'\','+e.pi+');renderCal();cM(\'m-cal\');"><i class="ti ti-check"></i> Mark paid</button></td></tr>';}).join('')+'</tbody></table></div>':'<p style="color:var(--t2);padding:1rem;text-align:center">No payments on this day.</p>';
+  document.getElementById('cal-dc').innerHTML=evts.length?'<div style="overflow-x:auto"><table><thead><tr><th>Account</th><th>Description</th><th style="text-align:right">Amount</th><th>Status</th><th></th></tr></thead><tbody>'+evts.map(function(e){return'<tr><td style="font-weight:500">'+e.acc+'</td><td style="color:var(--t2)">'+e.desc+'</td><td style="text-align:right;font-family:var(--m);font-weight:600">'+fmt(e.amount)+'</td><td>'+sbdg(e.status)+'</td><td><button class="btn-s" onclick="mkPaid(\''+e.aid+'\','+e.pi+');renderCal();cM(\'m-cal\');" style="color:#3ecf8e">✓ Mark paid</button></td></tr>';}).join('')+'</tbody></table></div>':'<p style="color:var(--t2);padding:1rem;text-align:center">No payments on this day.</p>';
   oM('m-cal');
 }
 function cmv(d){calM+=d;if(calM>11){calM=0;calY++;}if(calM<0){calM=11;calY--;}renderCal();}
@@ -543,7 +612,7 @@ function rtab(id,el){
   if(el)el.classList.add('on');
 }
 function remTbl(rows,empty){
-  if(!rows.length)return'<p style="font-size:12px;color:var(--t2);padding:.5rem 0;display:flex;align-items:center;gap:6px"><i class="ti ti-circle-check" style="color:var(--green)"></i>'+empty+'</p>';
+  if(!rows.length)return'<p style="font-size:12px;color:var(--t2);padding:.5rem 0;display:flex;align-items:center;gap:6px">✓'+empty+'</p>';
   rows.sort(function(a,b){return a._d-b._d;});
   return'<div style="overflow-x:auto"><table><thead><tr><th>Account</th><th>Date</th><th>Description</th><th style="text-align:right">Amount</th><th>Status</th></tr></thead><tbody>'+rows.map(function(r){return'<tr><td style="font-weight:500">'+r.acc+'</td><td style="font-family:var(--m);font-size:11px">'+eff(r)+'</td><td style="color:var(--t2)">'+r.desc+'</td><td style="text-align:right;font-family:var(--m);font-weight:600">'+fmt(r.amount)+'</td><td>'+sbdg(r.status)+'</td></tr>';}).join('')+'</tbody></table></div>';
 }
@@ -595,7 +664,7 @@ function renderStocks(){
   document.getElementById('stk-grid').style.display='grid';document.getElementById('stk-empty').style.display='none';
   document.getElementById('stk-grid').innerHTML=stocks.map(function(s,i){
     var val=s.qty*s.cp,gl2=s.qty*(s.cp-s.bp),pct=s.bp>0?((s.cp-s.bp)/s.bp*100):0;
-    return'<div class="stk-card"><div style="display:flex;justify-content:space-between;align-items:flex-start"><div><div style="font-size:14px;font-weight:700;font-family:var(--m)">'+s.ticker+'</div><div style="font-size:11px;color:var(--t2);margin-top:2px">'+s.name+'</div></div><div style="display:flex;gap:6px"><span style="background:rgba(91,156,246,.1);color:var(--blue);font-size:10px;padding:2px 6px;border-radius:4px;font-weight:600">'+s.mkt+'</span><button class="btn-s btn-d" onclick="delStk('+i+')"><i class="ti ti-trash"></i></button></div></div><div style="display:flex;align-items:baseline;gap:6px;margin-top:.875rem"><div style="font-size:18px;font-weight:600;font-family:var(--m)">'+s.cur+' '+s.cp.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})+'</div><span style="background:'+(pct>=0?'rgba(62,207,142,.12)':'rgba(242,107,107,.12)')+';color:'+(pct>=0?'var(--green)':'var(--red)')+';font-size:11px;padding:2px 6px;border-radius:5px;font-family:var(--m)">'+(pct>=0?'+':'')+pct.toFixed(2)+'%</span></div><div style="display:flex;gap:16px;margin-top:.75rem"><div><div style="font-size:10px;color:var(--t3)">Qty</div><div style="font-size:12px;font-weight:500;font-family:var(--m)">'+s.qty.toLocaleString()+'</div></div><div><div style="font-size:10px;color:var(--t3)">Avg buy</div><div style="font-size:12px;font-weight:500;font-family:var(--m)">'+s.cur+' '+s.bp.toFixed(2)+'</div></div><div><div style="font-size:10px;color:var(--t3)">Value</div><div style="font-size:12px;font-weight:500;font-family:var(--m)">'+fmt(val)+'</div></div><div><div style="font-size:10px;color:var(--t3)">G/L</div><div style="font-size:12px;font-weight:500;font-family:var(--m);color:'+(gl2>=0?'var(--green)':'var(--red)')+'"> '+(gl2>=0?'+':'')+fmt(gl2)+'</div></div></div>'+(s.broker?'<div style="font-size:10px;color:var(--t3);margin-top:8px">'+s.broker+'</div>':'')+'</div>';
+    return'<div class="stk-card"><div style="display:flex;justify-content:space-between;align-items:flex-start"><div><div style="font-size:14px;font-weight:700;font-family:var(--m)">'+s.ticker+'</div><div style="font-size:11px;color:var(--t2);margin-top:2px">'+s.name+'</div></div><div style="display:flex;gap:6px"><span style="background:rgba(91,156,246,.1);color:var(--blue);font-size:10px;padding:2px 6px;border-radius:4px;font-weight:600">'+s.mkt+'</span><button class="btn-s btn-d" onclick="delStk('+i+')">Delete</button></div></div><div style="display:flex;align-items:baseline;gap:6px;margin-top:.875rem"><div style="font-size:18px;font-weight:600;font-family:var(--m)">'+s.cur+' '+s.cp.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})+'</div><span style="background:'+(pct>=0?'rgba(62,207,142,.12)':'rgba(242,107,107,.12)')+';color:'+(pct>=0?'var(--green)':'var(--red)')+';font-size:11px;padding:2px 6px;border-radius:5px;font-family:var(--m)">'+(pct>=0?'+':'')+pct.toFixed(2)+'%</span></div><div style="display:flex;gap:16px;margin-top:.75rem"><div><div style="font-size:10px;color:var(--t3)">Qty</div><div style="font-size:12px;font-weight:500;font-family:var(--m)">'+s.qty.toLocaleString()+'</div></div><div><div style="font-size:10px;color:var(--t3)">Avg buy</div><div style="font-size:12px;font-weight:500;font-family:var(--m)">'+s.cur+' '+s.bp.toFixed(2)+'</div></div><div><div style="font-size:10px;color:var(--t3)">Value</div><div style="font-size:12px;font-weight:500;font-family:var(--m)">'+fmt(val)+'</div></div><div><div style="font-size:10px;color:var(--t3)">G/L</div><div style="font-size:12px;font-weight:500;font-family:var(--m);color:'+(gl2>=0?'var(--green)':'var(--red)')+'"> '+(gl2>=0?'+':'')+fmt(gl2)+'</div></div></div>'+(s.broker?'<div style="font-size:10px;color:var(--t3);margin-top:8px">'+s.broker+'</div>':'')+'</div>';
   }).join('');
 }
 function openAddStk(){oM('m-stk');}
@@ -616,8 +685,8 @@ function expStocks(){
 }
 
 function renderExport(){
-  document.getElementById('exp-acc').innerHTML=accs.map(function(a){return'<button onclick="expOneExcel(\''+a.id+'\')"><i class="ti ti-file-spreadsheet"></i> '+a.name+'</button>';}).join('');
-  document.getElementById('exp-sync').innerHTML=accs.map(function(a){return'<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px"><div style="width:28px;height:28px;border-radius:7px;background:rgba(91,156,246,.1);display:flex;align-items:center;justify-content:center;color:'+tcl(a.type)+';flex-shrink:0"><i class="ti ti-'+tic(a.type)+'" style="font-size:14px"></i></div><div style="flex:1"><div style="font-size:12px;font-weight:500;margin-bottom:3px">'+a.name+'</div><input type="text" placeholder="CSV URL…" value="'+(a.url||'')+'" onchange="accs.find(function(x){return x.id===\''+a.id+'\';}).url=this.value" style="font-size:11px;padding:5px 8px"></div><button class="btn-s" onclick="syncOne(\''+a.id+'\')"><i class="ti ti-refresh"></i> Sync</button><span class="ss" id="ss2-'+a.id+'">'+(a.url?(a.synced?'<span style="color:var(--green)">✓</span>':'—'):'—')+'</span></div>';}).join('');
+  document.getElementById('exp-acc').innerHTML=accs.map(function(a){return'<button onclick="expOneExcel(\''+a.id+'\')">📊 '+a.name+'</button>';}).join('');
+  document.getElementById('exp-sync').innerHTML=accs.map(function(a){return'<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px"><div style="width:28px;height:28px;border-radius:7px;background:rgba(91,156,246,.1);display:flex;align-items:center;justify-content:center;color:'+tcl(a.type)+';flex-shrink:0"><i class="ti ti-'+tic(a.type)+'" style="font-size:14px"></i></div><div style="flex:1"><div style="font-size:12px;font-weight:500;margin-bottom:3px">'+a.name+'</div><input type="text" placeholder="CSV URL…" value="'+(a.url||'')+'" onchange="accs.find(function(x){return x.id===\''+a.id+'\';}).url=this.value;saveState()" style="font-size:11px;padding:5px 8px"></div><button class="btn-s" onclick="syncOne(\''+a.id+'\')">↻ Sync</button><span class="ss" id="ss2-'+a.id+'">'+(a.url?(a.synced?'<span style="color:var(--green)">✓</span>':'—'):'—')+'</span></div>';}).join('');
 }
 function expAllExcel(){
   var wb=XLSX.utils.book_new();
@@ -705,7 +774,7 @@ async function doAI(){
   ms.appendChild(ld);ms.scrollTop=ms.scrollHeight;
   ah.push({role:'user',content:q});
   try{
-    var r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1024,system:ASYS,messages:ah.slice(-10)})});
+    var r=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1024,system:ASYS,messages:ah.slice(-10)})});
     var d=await r.json();
     var reply=(d.content&&d.content[0]&&d.content[0].text)||'Error.';
     ah.push({role:'assistant',content:reply});ld.remove();
