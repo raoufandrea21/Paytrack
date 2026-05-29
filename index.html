@@ -454,10 +454,9 @@ function renderCharts(){
 
 function renderMoStrip(){
   var mm={};
-  var now=TODAY;
-  // Show next 12 months
+  var M3=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   for(var mi=0;mi<12;mi++){
-    var dt=new Date(now.getFullYear(),now.getMonth()+mi,1);
+    var dt=new Date(TODAY.getFullYear(),TODAY.getMonth()+mi,1);
     var k=dt.getFullYear()+'-'+(dt.getMonth()+1).toString().padStart(2,'0');
     mm[k]={total:0,paid:0,overdue:0,count:0,yr:dt.getFullYear(),mo:dt.getMonth()};
   }
@@ -466,30 +465,31 @@ function renderMoStrip(){
       var d=pd(eff(p));if(!d)return;
       var k=d.getFullYear()+'-'+(d.getMonth()+1).toString().padStart(2,'0');
       if(!mm[k])return;
-      if(p.status!=='paid')mm[k].total+=p.amount;
-      if(p.status==='paid')mm[k].paid+=p.amount;
+      if(p.status!=='paid'){mm[k].total+=p.amount;mm[k].count++;}
       if(p.status==='overdue')mm[k].overdue+=p.amount;
-      if(p.status!=='paid')mm[k].count++;
     });
   });
-  var M3=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   var keys=Object.keys(mm).sort();
-  var isCurrentMo=function(k){var p=k.split('-');return +p[0]===TODAY.getFullYear()&&+p[1]-1===TODAY.getMonth();};
-  document.getElementById('mo-strip').innerHTML=keys.map(function(k){
+  var strip=document.getElementById('mo-strip');
+  if(!strip)return;
+  strip.innerHTML='';
+  keys.forEach(function(k){
     var m=mm[k];
-    var isCur=isCurrentMo(k);
-    var hasData=m.total>0||m.paid>0;
-    var bg=isCur?'rgba(91,156,246,0.15)':'var(--bg3)';
-    var border=isCur?'1px solid var(--blue)':'1px solid var(--b1)';
+    var isCur=(+k.split('-')[0]===TODAY.getFullYear()&&+k.split('-')[1]-1===TODAY.getMonth());
+    var div=document.createElement('div');
+    div.style.cssText='flex-shrink:0;min-width:110px;background:'+(isCur?'rgba(91,156,246,0.15)':'var(--bg3)')+';border:1px solid '+(isCur?'var(--blue)':'var(--b1)')+';border-radius:10px;padding:10px 12px;cursor:pointer;transition:background .12s';
+    div.onclick=function(){go('monthly',null);};
     var clr=m.overdue>0?'var(--red)':m.total>0?'var(--amber)':'var(--green)';
-    return'<div onclick="go('monthly',null)" style="flex-shrink:0;min-width:110px;background:'+bg+';border:'+border+';border-radius:10px;padding:10px 12px;cursor:pointer;transition:background .12s" onmouseover="this.style.background='var(--bg4)'" onmouseout="this.style.background=''+bg+''">'
-      +'<div style="font-size:11px;font-weight:600;color:var(--t2);margin-bottom:4px">'+M3[m.mo]+' '+m.yr+(isCur?' <span style="background:var(--blue);color:#fff;font-size:9px;padding:1px 5px;border-radius:3px">NOW</span>':'')+'</div>'
-      +(hasData
-        ?'<div style="font-size:14px;font-weight:700;font-family:var(--m);color:'+clr+'">'+fmt(m.total)+'</div>'
-        +'<div style="font-size:10px;color:var(--t3);margin-top:3px">'+m.count+' payment'+(m.count!==1?'s':'')+(m.overdue>0?' · <span style="color:var(--red)">'+fmt(m.overdue)+' overdue</span>':'')+'</div>'
-        :'<div style="font-size:13px;color:var(--t3)">—</div><div style="font-size:10px;color:var(--t3);margin-top:3px">No payments</div>')
-      +'</div>';
-  }).join('');
+    var badge=isCur?' <span style="background:var(--blue);color:#fff;font-size:9px;padding:1px 5px;border-radius:3px">NOW</span>':'';
+    if(m.total>0||m.paid>0){
+      div.innerHTML='<div style="font-size:11px;font-weight:600;color:var(--t2);margin-bottom:4px">'+M3[m.mo]+' '+m.yr+badge+'</div>'
+        +'<div style="font-size:14px;font-weight:700;font-family:var(--m);color:'+clr+'">'+fmt(m.total)+'</div>'
+        +'<div style="font-size:10px;color:var(--t3);margin-top:3px">'+m.count+' payment'+(m.count!==1?'s':'')+(m.overdue>0?' · <span style="color:var(--red)">'+fmt(m.overdue)+' overdue</span>':'')+'</div>';
+    } else {
+      div.innerHTML='<div style="font-size:11px;font-weight:600;color:var(--t2);margin-bottom:4px">'+M3[m.mo]+' '+m.yr+'</div><div style="font-size:13px;color:var(--t3)">No payments</div>';
+    }
+    strip.appendChild(div);
+  });
 }
 
 function renderDash(){  // Auto-flag overdue: any notpaid payment past today
