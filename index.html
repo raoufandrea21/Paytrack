@@ -158,29 +158,83 @@ label{display:block;font-size:11px;color:var(--t2);margin-bottom:4px;font-weight
 <div class="ct">
 
 <div id="p-dash" class="pg on">
-  <div class="mg">
-    <div class="mc rb" onclick="go('accs',null)"><div class="mc-ic r">⚠</div><div class="mc-lbl">Total outstanding</div><div class="mc-val" id="m1">—</div><div class="mc-sub">Click to view accounts</div></div>
-    <div class="mc gb" onclick="go('accs',null)"><div class="mc-ic g">✓</div><div class="mc-lbl">Total paid</div><div class="mc-val" id="m2">—</div><div class="mc-sub">All time</div></div>
-    <div class="mc rb" onclick="go('rem',null)"><div class="mc-ic r">⏰</div><div class="mc-lbl">Overdue now</div><div class="mc-val" id="m3">—</div><div class="mc-sub" id="m3s">Requires action</div></div>
-    <div class="mc ab" onclick="go('monthly',null)"><div class="mc-ic a">📅</div><div class="mc-lbl">This month</div><div class="mc-val" id="m4">—</div><div class="mc-sub">May 2026</div></div>
-    <div class="mc bb" onclick="go('accs',null)"><div class="mc-ic b">🏦</div><div class="mc-lbl">Active accounts</div><div class="mc-val" id="m5">—</div><div class="mc-sub">Click to manage</div></div>
-    <div class="mc pb" onclick="go('stk',null)"><div class="mc-ic p">📈</div><div class="mc-lbl">Portfolio value</div><div class="mc-val" id="m6">—</div><div class="mc-sub">Click to view stocks</div></div>
+
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:1.5rem">
+    <div onclick="go('accs',null)" style="background:linear-gradient(135deg,rgba(242,107,107,0.15),rgba(242,107,107,0.05));border:1px solid rgba(242,107,107,0.3);border-radius:14px;padding:1.25rem;cursor:pointer;position:relative;overflow:hidden">
+      <div style="position:absolute;top:-20px;right:-20px;width:80px;height:80px;background:rgba(242,107,107,0.1);border-radius:50%"></div>
+      <div style="font-size:10px;font-weight:700;color:var(--red);text-transform:uppercase;letter-spacing:1px;margin-bottom:.5rem">Total Outstanding</div>
+      <div style="font-size:22px;font-weight:700;color:var(--t1);font-family:var(--m);letter-spacing:-1px" id="m1">—</div>
+      <div style="font-size:11px;color:var(--t2);margin-top:.5rem">Across all accounts</div>
+    </div>
+    <div onclick="go('accs',null)" style="background:linear-gradient(135deg,rgba(62,207,142,0.15),rgba(62,207,142,0.05));border:1px solid rgba(62,207,142,0.3);border-radius:14px;padding:1.25rem;cursor:pointer;position:relative;overflow:hidden">
+      <div style="position:absolute;top:-20px;right:-20px;width:80px;height:80px;background:rgba(62,207,142,0.1);border-radius:50%"></div>
+      <div style="font-size:10px;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:1px;margin-bottom:.5rem">Total Paid</div>
+      <div style="font-size:22px;font-weight:700;color:var(--t1);font-family:var(--m);letter-spacing:-1px" id="m2">—</div>
+      <div style="font-size:11px;color:var(--t2);margin-top:.5rem" id="m2-pct">All time</div>
+    </div>
+    <div onclick="go('monthly',null)" style="background:linear-gradient(135deg,rgba(245,166,35,0.15),rgba(245,166,35,0.05));border:1px solid rgba(245,166,35,0.3);border-radius:14px;padding:1.25rem;cursor:pointer;position:relative;overflow:hidden">
+      <div style="position:absolute;top:-20px;right:-20px;width:80px;height:80px;background:rgba(245,166,35,0.1);border-radius:50%"></div>
+      <div style="font-size:10px;font-weight:700;color:var(--amber);text-transform:uppercase;letter-spacing:1px;margin-bottom:.5rem">This Month</div>
+      <div style="font-size:22px;font-weight:700;color:var(--t1);font-family:var(--m);letter-spacing:-1px" id="m4">—</div>
+      <div style="font-size:11px;color:var(--t2);margin-top:.5rem" id="m4-lbl">—</div>
+    </div>
+    <div onclick="go('monthly',null)" style="background:linear-gradient(135deg,rgba(91,156,246,0.15),rgba(91,156,246,0.05));border:1px solid rgba(91,156,246,0.3);border-radius:14px;padding:1.25rem;cursor:pointer;position:relative;overflow:hidden">
+      <div style="position:absolute;top:-20px;right:-20px;width:80px;height:80px;background:rgba(91,156,246,0.1);border-radius:50%"></div>
+      <div style="font-size:10px;font-weight:700;color:var(--blue);text-transform:uppercase;letter-spacing:1px;margin-bottom:.5rem">Next Month</div>
+      <div style="font-size:22px;font-weight:700;color:var(--t1);font-family:var(--m);letter-spacing:-1px" id="m-next">—</div>
+      <div style="font-size:11px;color:var(--t2);margin-top:.5rem" id="m-next-lbl">—</div>
+    </div>
+    <div onclick="go('stk',null)" style="background:linear-gradient(135deg,rgba(167,139,250,0.15),rgba(167,139,250,0.05));border:1px solid rgba(167,139,250,0.3);border-radius:14px;padding:1.25rem;cursor:pointer;position:relative;overflow:hidden">
+      <div style="position:absolute;top:-20px;right:-20px;width:80px;height:80px;background:rgba(167,139,250,0.1);border-radius:50%"></div>
+      <div style="font-size:10px;font-weight:700;color:var(--purple);text-transform:uppercase;letter-spacing:1px;margin-bottom:.5rem">Stock Portfolio</div>
+      <div style="font-size:22px;font-weight:700;color:var(--t1);font-family:var(--m);letter-spacing:-1px" id="m6">—</div>
+      <div style="font-size:11px;color:var(--t2);margin-top:.5rem" id="m6-gl">Click to view stocks</div>
+    </div>
+    <div onclick="go('stk',null)" style="background:linear-gradient(135deg,rgba(45,212,191,0.15),rgba(45,212,191,0.05));border:1px solid rgba(45,212,191,0.3);border-radius:14px;padding:1.25rem;cursor:pointer;position:relative;overflow:hidden">
+      <div style="position:absolute;top:-20px;right:-20px;width:80px;height:80px;background:rgba(45,212,191,0.1);border-radius:50%"></div>
+      <div style="font-size:10px;font-weight:700;color:var(--teal);text-transform:uppercase;letter-spacing:1px;margin-bottom:.5rem">Net Balance</div>
+      <div style="font-size:22px;font-weight:700;font-family:var(--m);letter-spacing:-1px" id="m-bal">—</div>
+      <div style="font-size:11px;color:var(--t2);margin-top:.5rem">Stocks minus Outstanding</div>
+    </div>
   </div>
-  <div class="g2">
-    <div class="card"><div class="card-t">Debt breakdown</div><div style="position:relative;height:195px"><canvas id="pc"></canvas></div><div id="pleg" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;font-size:11px;color:var(--t2)"></div></div>
-    <div class="card"><div class="card-t">Monthly obligations (AED)</div><div style="position:relative;height:195px"><canvas id="bc"></canvas></div></div>
+
+  <div style="display:grid;grid-template-columns:1.2fr 1fr;gap:1.25rem;margin-bottom:1.25rem">
+    <div class="card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">
+        <div style="font-size:11px;font-weight:600;color:var(--t2);text-transform:uppercase;letter-spacing:.5px">Debt breakdown</div>
+        <div id="pleg" style="display:flex;flex-wrap:wrap;gap:6px;font-size:10px;color:var(--t2)"></div>
+      </div>
+      <div style="position:relative;height:180px"><canvas id="pc"></canvas></div>
+    </div>
+    <div class="card">
+      <div style="font-size:11px;font-weight:600;color:var(--t2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:1rem">Monthly obligations</div>
+      <div style="position:relative;height:180px"><canvas id="bc"></canvas></div>
+    </div>
   </div>
-  <!-- Monthly summary strip -->
+
   <div class="card" style="margin-bottom:1.25rem">
-    <div class="sh"><div class="st">Monthly obligations summary</div><button class="btn-s" onclick="go('monthly',null)">Full breakdown →</button></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">
+      <div style="font-size:11px;font-weight:600;color:var(--t2);text-transform:uppercase;letter-spacing:.5px">Monthly obligations — next 12 months</div>
+      <button class="btn-s" onclick="go('monthly',null)">Full breakdown →</button>
+    </div>
     <div id="mo-strip" style="display:flex;gap:8px;overflow-x:auto;padding-bottom:4px"></div>
   </div>
 
-  <div class="g3">
-    <div class="card"><div class="sh"><div class="st">Upcoming — next 90 days</div><button class="btn-s" onclick="go('monthly',null)">View all →</button></div><div style="overflow-x:auto"><table><thead><tr><th>Account</th><th>Date</th><th>Description</th><th>Chq</th><th style="text-align:right">Amount</th><th>Status</th><th></th></tr></thead><tbody id="utb"></tbody></table></div></div>
-    <div class="card"><div class="sh"><div class="st">Recent activity</div></div><div id="act-feed"></div></div>
+  <div style="display:grid;grid-template-columns:1.6fr 1fr;gap:1.25rem">
+    <div class="card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">
+        <div style="font-size:11px;font-weight:600;color:var(--t2);text-transform:uppercase;letter-spacing:.5px">Upcoming — next 90 days</div>
+        <button class="btn-s" onclick="go('monthly',null)">View all →</button>
+      </div>
+      <div style="overflow-x:auto"><table><thead><tr><th>Account</th><th>Date</th><th>Description</th><th>Chq</th><th style="text-align:right">Amount</th><th>Status</th><th></th></tr></thead><tbody id="utb"></tbody></table></div>
+    </div>
+    <div class="card">
+      <div style="font-size:11px;font-weight:600;color:var(--t2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:1rem">Recent activity</div>
+      <div id="act-feed"></div>
+    </div>
   </div>
-</div>
+
+
 
 <div id="p-accs" class="pg">
   <div class="sh"><div class="st">Accounts</div><div style="display:flex;gap:8px"><button onclick="openAdd()">+ Add account</button><button onclick="go('exp',null)">↓ Export</button></div></div>
@@ -579,54 +633,87 @@ function renderMoStrip(){
   });
 }
 
-function renderDash(){  autoFlagOverdue();
-  var o=0,p=0,ov=0,mo=0;
+function renderDash(){
+  autoFlagOverdue();
+  var today=new Date();
+  var thisMo=today.getMonth(),thisYr=today.getFullYear();
+  var nextMo=(thisMo+1)%12,nextYr=thisMo===11?thisYr+1:thisYr;
+  var MNS=['January','February','March','April','May','June','July','August','September','October','November','December'];
+  var o=0,p=0,ov=0,mo=0,nmo=0;
   accs.forEach(function(a){
     a.pays.forEach(function(x){
       if(x.status==='paid')p+=x.amount;else o+=x.amount;
       if(x.status==='overdue')ov+=x.amount;
       var d=pd(eff(x));
-      if(x.status!=='paid'&&d&&d.getFullYear()===2026&&d.getMonth()===4)mo+=x.amount;
+      if(x.status!=='paid'&&d&&d.getFullYear()===thisYr&&d.getMonth()===thisMo)mo+=x.amount;
+      if(x.status!=='paid'&&d&&d.getFullYear()===nextYr&&d.getMonth()===nextMo)nmo+=x.amount;
     });
   });
+  var sv=stocks.reduce(function(s,x){return s+x.qty*(x.cp||0);},0);
+  var bal=sv-o;
+  var gl=stocks.reduce(function(s,x){return s+x.qty*((x.cp||0)-(x.bp||0));},0);
+  var ovc=accs.reduce(function(s,a){return s+a.pays.filter(function(px){return px.status==='overdue';}).length;},0);
   document.getElementById('m1').textContent=fmt(o);
   document.getElementById('m2').textContent=fmt(p);
-  document.getElementById('m3').textContent=fmt(ov);
-  var ovc=accs.reduce(function(s,a){return s+a.pays.filter(function(p){return p.status==='overdue';}).length;},0);
-  document.getElementById('m3s').textContent=ovc+' payment'+(ovc!==1?'s':'')+' overdue';
+  var tot=o+p;
+  document.getElementById('m2-pct').textContent=tot>0?Math.round(p/tot*100)+'% of total':'All time';
   document.getElementById('m4').textContent=fmt(mo);
-  document.getElementById('m5').textContent=accs.length;
-  var sv=stocks.reduce(function(s,x){return s+x.qty*x.cp;},0);
-  document.getElementById('m6').textContent=sv>0?fmt(sv):'—';
+  document.getElementById('m4-lbl').textContent=MNS[thisMo]+' '+thisYr;
+  var mnEl=document.getElementById('m-next');
+  if(mnEl)mnEl.textContent=fmt(nmo);
+  var mnLbl=document.getElementById('m-next-lbl');
+  if(mnLbl)mnLbl.textContent=MNS[nextMo]+' '+nextYr;
+  document.getElementById('m6').textContent=sv>0?fmt(sv):'AED 0';
+  var glEl=document.getElementById('m6-gl');
+  if(glEl){if(gl!==0)glEl.innerHTML='G/L: <span style="color:'+(gl>=0?'var(--green)':'var(--red)')+'"> '+(gl>=0?'+':'')+fmt(gl)+'</span>';else glEl.textContent='Click to view stocks';}
+  var balEl=document.getElementById('m-bal');
+  if(balEl){balEl.textContent=(bal<0?'-':'')+fmt(Math.abs(bal));balEl.style.color=bal>=0?'var(--green)':'var(--red)';}
+  if(document.getElementById('m5'))document.getElementById('m5').textContent=accs.length;
   document.getElementById('ov-dot').textContent=ovc;
   renderCharts();
   renderMoStrip();
-  var cut=new Date(TODAY);cut.setDate(cut.getDate()+90);
+  var cut=new Date(today);cut.setDate(cut.getDate()+90);
   var rows=[];
   accs.forEach(function(a){
     a.pays.forEach(function(x,i){
       var d=pd(eff(x));
-      if(x.status!=='paid'&&d&&d>=TODAY&&d<=cut)rows.push(Object.assign({},x,{acc:a.name,aid:a.id,pi:i,_d:d,defer:a.defer}));
+      if(x.status!=='paid'&&d&&d>=today&&d<=cut){
+        rows.push({acc:a.name,aid:a.id,pi:i,_d:d,defer:a.defer,status:x.status,amount:x.amount,desc:x.desc,chq:x.chq,dt:x.dt,nd:x.nd});
+      }
     });
   });
   rows.sort(function(a,b){return a._d-b._d;});
-  document.getElementById('utb').innerHTML=rows.slice(0,15).map(function(r){
+  var tbHtml='';
+  rows.slice(0,15).forEach(function(r){
     var hn=r.nd&&r.nd.trim();
-    return'<tr><td style="font-weight:500">'+r.acc+'</td><td style="font-family:var(--m);font-size:11px">'+eff(r)+(hn?'<br><span style="font-size:10px;color:var(--t3);text-decoration:line-through">'+r.dt+'</span>':'')+'</td><td style="max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--t2)">'+r.desc+'</td><td style="font-family:var(--m);font-size:10px;color:var(--t3)">'+(r.chq||'—')+'</td><td style="text-align:right;font-weight:600;font-family:var(--m)">'+fmt(r.amount)+'</td><td>'+sbdg(r.status)+'</td><td style="white-space:nowrap"><button class="btn-s" onclick="mkPaid(\''+r.aid+'\','+r.pi+')" style="color:#3ecf8e">✓ Paid</button>'+(r.defer?' <button class="btn-s" onclick="deferP(\''+r.aid+'\','+r.pi+')">Defer</button>':'')+' <button class="btn-s" onclick="opEdit(\''+r.aid+'\','+r.pi+')">✎ Edit</button></td></tr>';
-  }).join('');
+    var dc=eff(r)+(hn?'<br><span style="font-size:10px;color:var(--t3);text-decoration:line-through">'+r.dt+'</span>':'');
+    tbHtml+='<tr><td style="font-weight:500">'+r.acc+'</td><td style="font-family:var(--m);font-size:11px">'+dc+'</td>'
+      +'<td style="max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--t2)">'+r.desc+'</td>'
+      +'<td style="font-family:var(--m);font-size:10px;color:var(--t3)">'+(r.chq||'—')+'</td>'
+      +'<td style="text-align:right;font-weight:600;font-family:var(--m)">'+fmt(r.amount)+'</td>'
+      +'<td>'+sbdg(r.status)+'</td>'
+      +'<td style="white-space:nowrap"><button class="btn-s" onclick="mkPaid(\'' +r.aid+'\','+r.pi+')">✓</button>'
+      +(r.defer?' <button class="btn-s" onclick="deferP(\'' +r.aid+'\','+r.pi+')">Defer</button>':'')
+      +' <button class="btn-s" onclick="opEdit(\'' +r.aid+'\','+r.pi+')">✎</button></td></tr>';
+  });
+  document.getElementById('utb').innerHTML=tbHtml;
   var activity=[];
   accs.forEach(function(a){
-    a.pays.forEach(function(p){
-      var d=pd(p.dt);
-      if(p.status==='paid'&&d)activity.push({type:'paid',acc:a.name,desc:p.desc,amount:p.amount,date:p.dt,_d:d});
-      else if(p.status==='overdue')activity.push({type:'overdue',acc:a.name,desc:p.desc,amount:p.amount,date:p.dt,_d:pd(p.dt)||TODAY});
+    a.pays.forEach(function(px){
+      var d=pd(px.dt);
+      if(px.status==='paid'&&d)activity.push({type:'paid',acc:a.name,desc:px.desc,amount:px.amount,date:px.dt,_d:d});
+      else if(px.status==='overdue')activity.push({type:'overdue',acc:a.name,desc:px.desc,amount:px.amount,date:px.dt,_d:pd(px.dt)||today});
     });
   });
   activity.sort(function(a,b){return b._d-a._d;});
   var ac={paid:'var(--green)',overdue:'var(--red)',notpaid:'var(--amber)'};
-  document.getElementById('act-feed').innerHTML=activity.slice(0,8).map(function(a){
-    return'<div class="act-item"><div class="act-dot" style="background:'+ac[a.type]+'"></div><div><div style="font-size:12px;font-weight:500">'+a.acc+' — '+a.desc+'</div><div style="font-size:11px;color:var(--t2);margin-top:2px">'+fmt(a.amount)+' · '+a.date+' · '+sbdg(a.type)+'</div></div></div>';
-  }).join('');
+  var actHtml='';
+  activity.slice(0,8).forEach(function(a){
+    actHtml+='<div class="act-item"><div class="act-dot" style="background:'+ac[a.type]+'"></div>'
+      +'<div><div style="font-size:12px;font-weight:500">'+a.acc+' — '+a.desc+'</div>'
+      +'<div style="font-size:11px;color:var(--t2);margin-top:2px">'+fmt(a.amount)+' · '+a.date+' · '+sbdg(a.type)+'</div></div></div>';
+  });
+  document.getElementById('act-feed').innerHTML=actHtml;
 }
 
 function renderAccs(){
