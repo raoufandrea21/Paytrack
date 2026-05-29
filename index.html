@@ -386,12 +386,30 @@ function syncToServer(){
     }).catch(function(){});
   }catch(e){}
 }
+function convertDates(accsArr){
+  // Convert any YYYY-MM-DD dates to DD-MM-YYYY in loaded data
+  if(!accsArr)return accsArr;
+  accsArr.forEach(function(a){
+    if(!a.pays)return;
+    a.pays.forEach(function(p){
+      if(p.dt&&/^\d{4}-\d{2}-\d{2}$/.test(p.dt)){
+        var parts=p.dt.split('-');
+        p.dt=parts[2]+'-'+parts[1]+'-'+parts[0];
+      }
+      if(p.nd&&/^\d{4}-\d{2}-\d{2}$/.test(p.nd)){
+        var parts=p.nd.split('-');
+        p.nd=parts[2]+'-'+parts[1]+'-'+parts[0];
+      }
+    });
+  });
+  return accsArr;
+}
 function loadState(){
   try{
     var a=localStorage.getItem('pt_accs');
     if(a){
       var parsed=JSON.parse(a);
-      if(parsed&&Array.isArray(parsed)&&parsed.length>=0){
+      if(parsed&&Array.isArray(parsed)&&parsed.length>=0){parsed=convertDates(parsed);
         // Get list of deleted IDs
         var deletedRaw=localStorage.getItem('pt_deleted');
         var deletedIds=deletedRaw?JSON.parse(deletedRaw):[];
@@ -429,11 +447,15 @@ function loadState(){
 }
 function autoFlagOverdue(){
   var now=new Date();
+  // Set to start of today (midnight) so today's payments are NOT flagged as overdue
+  var today=new Date(now.getFullYear(),now.getMonth(),now.getDate());
   accs.forEach(function(a){
     a.pays.forEach(function(p){
-      if(p.status==='notpaid'){
+      if(p.status==='notpaid'||p.status==='overdue'){
         var d=pd(eff(p));
-        if(d&&d<now)p.status='overdue';
+        if(!d)return;
+        if(d<today)p.status='overdue';
+        else if(p.status==='overdue')p.status='notpaid'; // fix incorrectly flagged future payments
       }
     });
   });
