@@ -154,6 +154,7 @@ label{display:block;font-size:11px;color:var(--t2);margin-bottom:4px;font-weight
   <div class="tb-clock" id="clk"></div>
   <button onclick="go('exp',null)">↓ Export</button>
   <button onclick="syncAll()" id="sync-btn">↻ Sync</button>
+  <button onclick="pushToAllDevices()" id="push-btn" style="background:rgba(62,207,142,0.15);color:var(--green);border-color:rgba(62,207,142,0.3)">📱 Push to devices</button>
 </div>
 <div class="ct">
 
@@ -423,6 +424,24 @@ function saveState(){
   }catch(e){}
   syncToServer();
 }
+function pushToAllDevices(){
+  var btn=document.getElementById('push-btn');
+  if(btn){btn.innerHTML='<i class="ti ti-loader"></i> Pushing...';btn.disabled=true;}
+  fetch('/api/save',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({accs:accs,stocks:stocks,saved:new Date().toISOString()})
+  }).then(function(r){return r.json();})
+  .then(function(d){
+    if(btn){btn.innerHTML='<i class="ti ti-check"></i> Pushed!';btn.disabled=false;}
+    setTimeout(function(){if(btn)btn.innerHTML='<i class="ti ti-device-mobile"></i> Push';},3000);
+    alert('Data pushed to server!\nOpen PayTrack on any other device and it will load your latest data automatically.');
+  }).catch(function(e){
+    if(btn){btn.innerHTML='<i class="ti ti-device-mobile"></i> Push';btn.disabled=false;}
+    alert('Push failed: '+e.message);
+  });
+}
+
 function syncToServer(){
   try{
     fetch('/api/save',{
@@ -1308,24 +1327,28 @@ async function loadFromServer(){
     if(!res.ok)return;
     var data=await res.json();
     if(!data||!data.accs||!Array.isArray(data.accs)||!data.accs.length)return;
-    // Server has data - merge it (server wins for accounts, keep local stocks if newer)
     var serverAccs=convertDates(data.accs);
     var localTime=parseInt(localStorage.getItem('pt_save_time')||'0');
     var serverTime=data.saved?new Date(data.saved).getTime():0;
-    if(serverTime>localTime){
-      // Server is newer - use server data
+    // Use server data if it's newer OR if local has no save time (new device)
+    if(serverTime>localTime||localTime===0){
       var deletedRaw=localStorage.getItem('pt_deleted');
       var deletedIds=deletedRaw?JSON.parse(deletedRaw):[];
       accs=serverAccs.filter(function(a){return deletedIds.indexOf(a.id)===-1;});
       if(data.stocks&&Array.isArray(data.stocks)&&data.stocks.length)stocks=data.stocks;
       autoFlagOverdue();
-      saveState();
+      localStorage.setItem('pt_accs',JSON.stringify(accs));
+      localStorage.setItem('pt_stk',JSON.stringify(stocks));
+      if(serverTime)localStorage.setItem('pt_save_time',serverTime.toString());
       rAll();
-      // Show sync indicator
       var si=document.getElementById('sync-indicator');
-      if(si){si.textContent='↻ Synced from server';si.style.color='var(--green)';setTimeout(function(){si.textContent='';},3000);}
+      if(si){
+        si.textContent='✓ Synced';
+        si.style.color='var(--green)';
+        setTimeout(function(){si.textContent='';},4000);
+      }
     }
-  }catch(e){console.log('loadFromServer error:',e);}
+  }catch(e){console.log('loadFromServer:',e);}
 }
 
 window.addEventListener('load', function() {
