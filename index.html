@@ -419,8 +419,8 @@ function saveState(){
   try{
     localStorage.setItem('pt_accs',JSON.stringify(accs));
     localStorage.setItem('pt_stk',JSON.stringify(stocks));
+    localStorage.setItem('pt_save_time',Date.now().toString());
   }catch(e){}
-  // Sync to server so reminders always have latest data
   syncToServer();
 }
 function syncToServer(){
@@ -1302,13 +1302,41 @@ setInterval(function(){
 
 
 
+async function loadFromServer(){
+  try{
+    var res=await fetch('/api/load');
+    if(!res.ok)return;
+    var data=await res.json();
+    if(!data||!data.accs||!Array.isArray(data.accs)||!data.accs.length)return;
+    // Server has data - merge it (server wins for accounts, keep local stocks if newer)
+    var serverAccs=convertDates(data.accs);
+    var localTime=parseInt(localStorage.getItem('pt_save_time')||'0');
+    var serverTime=data.saved?new Date(data.saved).getTime():0;
+    if(serverTime>localTime){
+      // Server is newer - use server data
+      var deletedRaw=localStorage.getItem('pt_deleted');
+      var deletedIds=deletedRaw?JSON.parse(deletedRaw):[];
+      accs=serverAccs.filter(function(a){return deletedIds.indexOf(a.id)===-1;});
+      if(data.stocks&&Array.isArray(data.stocks)&&data.stocks.length)stocks=data.stocks;
+      autoFlagOverdue();
+      saveState();
+      rAll();
+      // Show sync indicator
+      var si=document.getElementById('sync-indicator');
+      if(si){si.textContent='↻ Synced from server';si.style.color='var(--green)';setTimeout(function(){si.textContent='';},3000);}
+    }
+  }catch(e){console.log('loadFromServer error:',e);}
+}
+
 window.addEventListener('load', function() {
   try { loadState(); } catch(e) { console.log('loadState error:', e); }
   try { renderDash(); } catch(e) { console.log('renderDash error:', e); }
+  // After local load, try to pull latest from server (for multi-device sync)
+  loadFromServer();
 });
-// Fallback in case load already fired
 if(document.readyState === 'complete') {
   try { loadState(); renderDash(); } catch(e) {}
+  loadFromServer();
 }</script>
 <div class="ovlay" id="m-stk-edit" style="display:none">
   <div class="modal">
