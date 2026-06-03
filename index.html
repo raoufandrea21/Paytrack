@@ -1325,7 +1325,12 @@ async function loadFromServer(){
   try{
     var res=await fetch('/api/load');
     if(!res.ok)return;
-    var data=await res.json();
+    var raw=await res.json();
+    // Handle both direct and wrapped response formats
+    var data=raw;
+    if(raw&&raw.value&&typeof raw.value==='string'){
+      try{data=JSON.parse(raw.value);}catch(e){return;}
+    }
     if(!data||!data.accs||!Array.isArray(data.accs)||!data.accs.length)return;
     var serverAccs=convertDates(data.accs);
     var localTime=parseInt(localStorage.getItem('pt_save_time')||'0');
