@@ -10,14 +10,18 @@ export default async function handler(req, res) {
     const kv = process.env.KV_REST_API_URL;
     const token = process.env.KV_REST_API_TOKEN;
     if (!kv || !token) return res.status(500).json({ error: 'KV not configured' });
-    const data = JSON.stringify({ accs, stocks: stocks || [], saved: new Date().toISOString() });
+    const data = JSON.stringify({ 
+      accs, 
+      stocks: stocks || [], 
+      saved: new Date().toISOString() 
+    });
     const r = await fetch(`${kv}/set/paytrack_data`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({ value: data })
     });
     if (!r.ok) throw new Error('KV write failed: ' + r.status);
-    return res.status(200).json({ success: true, accounts: accs.length });
+    return res.status(200).json({ success: true, accounts: accs.length, saved: new Date().toISOString() });
   } catch (e) {
     return res.status(500).json({ error: e.message });
   }
