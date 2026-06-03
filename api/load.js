@@ -14,9 +14,9 @@ export default async function handler(req, res) {
     if (!r.ok) return res.status(200).json({ error: 'KV read failed' });
 
     const json = await r.json();
-    if (!json.result) return res.status(200).json({ error: 'No data in KV' });
+    
 
-    const data = JSON.parse(json.result);
+    const raw = json.result || json.value; if (!raw) return res.status(200).json({ error: 'No data' }); const data = JSON.parse(raw);
     return res.status(200).json(data);
   } catch (e) {
     return res.status(200).json({ error: e.message });
