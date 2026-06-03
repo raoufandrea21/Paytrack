@@ -422,7 +422,7 @@ function saveState(skipSync){
     localStorage.setItem('pt_stk',JSON.stringify(stocks));
     localStorage.setItem('pt_save_time',Date.now().toString());
   }catch(e){}
-  if(!skipSync)syncToServer();
+  
 }
 function pushToAllDevices(){
   var btn=document.getElementById('push-btn');
