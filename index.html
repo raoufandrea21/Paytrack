@@ -536,7 +536,7 @@ async function syncAcc(a){
       var st='notpaid';
       if(rs==='PAID'||rs==='P')st='paid';
       else if(d<TODAY)st='overdue';
-      parsed.push({desc:(r[1]||r[0]||'Payment').trim(),status:st,amount:amt,dt:fd(d),nd:pd(r[7])?fd(pd(r[7])):'',chq:(r[5]||'').trim(),pct:(r[3]||'').trim()});
+      parsed.push({desc:(r[1]||r[0]||'Payment').trim(),status:st,amount:amt,dt:fd(d),nd:pd(r[8])?fd(pd(r[8])):pd(r[7])?fd(pd(r[7])):'',chq:(r[5]||'').trim(),pct:(r[3]||'').trim()});
     }
     if(parsed.length>0){a.pays=parsed;a.synced=true;return true;}
   }catch(e){}return false;
