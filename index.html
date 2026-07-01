@@ -140,6 +140,8 @@ label{display:block;font-size:11px;color:var(--t2);margin-bottom:4px;font-weight
   <div class="ni" onclick="go('monthly',this)">📊<span>Monthly view</span></div>
   <div class="ni" onclick="go('cal',this)">📅<span>Calendar</span></div>
   <div class="ni" onclick="go('rem',this)">🔔<span>Reminders</span><span class="dot" id="ov-dot">0</span></div>
+  <div class="nl">Planning</div>
+  <div class="ni" onclick="go('cf',this)">💰<span>Cash Flow</span></div>
   <div class="nl">Investments</div>
   <div class="ni" onclick="go('stk',this)">📈<span>Stocks</span></div>
   <div class="nl">Tools</div>
@@ -325,6 +327,67 @@ label{display:block;font-size:11px;color:var(--t2);margin-bottom:4px;font-weight
 </div>
 
 <!-- MODALS -->
+<!-- CASH FLOW PAGE HTML -->
+<div id="p-cf" class="pg">
+  <!-- KPI Cards -->
+  <div id="cf-kpi" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:1.25rem"></div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:1.25rem">
+    <!-- Monthly Outflows Table -->
+    <div class="card">
+      <div class="card-t"><i class="ti ti-list-details" style="color:var(--red);margin-right:5px"></i>Monthly Outflows</div>
+      <table id="cf-out-table">
+        <thead><tr><th>Line item</th><th style="text-align:right">AED/mo</th><th>Remaining</th></tr></thead>
+        <tbody id="cf-out-body"></tbody>
+        <tfoot id="cf-out-foot"></tfoot>
+      </table>
+    </div>
+
+    <!-- Outstanding Liabilities -->
+    <div class="card">
+      <div class="card-t"><i class="ti ti-building-bank" style="color:var(--amber);margin-right:5px"></i>Outstanding Liabilities</div>
+      <div id="cf-liab-cards" style="display:flex;flex-direction:column;gap:8px;margin-top:4px"></div>
+      <div style="border-top:1px solid var(--b1);margin-top:12px;padding-top:10px" id="cf-liab-total"></div>
+    </div>
+  </div>
+
+  <!-- 12-Month Chart -->
+  <div class="card" style="margin-bottom:1.25rem">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+      <div class="card-t" style="margin-bottom:0"><i class="ti ti-chart-bar" style="color:var(--blue);margin-right:5px"></i>12-Month Cash Flow — Jul 2026 to Jun 2027</div>
+      <div style="display:flex;gap:12px;font-size:11px;color:var(--t2)">
+        <span><span style="display:inline-block;width:10px;height:10px;background:rgba(91,156,246,.5);border-radius:2px;margin-right:4px"></span>Fixed costs</span>
+        <span><span style="display:inline-block;width:10px;height:10px;background:#f26b6b;border-radius:2px;margin-right:4px"></span>Property payment</span>
+      </div>
+    </div>
+    <div style="height:220px;position:relative"><canvas id="cf-chart"></canvas></div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:1.25rem">
+    <!-- Property Payment Schedule -->
+    <div class="card">
+      <div class="card-t"><i class="ti ti-home-2" style="color:var(--green);margin-right:5px"></i>Property Payment Schedule</div>
+      <div style="overflow-x:auto">
+        <table id="cf-prop-table">
+          <thead><tr><th>Project</th><th>Milestone</th><th>Due</th><th style="text-align:right">Amount</th><th>Status</th></tr></thead>
+          <tbody id="cf-prop-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 12-Month Running Balance -->
+    <div class="card">
+      <div class="card-t"><i class="ti ti-trending-up" style="color:var(--green);margin-right:5px"></i>12-Month Running Balance</div>
+      <div style="overflow-x:auto">
+        <table id="cf-bal-table">
+          <thead><tr><th>Month</th><th style="text-align:right">In</th><th style="text-align:right">Out</th><th style="text-align:right">Balance</th></tr></thead>
+          <tbody id="cf-bal-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="ovlay" id="m-add" style="display:none"><div class="modal"><div class="modal-t">+Add account</div><div class="fr"><label>Name</label><input id="a-n" placeholder="e.g. Marina Villa"></div><div class="fr2"><div><label>Type</label><select id="a-t"><option>Installments</option><option>Car Loan</option><option>Cash Loan</option><option>School Fees</option><option>Mortgage</option><option>Lender</option><option>Other</option></select></div><div><label>Principal (AED)</label><input type="number" id="a-p" placeholder="0"></div></div><div class="fr"><label style="display:flex;align-items:center;gap:6px"><input type="checkbox" id="a-d" style="width:auto">Enable defer option (loans)</label></div><div class="fa"><button onclick="cM('m-add')">Cancel</button><button class="btn-p" onclick="doAdd()">✓ Add</button></div></div></div>
 
 <div class="ovlay" id="m-del" style="display:none"><div class="modal"><div class="modal-t" style="color:var(--red)">🗑Delete account</div><p style="font-size:13px;color:var(--t2);margin-bottom:1rem">Delete <strong id="d-n" style="color:var(--t1)"></strong>? This cannot be undone.</p><div class="fa"><button onclick="cM('m-del')">Cancel</button><button class="btn-d" onclick="doDel()">🗑 Delete</button></div></div></div>
@@ -536,7 +599,7 @@ async function syncAcc(a){
       var st='notpaid';
       if(rs==='PAID'||rs==='P')st='paid';
       else if(d<TODAY)st='overdue';
-      parsed.push({desc:(r[1]||r[0]||'Payment').trim(),status:st,amount:amt,dt:fd(d),nd:pd(r[8])?fd(pd(r[8])):pd(r[7])?fd(pd(r[7])):'',chq:(r[5]||'').trim(),pct:(r[3]||'').trim()});
+      parsed.push({desc:(r[1]||r[0]||'Payment').trim(),status:st,amount:amt,dt:fd(d),nd:pd(r[7])?fd(pd(r[7])):'',chq:(r[5]||'').trim(),pct:(r[3]||'').trim()});
     }
     if(parsed.length>0){a.pays=parsed;a.synced=true;return true;}
   }catch(e){}return false;
@@ -1160,7 +1223,7 @@ async function doAI(){
 }
 function askC(q){document.getElementById('ai-in').value=q;doAI();}
 
-var pgTitles={dash:'Dashboard',accs:'Accounts',monthly:'Monthly view',cal:'Calendar',rem:'Reminders',stk:'Stocks',ai:'AI assistant',exp:'Export'};
+var pgTitles={dash:'Dashboard',accs:'Accounts',monthly:'Monthly view',cal:'Calendar',rem:'Reminders',stk:'Stocks',ai:'AI assistant',exp:'Export',cf:'Cash Flow'};
 function go(pg,el){
   document.querySelectorAll('.pg').forEach(function(p){p.classList.remove('on');});
   document.querySelectorAll('.ni').forEach(function(n){n.classList.remove('on');});
@@ -1174,6 +1237,7 @@ function go(pg,el){
   if(pg==='rem'){renderRem();}
   if(pg==='dash')renderDash();
   if(pg==='dash')renderDash();
+  if(pg==='cf'){renderCashFlow();}
   if(pg==='stk'){renderStocks();setTimeout(function(){
     if(!stocks.length)return;
     var ps=stocks.map(function(s,i){return fetchLivePrice(s.yfSym||s.ticker,s.mkt).then(function(live){if(live&&live.price&&live.price>0){stocks[i].cp=live.price;stocks[i].livePrice=live.price;stocks[i].prevClose=live.prev||stocks[i].prevClose;}}).catch(function(){});});
@@ -1340,7 +1404,264 @@ window.addEventListener('load', function() {
 // Fallback in case load already fired
 if(document.readyState === 'complete') {
   try { loadState(); renderDash(); } catch(e) {}
-}</script>
+}
+
+// ── Cash Flow Tab ────────────────────────
+// ── Cash Flow State ──────────────────────────────────────────────────────────
+var cfState = {
+  income: 100000,
+  nbfBalance: 0,
+  outflows: [
+    { label:'NBF Personal Loan', amount:23081, months:29 },
+    { label:'BMW X4 Finance',    amount:5765,  months:26 },
+    { label:'Noya Villa Rent',   amount:19000, months:null, note:'Paid quarterly (AED 57k)' },
+    { label:'School Fees',       amount:4000,  months:null, note:'AED 62,200/yr, 3 terms' },
+    { label:'Living Expenses',   amount:30000, months:null }
+  ],
+  propPayments: [
+    { project:'Nawayef', milestone:'Commencement of construction',   date:'2026-08-30', amount:292950  },
+    { project:'Mayar',   milestone:'50% foundation works',           date:'2026-08-30', amount:193957  },
+    { project:'Mayar',   milestone:'50% superstructure',             date:'2027-02-28', amount:193957  },
+    { project:'Nawayef', milestone:'Commencement of townhouses',     date:'2027-03-30', amount:585900  },
+    { project:'Mayar',   milestone:'100% superstructure',            date:'2027-06-30', amount:193957  },
+    { project:'Nawayef', milestone:'Superstructure 100%',            date:'2027-09-30', amount:292950  },
+    { project:'Mayar',   milestone:'Weathertight completion',        date:'2027-12-30', amount:193957  },
+    { project:'Nawayef', milestone:'Facade completion',              date:'2028-03-30', amount:292950  },
+    { project:'Mayar',   milestone:'Building completion cert. (60%)',date:'2028-06-30', amount:2327479 },
+    { project:'Nawayef', milestone:'Completion / BCC',               date:'2028-12-30', amount:585900  },
+    { project:'Nawayef', milestone:'Handover (50%)',                 date:'2029-04-30', amount:2929500 }
+  ],
+  liabilities: [
+    { label:'Nawayef total',  amount:5273100, color:'#a78bfa' },
+    { label:'Mayar total',    amount:3103305, color:'#5b9cf6' },
+    { label:'NBF Loan bal.',  amount:667032,  color:'#f5a623' },
+    { label:'BMW X4 bal.',    amount:151090,  color:'#f26b6b' }
+  ]
+};
+
+var cfChart = null;
+
+function cfSave() {
+  try { localStorage.setItem('pt_cf', JSON.stringify({income:cfState.income,nbfBalance:cfState.nbfBalance,outflows:cfState.outflows,propPayments:cfState.propPayments})); } catch(e){}
+}
+function cfLoad() {
+  try {
+    var d = JSON.parse(localStorage.getItem('pt_cf')||'{}');
+    if(d.income)      cfState.income      = d.income;
+    if(d.nbfBalance !== undefined) cfState.nbfBalance = d.nbfBalance;
+    if(d.outflows && d.outflows.length === cfState.outflows.length)
+      cfState.outflows = d.outflows;
+    if(d.propPayments && d.propPayments.length === cfState.propPayments.length)
+      cfState.propPayments = d.propPayments;
+  } catch(e){}
+}
+
+function cfFmt(n) {
+  if(n >= 1e6) return 'AED ' + (n/1e6).toFixed(2) + 'M';
+  if(n >= 1e3) return 'AED ' + Math.round(n).toLocaleString();
+  return 'AED ' + Math.round(n);
+}
+
+function cfMoKey(date) { // returns "2026-08"
+  var d = new Date(date);
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
+}
+
+function cfMonths12() { // Jul 2026 - Jun 2027
+  var months = [];
+  for(var i = 0; i < 12; i++) {
+    var d = new Date(2026, 6 + i, 1); // month 6 = July
+    months.push({ key: d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'), yr: d.getFullYear(), mo: d.getMonth() });
+  }
+  return months;
+}
+
+function renderCashFlow() {
+  cfLoad();
+  var totalOut = cfState.outflows.reduce(function(s,o){ return s + o.amount; }, 0);
+  var surplus  = cfState.income - totalOut;
+
+  // ── KPI Cards ──
+  var runway = cfState.nbfBalance > 0 ? Math.floor(cfState.nbfBalance / Math.max(totalOut - cfState.income, 1)) : 0;
+  var kpiEl = document.getElementById('cf-kpi');
+  if(!kpiEl) return;
+  var kpiData = [
+    { icon:'ti-cash', color:'var(--green)', label:'Monthly Income',    val:'AED '+cfState.income.toLocaleString(), sub:'', editable:'income' },
+    { icon:'ti-arrow-down-circle', color:'var(--red)', label:'Total Fixed Out', val:'AED '+totalOut.toLocaleString(), sub:cfState.outflows.length+' line items', editable:null },
+    { icon:'ti-trending-up', color: surplus>=0?'var(--green)':'var(--red)', label:'Net Monthly Surplus', val: (surplus>=0?'+':'')+'AED '+surplus.toLocaleString(), sub: surplus<0?'⚠ Deficit':'', editable:null },
+    { icon:'ti-building-bank', color:'var(--blue)', label:'NBF Balance', val:'AED '+cfState.nbfBalance.toLocaleString(), sub: cfState.nbfBalance>0 ? 'Runway: ~'+Math.floor(cfState.nbfBalance/Math.max(totalOut,1))+' mo' : 'Enter balance below', editable:'nbfBalance' }
+  ];
+  kpiEl.innerHTML = kpiData.map(function(k) {
+    var valHtml = k.editable
+      ? '<div style="font-size:20px;font-weight:700;font-family:var(--m);color:'+k.color+';margin-bottom:2px"><input type="number" value="'+cfState[k.editable]+'" onchange="cfState[\''+k.editable+'\']=+this.value;cfSave();renderCashFlow()" style="background:transparent;border:none;border-bottom:1px solid var(--b2);color:'+k.color+';font-size:20px;font-weight:700;font-family:var(--m);width:160px;outline:none;padding:0" ></div>'
+      : '<div style="font-size:20px;font-weight:700;font-family:var(--m);color:'+k.color+';margin-bottom:2px">'+k.val+'</div>';
+    return '<div style="background:var(--bg2);border:1px solid var(--b1);border-radius:14px;padding:1.1rem 1.25rem">'
+      + '<div style="font-size:11px;color:var(--t3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px"><i class="ti '+k.icon+'" style="margin-right:4px;color:'+k.color+'"></i>'+k.label+'</div>'
+      + valHtml
+      + '<div style="font-size:11px;color:var(--t2)">'+k.sub+'</div>'
+      + '</div>';
+  }).join('');
+
+  // ── Monthly Outflows Table ──
+  var tbody = document.getElementById('cf-out-body');
+  var tfoot = document.getElementById('cf-out-foot');
+  if(tbody) tbody.innerHTML = cfState.outflows.map(function(o,i) {
+    return '<tr>'
+      + '<td style="font-size:12px">'
+          + '<div style="font-weight:500;color:var(--t1)">'+o.label+'</div>'
+          + (o.note ? '<div style="font-size:10px;color:var(--t3);margin-top:1px">'+o.note+'</div>' : '')
+        + '</td>'
+      + '<td style="text-align:right;font-family:var(--m);font-weight:600">'
+          + '<input type="number" value="'+o.amount+'" onchange="cfState.outflows['+i+'].amount=+this.value;cfSave();renderCashFlow()" style="background:transparent;border:none;border-bottom:1px solid var(--b2);color:var(--t1);font-size:12px;font-family:var(--m);font-weight:600;width:90px;text-align:right;outline:none;padding:0">'
+        + '</td>'
+      + '<td style="font-size:11px;color:var(--t2)">'
+          + (o.months ? o.months+' mo left' : '—')
+        + '</td>'
+      + '</tr>';
+  }).join('');
+  if(tfoot) tfoot.innerHTML = '<tr style="border-top:1px solid var(--b2)">'
+    + '<td style="font-size:12px;font-weight:600;color:var(--t1);padding-top:8px">Total</td>'
+    + '<td style="text-align:right;font-family:var(--m);font-weight:700;color:var(--red);padding-top:8px">'+totalOut.toLocaleString()+'</td>'
+    + '<td></td></tr>';
+
+  // ── Liabilities Cards ──
+  var liabEl = document.getElementById('cf-liab-cards');
+  var liabTot = document.getElementById('cf-liab-total');
+  var totalLiab = cfState.liabilities.reduce(function(s,l){ return s+l.amount; }, 0);
+  if(liabEl) liabEl.innerHTML = cfState.liabilities.map(function(l) {
+    var pct = Math.round(l.amount / totalLiab * 100);
+    return '<div>'
+      + '<div style="display:flex;justify-content:space-between;margin-bottom:4px">'
+          + '<span style="font-size:12px;font-weight:500;color:var(--t1)">'+l.label+'</span>'
+          + '<span style="font-size:12px;font-family:var(--m);font-weight:600;color:'+l.color+'">AED '+l.amount.toLocaleString()+'</span>'
+        + '</div>'
+      + '<div style="height:5px;background:var(--bg3);border-radius:99px;overflow:hidden">'
+          + '<div style="height:100%;width:'+pct+'%;background:'+l.color+';border-radius:99px"></div>'
+        + '</div>'
+      + '</div>';
+  }).join('');
+  if(liabTot) liabTot.innerHTML = '<div style="display:flex;justify-content:space-between">'
+    + '<span style="font-size:12px;font-weight:600;color:var(--t2)">Total outstanding</span>'
+    + '<span style="font-size:14px;font-family:var(--m);font-weight:700;color:var(--amber)">AED '+totalLiab.toLocaleString()+'</span>'
+    + '</div>';
+
+  // ── Property Schedule ──
+  var propBody = document.getElementById('cf-prop-body');
+  var today = new Date();
+  if(propBody) propBody.innerHTML = cfState.propPayments.map(function(p,i) {
+    var d   = new Date(p.date);
+    var isPast = d < today;
+    var isNear = !isPast && (d - today) < 90*86400000;
+    var badge = isPast
+      ? '<span style="background:rgba(62,207,142,.15);color:#3ecf8e;font-size:10px;font-weight:700;padding:2px 7px;border-radius:99px">Paid</span>'
+      : isNear
+        ? '<span style="background:rgba(242,107,107,.15);color:#f26b6b;font-size:10px;font-weight:700;padding:2px 7px;border-radius:99px">Due soon</span>'
+        : '<span style="background:rgba(255,255,255,.06);color:var(--t2);font-size:10px;font-weight:700;padding:2px 7px;border-radius:99px">Upcoming</span>';
+    var proj = p.project === 'Nawayef'
+      ? '<span style="background:rgba(167,139,250,.15);color:#a78bfa;font-size:10px;font-weight:700;padding:2px 7px;border-radius:99px">'+p.project+'</span>'
+      : '<span style="background:rgba(91,156,246,.15);color:#5b9cf6;font-size:10px;font-weight:700;padding:2px 7px;border-radius:99px">'+p.project+'</span>';
+    return '<tr style="'+(isPast?'opacity:.5':'')+'"><td>'+proj+'</td>'
+      + '<td style="font-size:11px;color:var(--t2);max-width:160px">'+p.milestone+'</td>'
+      + '<td style="font-size:11px;white-space:nowrap">'+d.toLocaleDateString('en-AE',{day:'numeric',month:'short',year:'numeric'})+'</td>'
+      + '<td style="text-align:right;font-family:var(--m);font-weight:600;color:var(--amber)">'
+          + '<input type="number" value="'+p.amount+'" onchange="cfState.propPayments['+i+'].amount=+this.value;cfSave();renderCashFlow()" style="background:transparent;border:none;border-bottom:1px solid var(--b2);color:var(--amber);font-size:12px;font-family:var(--m);font-weight:600;width:100px;text-align:right;outline:none;padding:0">'
+        + '</td>'
+      + '<td>'+badge+'</td></tr>';
+  }).join('');
+
+  // ── 12-Month Rolling Balance ──
+  var months12 = cfMonths12();
+  var MN = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  // property payments bucketed by month key
+  var propByMonth = {};
+  cfState.propPayments.forEach(function(p){ var k=cfMoKey(p.date); propByMonth[k]=(propByMonth[k]||0)+p.amount; });
+
+  var balBody = document.getElementById('cf-bal-body');
+  if(balBody) {
+    var runBal = cfState.nbfBalance;
+    balBody.innerHTML = months12.map(function(m) {
+      var prop = propByMonth[m.key] || 0;
+      var inflow  = cfState.income;
+      var outflow = totalOut + prop;
+      runBal += (inflow - outflow);
+      var hasProp = prop > 0;
+      var isNeg   = runBal < 0;
+      var rowBg   = isNeg ? 'background:rgba(242,107,107,.07);' : hasProp ? 'background:rgba(245,166,35,.07);' : '';
+      var balCol  = isNeg ? 'color:var(--red)' : hasProp ? 'color:var(--amber)' : 'color:var(--green)';
+      return '<tr style="'+rowBg+'">'
+        + '<td style="font-size:11px;font-weight:500">'+ MN[m.mo]+' '+m.yr+'</td>'
+        + '<td style="text-align:right;font-size:11px;font-family:var(--m);color:var(--green)">'+inflow.toLocaleString()+'</td>'
+        + '<td style="text-align:right;font-size:11px;font-family:var(--m);color:var(--red)">'
+            + outflow.toLocaleString()
+            + (prop>0?'<div style="font-size:9px;color:var(--amber)">incl. '+prop.toLocaleString()+' prop</div>':'')
+          + '</td>'
+        + '<td style="text-align:right;font-size:12px;font-family:var(--m);font-weight:700;'+balCol+'">'+Math.round(runBal).toLocaleString()+'</td>'
+        + '</tr>';
+    }).join('');
+  }
+
+  // ── Chart ──
+  var fixedData  = months12.map(function(){ return totalOut; });
+  var propData   = months12.map(function(m){ return propByMonth[m.key] || 0; });
+  var labels     = months12.map(function(m){ return MN[m.mo]+' '+String(m.yr).slice(2); });
+  var hasPropArr = months12.map(function(m){ return (propByMonth[m.key]||0) > 0; });
+
+  var ctx = document.getElementById('cf-chart');
+  if(!ctx) return;
+  if(cfChart) { cfChart.destroy(); cfChart = null; }
+  cfChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [
+        {
+          label: 'Fixed costs',
+          data: fixedData,
+          backgroundColor: months12.map(function(m){ return (propByMonth[m.key]||0)>0 ? 'rgba(242,107,107,0.25)' : 'rgba(91,156,246,0.4)'; }),
+          borderRadius: 3,
+          borderSkipped: false,
+          stack: 'a'
+        },
+        {
+          label: 'Property payment',
+          data: propData,
+          backgroundColor: '#f26b6b',
+          borderRadius: 3,
+          borderSkipped: false,
+          stack: 'a'
+        }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#22222e', titleColor: '#eeeef5', bodyColor: '#8888a0',
+          borderColor: 'rgba(255,255,255,.1)', borderWidth: 1,
+          callbacks: {
+            label: function(c){ return ' ' + c.dataset.label + ': AED ' + c.raw.toLocaleString(); }
+          }
+        }
+      },
+      scales: {
+        y: {
+          stacked: true,
+          ticks: { callback: function(v){ return 'AED '+(v>=1e6?(v/1e6).toFixed(1)+'M':(v/1000).toFixed(0)+'k'); }, color:'#44445a', font:{size:10} },
+          grid: { color:'rgba(255,255,255,.04)' }, border: { display: false }
+        },
+        x: {
+          stacked: true,
+          ticks: { autoSkip: false, maxRotation: 45, font: { size: 9 }, color: '#44445a' },
+          grid: { display: false }, border: { display: false }
+        }
+      }
+    }
+  });
+}
+
+
+</script>
 <div class="ovlay" id="m-stk-edit" style="display:none">
   <div class="modal">
     <div class="modal-t">✎ Edit stock</div>
@@ -1355,759 +1676,5 @@ if(document.readyState === 'complete') {
 </div>
 
 <div class="ovlay" id="m-tv" style="display:none;align-items:center;justify-content:center"><div style="background:var(--bg2);border:1px solid var(--b2);border-radius:16px;width:92vw;max-width:1000px;height:85vh;display:flex;flex-direction:column;overflow:hidden"><div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--b1)"><div style="font-size:14px;font-weight:600" id="tv-title">Chart</div><button onclick="cM('m-tv');document.getElementById('tv-frame').src=''" style="font-size:12px">Close</button></div><iframe id="tv-frame" src="" style="flex:1;border:none;border-radius:0 0 16px 16px" allowfullscreen></iframe></div></div>
-
-<!-- ============================================================
-  PayTrack Smart Sync Patch
-  INSTRUCTIONS: Paste everything below just before the </body> tag
-  in your index.html. That's the only change needed in index.html.
-  ============================================================ -->
-
-<!-- ── Smart Sync Modal ──────────────────────────────────── -->
-<div id="ss-overlay" style="display:none">
-  <div id="ss-modal">
-    <div id="ss-header">
-      <div>
-        <div id="ss-title">Syncing…</div>
-        <div id="ss-subtitle"></div>
-      </div>
-      <button id="ss-close" onclick="PayTrackSmartSync.close()">✕</button>
-    </div>
-
-    <!-- Schema badge (collapsible) -->
-    <div id="ss-schema-bar" style="display:none">
-      <span id="ss-schema-label">🤖 AI detected schema</span>
-      <button id="ss-schema-toggle" onclick="PayTrackSmartSync.toggleSchema()">▾ Show</button>
-      <div id="ss-schema-detail" style="display:none"></div>
-    </div>
-
-    <!-- Loading state -->
-    <div id="ss-loading">
-      <div class="ss-spinner"></div>
-      <div id="ss-loading-msg">Fetching sheet…</div>
-    </div>
-
-    <!-- Error state -->
-    <div id="ss-error" style="display:none">
-      <div id="ss-error-msg"></div>
-    </div>
-
-    <!-- No changes -->
-    <div id="ss-no-changes" style="display:none">
-      <div class="ss-empty">✓ Sheet is in sync — no changes detected.</div>
-    </div>
-
-    <!-- Changes list -->
-    <div id="ss-changes" style="display:none">
-      <div id="ss-summary-bar">
-        <span id="ss-summary-text"></span>
-        <label class="ss-select-all-label">
-          <input type="checkbox" id="ss-select-all" checked
-                 onchange="PayTrackSmartSync.toggleAll(this.checked)"> Select all
-        </label>
-      </div>
-      <div id="ss-change-list"></div>
-    </div>
-
-    <!-- Footer -->
-    <div id="ss-footer" style="display:none">
-      <button id="ss-cancel-btn" onclick="PayTrackSmartSync.close()">Cancel</button>
-      <button id="ss-apply-btn" onclick="PayTrackSmartSync.applySelected()">
-        ✓ Apply selected changes
-      </button>
-    </div>
-  </div>
-</div>
-
-<!-- ── Smart Sync Styles ─────────────────────────────────── -->
-<style>
-#ss-overlay {
-  position: fixed; inset: 0; z-index: 9999;
-  background: rgba(0,0,0,.55);
-  display: flex; align-items: center; justify-content: center;
-  backdrop-filter: blur(3px);
-}
-#ss-modal {
-  background: #fff; border-radius: 14px;
-  width: min(680px, 95vw);
-  max-height: 88vh; overflow: hidden;
-  display: flex; flex-direction: column;
-  box-shadow: 0 24px 60px rgba(0,0,0,.22);
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-}
-#ss-header {
-  display: flex; align-items: flex-start;
-  justify-content: space-between;
-  padding: 20px 24px 16px;
-  border-bottom: 1px solid #f0f0f0;
-}
-#ss-title { font-size: 17px; font-weight: 700; color: #111; }
-#ss-subtitle { font-size: 13px; color: #888; margin-top: 3px; }
-#ss-close {
-  background: none; border: none; cursor: pointer;
-  color: #aaa; font-size: 18px; padding: 0;
-  line-height: 1; flex-shrink: 0; margin-left: 12px;
-}
-#ss-close:hover { color: #555; }
-
-/* Schema bar */
-#ss-schema-bar {
-  display: flex; align-items: center; gap: 10px;
-  padding: 10px 24px;
-  background: #f8f4ff; border-bottom: 1px solid #ede8ff;
-  font-size: 12px;
-}
-#ss-schema-label { color: #6b44e0; font-weight: 600; }
-#ss-schema-toggle {
-  background: none; border: 1px solid #6b44e0;
-  color: #6b44e0; border-radius: 4px;
-  padding: 2px 8px; font-size: 11px; cursor: pointer;
-}
-#ss-schema-detail {
-  padding: 10px 0 0; font-size: 11px;
-  color: #555; line-height: 1.6;
-  flex-basis: 100%;
-}
-#ss-schema-detail code {
-  background: #eee; border-radius: 3px;
-  padding: 1px 4px; font-size: 10.5px;
-}
-
-/* Loading */
-#ss-loading {
-  padding: 48px 24px; text-align: center;
-}
-.ss-spinner {
-  width: 32px; height: 32px; margin: 0 auto 14px;
-  border: 3px solid #eee; border-top-color: #6b44e0;
-  border-radius: 50%; animation: ss-spin .7s linear infinite;
-}
-@keyframes ss-spin { to { transform: rotate(360deg); } }
-#ss-loading-msg { font-size: 14px; color: #888; }
-
-/* Error */
-#ss-error {
-  padding: 24px; margin: 16px 24px;
-  background: #fff5f5; border: 1px solid #ffd5d5;
-  border-radius: 8px; color: #c0392b; font-size: 14px;
-}
-
-/* No changes */
-.ss-empty {
-  padding: 48px 24px; text-align: center;
-  font-size: 15px; color: #555;
-}
-
-/* Summary bar */
-#ss-summary-bar {
-  display: flex; justify-content: space-between; align-items: center;
-  padding: 12px 24px 8px;
-  font-size: 13px; color: #555;
-}
-.ss-select-all-label {
-  display: flex; align-items: center; gap: 6px;
-  font-size: 13px; cursor: pointer; color: #444;
-}
-
-/* Change list */
-#ss-change-list {
-  overflow-y: auto;
-  max-height: calc(88vh - 280px);
-  padding: 0 24px 8px;
-}
-.ss-group-header {
-  font-size: 11px; font-weight: 700; letter-spacing: .08em;
-  text-transform: uppercase; color: #999;
-  padding: 14px 0 6px; border-top: 1px solid #f0f0f0;
-  margin-top: 4px;
-}
-.ss-group-header:first-child { border-top: none; margin-top: 0; }
-
-.ss-change-row {
-  display: flex; align-items: flex-start; gap: 12px;
-  padding: 10px 12px; border-radius: 8px; margin-bottom: 4px;
-  border: 1px solid transparent; transition: background .15s;
-}
-.ss-change-row:hover { background: #fafafa; }
-.ss-change-row.ss-deselected { opacity: .45; }
-
-.ss-change-row input[type=checkbox] {
-  margin-top: 2px; cursor: pointer; flex-shrink: 0;
-  width: 15px; height: 15px; accent-color: #6b44e0;
-}
-.ss-change-body { flex: 1; min-width: 0; }
-.ss-change-id {
-  font-size: 12px; font-weight: 700; color: #333;
-  margin-bottom: 3px;
-}
-.ss-change-desc { font-size: 12px; color: #666; margin-bottom: 5px; }
-.ss-change-detail {
-  font-size: 12px;
-  display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
-}
-.ss-from { color: #aaa; text-decoration: line-through; }
-.ss-arrow { color: #bbb; }
-.ss-to { color: #111; font-weight: 600; }
-.ss-badge {
-  font-size: 10px; font-weight: 700; letter-spacing: .04em;
-  padding: 2px 7px; border-radius: 99px;
-  text-transform: uppercase; flex-shrink: 0;
-}
-.ss-badge-new    { background: #e6f9ef; color: #1a8a4a; }
-.ss-badge-date   { background: #fff3e0; color: #e65100; }
-.ss-badge-amount { background: #fde8e8; color: #c0392b; }
-.ss-badge-status { background: #e8f5e9; color: #2e7d32; }
-.ss-dates-chain {
-  font-size: 11px; color: #888; margin-top: 3px;
-  display: flex; gap: 4px; flex-wrap: wrap; align-items: center;
-}
-.ss-dates-chain span { background: #f0f0f0; padding: 1px 6px; border-radius: 4px; }
-.ss-dates-chain .ss-date-current { background: #fff3e0; color: #e65100; font-weight: 600; }
-
-/* Footer */
-#ss-footer {
-  display: flex; gap: 10px; justify-content: flex-end;
-  padding: 14px 24px;
-  border-top: 1px solid #f0f0f0;
-}
-#ss-cancel-btn {
-  background: #f5f5f5; border: none; border-radius: 8px;
-  padding: 9px 20px; font-size: 14px; cursor: pointer; color: #555;
-}
-#ss-cancel-btn:hover { background: #eee; }
-#ss-apply-btn {
-  background: #6b44e0; border: none; border-radius: 8px;
-  padding: 9px 22px; font-size: 14px; font-weight: 600;
-  color: #fff; cursor: pointer;
-}
-#ss-apply-btn:hover { background: #5a34cc; }
-#ss-apply-btn:disabled { background: #ccc; cursor: not-allowed; }
-</style>
-
-<!-- ── Smart Sync JavaScript ─────────────────────────────── -->
-<script>
-// =============================================================
-//  PayTrackSmartSync — drop-in intelligent sync module
-//  Requires: /api/sheets-schema.js deployed in Vercel
-// =============================================================
-const PayTrackSmartSync = (() => {
-
-  // ────────────────────────────────────────────────────────
-  // CONFIG — auto-detected at runtime, no manual edits needed
-  // ────────────────────────────────────────────────────────
-  let _storageKey     = null;  // detected localStorage key
-  let _wrapperKey     = null;  // if accounts live inside a wrapper object
-  let _currentAccountId = null;
-  let _pendingChanges = [];
-  let _schemaVisible  = false;
-  let _detectedSchema = null;
-
-  // ── localStorage auto-detection ─────────────────────────
-  function detectStorage() {
-    for (const key of Object.keys(localStorage)) {
-      try {
-        const val = JSON.parse(localStorage.getItem(key));
-        // Direct accounts array: [{payments:[...]}, ...]
-        if (Array.isArray(val) && val.length > 0 &&
-            val[0] && typeof val[0] === 'object' &&
-            (Array.isArray(val[0].payments) || val[0].csvUrl !== undefined)) {
-          return { key, accounts: val, wrapperKey: null };
-        }
-        // Wrapped: { accounts: [...], ...other }
-        if (val && typeof val === 'object' && !Array.isArray(val) &&
-            Array.isArray(val.accounts) && val.accounts.length > 0 &&
-            val.accounts[0]?.payments !== undefined) {
-          return { key: 'accounts_in_' + key, accounts: val.accounts,
-                   wrapperKey: key, wrapper: val };
-        }
-      } catch { /* skip non-JSON keys */ }
-    }
-    return null;
-  }
-
-  function getAccounts() {
-    const found = detectStorage();
-    if (!found) throw new Error(
-      'Could not find account data in localStorage. ' +
-      'Check console: Object.keys(localStorage) to find the right key.'
-    );
-    _storageKey  = found.key;
-    _wrapperKey  = found.wrapperKey;
-    return { accounts: found.accounts, wrapper: found.wrapper };
-  }
-
-  function saveAccounts(accounts, wrapper) {
-    if (_wrapperKey) {
-      const w = wrapper || JSON.parse(localStorage.getItem(_wrapperKey) || '{}');
-      w.accounts = accounts;
-      localStorage.setItem(_wrapperKey, JSON.stringify(w));
-    } else {
-      // _storageKey may be prefixed — use the real key
-      const realKey = _wrapperKey ? _wrapperKey :
-        Object.keys(localStorage).find(k => {
-          try {
-            const v = JSON.parse(localStorage.getItem(k));
-            return Array.isArray(v) && v[0]?.payments !== undefined;
-          } catch { return false; }
-        });
-      if (realKey) localStorage.setItem(realKey, JSON.stringify(accounts));
-    }
-  }
-
-  // ── UI helpers ───────────────────────────────────────────
-  function show(id)  { const el = document.getElementById(id); if (el) el.style.display = ''; }
-  function hide(id)  { const el = document.getElementById(id); if (el) el.style.display = 'none'; }
-  function text(id, t) { const el = document.getElementById(id); if (el) el.textContent = t; }
-  function html(id, h) { const el = document.getElementById(id); if (el) el.innerHTML = h; }
-
-  function setLoadingMsg(msg) { text('ss-loading-msg', msg); }
-
-  function showError(msg) {
-    hide('ss-loading');
-    show('ss-error');
-    html('ss-error-msg', '⚠️ ' + msg);
-    show('ss-footer');
-    document.getElementById('ss-apply-btn').disabled = true;
-  }
-
-  // ── CSV parsing (client-side, used only for display) ─────
-  function parseDate(d) {
-    if (!d || d.trim() === '' || d.trim() === '-') return null;
-    const m = d.trim().match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/);
-    return m ? `${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}` : d.trim();
-  }
-
-  function fmtAmt(n) {
-    return 'AED ' + Number(n).toLocaleString('en-AE', {
-      minimumFractionDigits: 0, maximumFractionDigits: 0
-    });
-  }
-
-  // ── Row extractor — uses schema from Gemini ───────────────
-  function extractPayments(rows, schema) {
-    const payments = [];
-    for (let i = schema.headerRows; i < rows.length; i++) {
-      const row = rows[i];
-      const pid = row[schema.paymentIdCol]?.trim();
-      if (!pid) continue;
-
-      // Amount: strip commas + parse
-      const rawAmt = (row[schema.amountCol] || '0').replace(/,/g, '');
-      const amount = parseFloat(rawAmt) || 0;
-      if (amount === 0) continue; // skip total/summary rows
-
-      // All date columns → pick rightmost non-empty as effective
-      const allDates = (schema.dateCols || [])
-        .map(c => row[c]?.trim())
-        .filter(d => d && d !== '-');
-
-      let effectiveDate = null;
-      for (const dc of [...(schema.dateCols || [])].reverse()) {
-        const d = row[dc]?.trim();
-        if (d && d !== '-') { effectiveDate = d; break; }
-      }
-
-      const originalDate = schema.dateCols?.length
-        ? row[schema.dateCols[0]]?.trim() : null;
-
-      const paidRaw = schema.paidStatusCol >= 0
-        ? row[schema.paidStatusCol]?.trim().toUpperCase() : '';
-      const isPaid = paidRaw === 'PAID';
-
-      payments.push({
-        paymentId:    pid,
-        description:  row[schema.descriptionCol]?.trim() || '',
-        amount,
-        percent:      schema.percentCol >= 0 ? row[schema.percentCol]?.trim() : '',
-        chequeNo:     schema.chequeCol >= 0  ? row[schema.chequeCol]?.trim()  : '',
-        originalDate,
-        effectiveDate,
-        allDates,
-        isPaid
-      });
-    }
-    return payments;
-  }
-
-  // ── Diff engine ──────────────────────────────────────────
-  function norm(s) { return (s || '').toLowerCase().replace(/[^a-z0-9]/g, ''); }
-
-  function matchPayment(existing, pid, desc) {
-    // Try id → description → paymentNum field
-    if (norm(existing.id)          === norm(pid))   return true;
-    if (norm(existing.paymentNum)  === norm(pid))   return true;
-    if (norm(existing.description) === norm(desc))  return true;
-    if (norm(existing.description) === norm(pid))   return true;
-    return false;
-  }
-
-  function diffPayments(existingPayments, sheetPayments) {
-    const changes = [];
-
-    for (const sp of sheetPayments) {
-      const existing = (existingPayments || []).find(p =>
-        matchPayment(p, sp.paymentId, sp.description)
-      );
-
-      if (!existing) {
-        changes.push({ type: 'NEW', sheet: sp });
-        continue;
-      }
-
-      // ── Amount change ──
-      const existAmt = parseFloat(existing.amount || 0);
-      if (Math.abs(existAmt - sp.amount) > 0.5) {
-        changes.push({ type: 'AMOUNT', existing, sheet: sp,
-          from: existAmt, to: sp.amount });
-      }
-
-      // ── Date change — compare effective against revisedDate or dueDate ──
-      const existEffective = existing.revisedDate || existing.dueDate || null;
-      const normExist = parseDate(existEffective);
-      const normSheet = parseDate(sp.effectiveDate);
-      if (normSheet && normExist !== normSheet) {
-        changes.push({ type: 'DATE', existing, sheet: sp,
-          from: existEffective, to: sp.effectiveDate,
-          allSheetDates: sp.allDates });
-      }
-
-      // ── Status change (sheet says PAID, app does not) ──
-      if (sp.isPaid && existing.status !== 'paid') {
-        changes.push({ type: 'STATUS', existing, sheet: sp });
-      }
-    }
-
-    return changes;
-  }
-
-  // ── Build review UI ──────────────────────────────────────
-  function renderChanges(changes) {
-    const groups = { NEW: [], DATE: [], STATUS: [], AMOUNT: [] };
-    const labels = {
-      NEW:    'New payments found in sheet',
-      DATE:   'Due date revisions',
-      STATUS: 'Payments marked PAID in sheet',
-      AMOUNT: 'Amount changes'
-    };
-
-    changes.forEach((ch, idx) => {
-      ch._idx = idx;
-      groups[ch.type].push(ch);
-    });
-
-    let html = '';
-    for (const type of ['NEW', 'DATE', 'STATUS', 'AMOUNT']) {
-      if (!groups[type].length) continue;
-      const badgeCls = `ss-badge ss-badge-${type.toLowerCase()}`;
-      html += `<div class="ss-group-header">${labels[type]} (${groups[type].length})</div>`;
-
-      for (const ch of groups[type]) {
-        const pid  = ch.sheet?.paymentId  || ch.existing?.id || ch.existing?.description || '';
-        const desc = ch.sheet?.description|| ch.existing?.description || '';
-
-        let detail = '';
-
-        if (type === 'NEW') {
-          detail = `
-            <span class="ss-to">${fmtAmt(ch.sheet.amount)}</span>
-            <span style="color:#bbb">·</span>
-            <span style="color:#888">Due: ${ch.sheet.effectiveDate || ch.sheet.originalDate || '—'}</span>
-            ${ch.sheet.isPaid ? '<span class="ss-badge ss-badge-status">PAID</span>' : ''}
-          `;
-        } else if (type === 'DATE') {
-          detail = `
-            <span class="ss-from">${ch.from || '—'}</span>
-            <span class="ss-arrow">→</span>
-            <span class="ss-to">${ch.to}</span>
-          `;
-          if (ch.allSheetDates && ch.allSheetDates.length > 1) {
-            detail += `<div class="ss-dates-chain">Date history: ` +
-              ch.allSheetDates.map((d, i) =>
-                `<span class="${i === ch.allSheetDates.length-1 ? 'ss-date-current' : ''}">${d}</span>`
-              ).join('<span style="color:#ccc;font-size:10px">›</span>') +
-              `</div>`;
-          }
-        } else if (type === 'STATUS') {
-          detail = `
-            <span class="ss-from">${ch.existing?.status || 'unpaid'}</span>
-            <span class="ss-arrow">→</span>
-            <span class="ss-to">paid</span>
-            <span style="color:#888;font-size:11px">(${fmtAmt(ch.sheet.amount)})</span>
-          `;
-        } else if (type === 'AMOUNT') {
-          detail = `
-            <span class="ss-from">${fmtAmt(ch.from)}</span>
-            <span class="ss-arrow">→</span>
-            <span class="ss-to">${fmtAmt(ch.to)}</span>
-          `;
-        }
-
-        html += `
-          <div class="ss-change-row" id="ss-row-${ch._idx}">
-            <input type="checkbox" checked
-                   onchange="PayTrackSmartSync.toggleRow(${ch._idx}, this.checked)">
-            <div class="ss-change-body">
-              <div class="ss-change-id">
-                <span class="${badgeCls}">${type}</span>
-                &nbsp;${pid}
-              </div>
-              <div class="ss-change-desc">${desc}</div>
-              <div class="ss-change-detail">${detail}</div>
-            </div>
-          </div>`;
-      }
-    }
-
-    document.getElementById('ss-change-list').innerHTML = html;
-
-    const total = changes.length;
-    text('ss-summary-text',
-      `${total} change${total !== 1 ? 's' : ''} detected — review and apply:`);
-  }
-
-  // ── Render detected schema (collapsible) ─────────────────
-  function renderSchema(schema, totalRows) {
-    const cols = [];
-    const add  = (label, idx) => {
-      if (idx >= 0) cols.push(`<b>${label}:</b> column&nbsp;${idx}`);
-    };
-    add('Payment ID', schema.paymentIdCol);
-    add('Description', schema.descriptionCol);
-    add('Amount', schema.amountCol);
-    add('Cheque', schema.chequeCol);
-    add('Paid status', schema.paidStatusCol);
-
-    const dateInfo = `<b>Date columns:</b> [${(schema.dateCols||[]).join(', ')}] — effective: <code>${schema.effectiveDateCol}</code>`;
-
-    html('ss-schema-detail',
-      cols.map(c => `<code>${c}</code>`).join(' &nbsp;·&nbsp; ') +
-      '&nbsp;&nbsp;' + dateInfo +
-      `&nbsp;&nbsp;<code><b>Header rows:</b> ${schema.headerRows}</code>` +
-      `&nbsp;&nbsp;<code><b>Data rows:</b> ${totalRows - schema.headerRows}</code>`
-    );
-    show('ss-schema-bar');
-  }
-
-  // ── Apply changes to localStorage ───────────────────────
-  function applySelected() {
-    const selected = _pendingChanges.filter((_, i) => {
-      const cb = document.querySelector(`#ss-row-${i} input[type=checkbox]`);
-      return cb ? cb.checked : true;
-    });
-
-    if (!selected.length) { close(); return; }
-
-    try {
-      const { accounts, wrapper } = getAccounts();
-      const account = accounts.find(a => a.id === _currentAccountId);
-      if (!account) throw new Error('Account not found in storage');
-
-      for (const ch of selected) {
-        const pmt = (account.payments || []).find(p =>
-          matchPayment(p,
-            ch.sheet?.paymentId  || ch.existing?.id,
-            ch.sheet?.description|| ch.existing?.description
-          )
-        );
-
-        if (ch.type === 'NEW') {
-          account.payments = account.payments || [];
-          account.payments.push({
-            id:          'p_' + Date.now() + '_' + Math.random().toString(36).slice(2,7),
-            description: ch.sheet.description,
-            amount:      ch.sheet.amount,
-            chequeNo:    ch.sheet.chequeNo  || '',
-            percent:     ch.sheet.percent   || '',
-            dueDate:     ch.sheet.originalDate || ch.sheet.effectiveDate,
-            revisedDate: (ch.sheet.effectiveDate !== ch.sheet.originalDate)
-                           ? ch.sheet.effectiveDate : null,
-            status:      ch.sheet.isPaid ? 'paid' : 'notpaid'
-          });
-        } else if (pmt) {
-          if (ch.type === 'DATE')   pmt.revisedDate = ch.to;
-          if (ch.type === 'AMOUNT') pmt.amount      = ch.to;
-          if (ch.type === 'STATUS') pmt.status      = 'paid';
-        }
-      }
-
-      // Update last sync timestamp on account
-      account.lastSync = new Date().toISOString();
-      account.lastSyncSchema = _detectedSchema;
-
-      saveAccounts(accounts, wrapper);
-
-      // Reload to refresh UI — works universally
-      location.reload();
-
-    } catch (err) {
-      showError('Could not save changes: ' + err.message);
-    }
-  }
-
-  // ── Toggle individual row ────────────────────────────────
-  function toggleRow(idx, checked) {
-    const row = document.getElementById('ss-row-' + idx);
-    if (row) row.classList.toggle('ss-deselected', !checked);
-    // Update select-all checkbox state
-    const all = document.querySelectorAll('#ss-change-list input[type=checkbox]');
-    const allChecked = [...all].every(c => c.checked);
-    const sa = document.getElementById('ss-select-all');
-    if (sa) sa.checked = allChecked;
-  }
-
-  // ── Toggle all checkboxes ────────────────────────────────
-  function toggleAll(checked) {
-    document.querySelectorAll('#ss-change-list input[type=checkbox]')
-      .forEach((cb, i) => {
-        cb.checked = checked;
-        toggleRow(i, checked);
-      });
-  }
-
-  // ── Schema expand/collapse ───────────────────────────────
-  function toggleSchema() {
-    _schemaVisible = !_schemaVisible;
-    const detail = document.getElementById('ss-schema-detail');
-    const btn    = document.getElementById('ss-schema-toggle');
-    if (detail) detail.style.display = _schemaVisible ? '' : 'none';
-    if (btn)    btn.textContent = _schemaVisible ? '▴ Hide' : '▾ Show';
-  }
-
-  // ── Close / open modal ───────────────────────────────────
-  function close() {
-    const overlay = document.getElementById('ss-overlay');
-    if (overlay) overlay.style.display = 'none';
-    _currentAccountId = null;
-    _pendingChanges   = [];
-    _schemaVisible    = false;
-  }
-
-  function openModal(accountId, accountName) {
-    _currentAccountId = accountId;
-    // Reset state
-    hide('ss-loading');
-    hide('ss-error');
-    hide('ss-no-changes');
-    hide('ss-changes');
-    hide('ss-footer');
-    hide('ss-schema-bar');
-    show('ss-loading');
-    text('ss-title',    '↻ Smart Sync');
-    text('ss-subtitle', accountName || 'Syncing account…');
-    setLoadingMsg('Fetching sheet…');
-
-    const overlay = document.getElementById('ss-overlay');
-    if (overlay) overlay.style.display = '';
-  }
-
-  // ── MAIN: entry point called from your sync button ───────
-  //
-  //  Usage in index.html:
-  //    Replace:  syncAccount(account.id)
-  //    With:     PayTrackSmartSync.run(account.id, account.csvUrl, account.name)
-  //
-  async function run(accountId, csvUrl, accountName) {
-    if (!csvUrl) {
-      alert('No Google Sheets CSV URL set for this account.');
-      return;
-    }
-
-    openModal(accountId, accountName);
-
-    try {
-      // ── Step 1: Fetch CSV + detect schema via Gemini ──────
-      setLoadingMsg('AI is detecting column schema…');
-
-      const resp = await fetch('/api/sheets-schema', {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ csvUrl })
-      });
-
-      if (!resp.ok) {
-        const err = await resp.json().catch(() => ({}));
-        throw new Error(err.error || `HTTP ${resp.status}`);
-      }
-
-      const { schema, rows, totalRows } = await resp.json();
-      _detectedSchema = schema;
-
-      // Show schema badge
-      renderSchema(schema, totalRows);
-
-      // ── Step 2: Extract normalised payment rows ───────────
-      setLoadingMsg('Comparing with your data…');
-      const sheetPayments = extractPayments(rows, schema);
-
-      // ── Step 3: Diff ──────────────────────────────────────
-      const { accounts } = getAccounts();
-      const account = accounts.find(a => a.id === accountId);
-      if (!account) throw new Error(`Account ${accountId} not found in storage`);
-
-      const changes = diffPayments(account.payments || [], sheetPayments);
-      _pendingChanges = changes;
-
-      hide('ss-loading');
-      show('ss-footer');
-
-      if (!changes.length) {
-        show('ss-no-changes');
-        document.getElementById('ss-apply-btn').disabled = true;
-      } else {
-        renderChanges(changes);
-        show('ss-changes');
-      }
-
-    } catch (err) {
-      console.error('[SmartSync]', err);
-      showError(err.message);
-    }
-  }
-
-  // ── Auto-hook: intercepts existing sync buttons ──────────
-  //
-  //  This tries to automatically wrap your existing sync calls.
-  //  If it fails, call PayTrackSmartSync.run(...) manually.
-  //
-  function autoHook() {
-    // Strategy: override the global function names commonly used for sync
-    const syncNames = ['syncAccount', 'syncSheet', 'syncGoogleSheet',
-                       'syncAccountSheet', 'doSync', 'pullSheet'];
-
-    for (const name of syncNames) {
-      if (typeof window[name] === 'function') {
-        const original = window[name];
-        window[name] = function(accountId, ...args) {
-          // Try to find the account to get csvUrl + name
-          try {
-            const { accounts } = getAccounts();
-            const acc = accounts.find(a => a.id === accountId);
-            if (acc?.csvUrl) {
-              run(acc.id, acc.csvUrl, acc.name);
-              return; // intercept successful
-            }
-          } catch { /* fall through to original */ }
-          return original.call(this, accountId, ...args);
-        };
-        console.log(`[SmartSync] Auto-hooked into window.${name}`);
-      }
-    }
-  }
-
-  // Run auto-hook after DOM + existing scripts are ready
-  document.addEventListener('DOMContentLoaded', () => {
-    // Small delay to ensure the app's own JS has initialized
-    setTimeout(autoHook, 300);
-  });
-
-  // Close overlay when clicking outside modal
-  document.addEventListener('click', e => {
-    if (e.target.id === 'ss-overlay') close();
-  });
-
-  // Public API
-  return { run, close, toggleRow, toggleAll, toggleSchema, applySelected };
-
-})();
-</script>
 </body>
 </html>
