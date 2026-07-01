@@ -339,14 +339,12 @@ label{display:block;font-size:11px;color:var(--t2);margin-bottom:4px;font-weight
 
   <div id="cf-kpi" style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:1.25rem"></div>
   <div id="cf-overdue" style="margin-bottom:1.25rem"></div>
-  <div class="card" style="margin-bottom:1.25rem">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-      <div class="card-t" style="margin-bottom:0"><i class="ti ti-crystal-ball" style="color:var(--purple);margin-right:5px"></i>Forecast Assumptions</div>
-      <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--t2);cursor:pointer"><span>Show forecast</span><input type="checkbox" id="cf-fc-master" onchange="cfFcMaster(this.checked)" style="width:auto"></label>
+  <div class="card" style="margin-bottom:1.25rem;padding:12px 16px">
+    <div style="display:flex;align-items:center;justify-content:space-between">
+      <div style="display:flex;align-items:center;gap:8px"><i class="ti ti-crystal-ball" style="color:var(--purple)"></i><span style="font-size:13px;font-weight:600">Forecast</span><span id="cf-fc-count" style="font-size:11px;color:var(--t3)"></span></div>
+      <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--t2);cursor:pointer"><span>Show forecast in projection</span><input type="checkbox" id="cf-fc-master" onchange="cfFcMaster(this.checked)" style="width:auto"></label>
     </div>
-    <div style="font-size:11px;color:var(--t3);margin-bottom:12px">What-if scenarios layered on the projection only — your actual accounts are never changed.</div>
-    <div id="cf-fc-list"></div>
-    <button class="btn-s" onclick="cfFcAdd()" style="margin-top:8px">+ Add assumption</button>
+    <div style="font-size:11px;color:var(--t3);margin-top:6px">Create forecasts with the <i class="ti ti-wand"></i> Auto-forecast button inside each account. This switch shows/hides them here.</div>
   </div>
 
   <div class="card" style="margin-bottom:1.25rem">
@@ -381,6 +379,19 @@ label{display:block;font-size:11px;color:var(--t2);margin-bottom:4px;font-weight
 
 <div class="ovlay" id="m-pay" style="display:none"><div class="modal"><div class="modal-t">+Add payment</div><div class="fr"><label>Description</label><input id="p-d" placeholder="e.g. 5th instalment"></div><div class="fr2"><div><label>Amount (AED)</label><input type="number" id="p-a" placeholder="0"></div><div><label>Cheque #</label><input id="p-c" placeholder="optional"></div></div><div class="fr2"><div><label>Due date</label><input type="date" id="p-dt"></div><div><label>%</label><input id="p-pct" placeholder="e.g. 5%"></div></div><div class="fr"><label>Status</label><select id="p-s"><option value="notpaid">Not paid</option><option value="paid">Paid</option><option value="overdue">Overdue</option></select></div><div class="fa"><button onclick="cM('m-pay')">Cancel</button><button class="btn-p" onclick="doAddPay()">✓ Add</button></div></div></div>
 
+<div class="ovlay" id="m-afc" style="display:none"><div class="modal">
+  <div class="modal-t"><i class="ti ti-wand"></i> Auto-forecast</div>
+  <p id="afc-summary" style="font-size:12px;color:var(--t2);margin-bottom:1rem;line-height:1.6"></p>
+  <div class="fr"><label id="afc-count-lbl">How many future payments to add?</label><input type="number" id="afc-count" value="4"></div>
+  <div class="fr" id="afc-price-row"><label style="margin-bottom:6px">Price</label>
+    <label style="display:flex;align-items:center;gap:6px;font-weight:400;font-size:12px;margin-bottom:4px"><input type="radio" name="afc-price" id="afc-price-same" checked onchange="afcPriceMode()" style="width:auto">Same price as detected</label>
+    <label style="display:flex;align-items:center;gap:6px;font-weight:400;font-size:12px"><input type="radio" name="afc-price" onchange="afcPriceMode()" style="width:auto">Different total amount</label>
+  </div>
+  <div class="fr" id="afc-newtotal-wrap" style="display:none"><label>New total amount (spread across payments)</label><input type="number" id="afc-newtotal" placeholder="0"></div>
+  <div class="fr"><label id="afc-inc-lbl">Increase % (optional)</label><input type="number" id="afc-inc" value="0"></div>
+  <p style="font-size:11px;color:var(--t3);margin-bottom:1rem">These are added as <span style="color:var(--purple)">forecast</span> payments — tagged, editable, and toggled by the master forecast switch. Edit any of them afterwards if the real numbers differ.</p>
+  <div class="fa"><button onclick="cM('m-afc')">Cancel</button><button class="btn-p" onclick="doAutoForecast()"><i class="ti ti-wand"></i> Generate forecast</button></div>
+</div></div>
 <div class="ovlay" id="m-defer" style="display:none"><div class="modal"><div class="modal-t">↻ Defer payment</div><p style="font-size:12px;color:var(--t2);margin-bottom:1rem;line-height:1.6">This pushes <strong id="df-desc" style="color:var(--t1)"></strong> out one month and appends a new instalment at the end of the schedule, so your total owed stays correct.</p><div class="fr"><label>Deferment fee / added profit (AED) — optional</label><input type="number" id="df-fee" placeholder="0"></div><div class="fa"><button onclick="cM('m-defer')">Cancel</button><button class="btn-p" onclick="doDefer()">↻ Defer &amp; add instalment</button></div></div></div>
 <div class="ovlay" id="m-stk" style="display:none"><div class="modal"><div class="modal-t">📈Add stock</div><div class="fr2"><div><label>Ticker</label><input id="s-t" placeholder="e.g. EMAAR"></div><div><label>Company name</label><input id="s-n" placeholder="e.g. Emaar Properties"></div></div><div class="fr2"><div><label>Market</label><select id="s-m"><option>DFM</option><option>ADX</option><option>NYSE</option><option>NASDAQ</option><option>LSE</option><option>Other</option></select></div><div><label>Currency</label><select id="s-cur"><option>AED</option><option>USD</option><option>GBP</option><option>EUR</option></select></div></div><div class="fr2"><div><label>Quantity</label><input type="number" id="s-q" placeholder="0"></div><div><label>Avg buy price</label><input type="number" id="s-b" placeholder="0.00" step="0.01"></div></div><div class="fr2"><div><label>Current price</label><input type="number" id="s-p" placeholder="0.00" step="0.01"></div><div><label>Broker</label><input id="s-br" placeholder="e.g. BHM Capital"></div></div><div class="fa"><button onclick="cM('m-stk')">Cancel</button><button class="btn-p" onclick="doAddStk()">✓ Add</button></div></div></div>
 
@@ -409,7 +420,13 @@ function pd(s){
 }
 function fmt(n){return'AED '+Math.round(n).toLocaleString();}
 function eff(p){return(p.nd&&p.nd.trim())?p.nd:p.dt;}
+// Forecast visibility: when the master switch is OFF, forecast rows are excluded
+// from every total and view. cfConfig may not be loaded yet on first paint, so
+// default to hidden (false) until loaded.
+function fcVisible(){ try{ return !!(cfConfig && cfConfig.forecastOn); }catch(e){ return false; } }
+function visPays(a){ if(!a||!a.pays) return []; return fcVisible()?a.pays:a.pays.filter(function(p){return !p.forecast;}); }
 function sbdg(s){var m={paid:'Paid',overdue:'Overdue',notpaid:'Not paid',deferred:'Deferred',confirm:'Confirm?',delayed:'Delayed'};var c={paid:'bp',overdue:'bo',notpaid:'bn',deferred:'bd',confirm:'bn',delayed:'bo'};return'<span class="bdg '+(c[s]||'bn')+'">'+(m[s]||s)+'</span>';}
+function fcTag(){return '<span style="background:rgba(167,139,250,.15);color:var(--purple);font-size:9px;font-weight:700;padding:1px 6px;border-radius:99px;margin-left:4px">FORECAST</span>';}
 function tic(t){var m={Installments:'home','Car Loan':'car','Cash Loan':'cash','School Fees':'school',Lender:'user',Mortgage:'home-2'};return m[t]||'building-bank';}
 function tcl(t){var m={Installments:'#5b9cf6','Car Loan':'#f5a623','Cash Loan':'#3ecf8e','School Fees':'#a78bfa',Lender:'#f26b6b',Mortgage:'#2dd4bf'};return m[t]||'#8888a0';}
 function oM(id){document.getElementById(id).style.display='flex';}
@@ -456,7 +473,13 @@ var accs=[
 var stocks=[];
 function saveState(){
   try{
-    localStorage.setItem('pt_accs',JSON.stringify(accs));
+    // Persist only REAL payments — forecast rows are regenerated from cfConfig.forecasts.
+    var clean=accs.map(function(a){
+      var c=Object.assign({},a);
+      if(c.pays) c.pays=c.pays.filter(function(p){return !p.forecast;});
+      return c;
+    });
+    localStorage.setItem('pt_accs',JSON.stringify(clean));
     localStorage.setItem('pt_stk',JSON.stringify(stocks));
   }catch(e){}
   // Sync to server so reminders always have latest data
@@ -577,14 +600,34 @@ async function syncAcc(a){
     var parsed=[];
     for(var i=0;i<rows.length;i++){
       var r=rows[i];
-      var amt=parseFloat((r[4]||r[3]||'').replace(/[^0-9.]/g,''));
+      // Amount: prefer col 4, else col 3, else the largest numeric cell >=100 in the row.
+      var amt=parseFloat((r[4]||'').replace(/[^0-9.]/g,''));
+      if(!amt||isNaN(amt)||amt<100){ amt=parseFloat((r[3]||'').replace(/[^0-9.]/g,'')); }
+      if(!amt||isNaN(amt)||amt<100){
+        var best=0;
+        for(var c=0;c<r.length;c++){ var v=parseFloat((r[c]||'').replace(/[^0-9.]/g,'')); if(!isNaN(v)&&v>=1000&&v>best&&!/^\d{2}-\d{2}-\d{4}$/.test((r[c]||'').trim())) best=v; }
+        amt=best;
+      }
       if(!amt||isNaN(amt)||amt<100)continue;
-      var d=pd(r[6]||r[2]||'');if(!d)continue;
-      var rs=(r[8]||r[4]||'').trim().toUpperCase();
+      // Date: first parseable date cell (prefer col 6, then 2, then scan).
+      var d=pd(r[6])||pd(r[2]);
+      if(!d){ for(var c2=0;c2<r.length;c2++){ var dd=pd((r[c2]||'').trim()); if(dd){ d=dd; break; } } }
+      if(!d)continue;
+      // Revised date: prefer col 8 (New Date), else col 7.
+      var nd=pd(r[8])?fd(pd(r[8])):(pd(r[7])?fd(pd(r[7])):'');
+      // Status: scan EVERY cell for a paid/overdue marker (fixes Mayar col-9 PAID).
       var st='notpaid';
-      if(rs==='PAID'||rs==='P')st='paid';
-      else if(d<TODAY)st='overdue';
-      parsed.push({desc:(r[1]||r[0]||'Payment').trim(),status:st,amount:amt,dt:fd(d),nd:pd(r[7])?fd(pd(r[7])):'',chq:(r[5]||'').trim(),pct:(r[3]||'').trim()});
+      var rowUpper=r.map(function(x){return (x||'').trim().toUpperCase();});
+      var isPaid=rowUpper.some(function(x){return x==='PAID'||x==='P'||x==='CLEARED'||x==='DONE'||x==='YES';});
+      if(isPaid) st='paid';
+      else if(d<TODAY) st='overdue';
+      // Cheque: prefer col 5; else a cell that looks like a cheque number (6 digits) not the amount.
+      var chq=(r[5]||'').trim();
+      // Description: col 1 if present, else col 0.
+      var desc=((r[1]||'').trim())||((r[0]||'').trim())||'Payment';
+      // Skip header-ish rows (no date already filtered; also skip if desc looks like a header)
+      if(/^(payment|description|status|amount|date|unit|percent)$/i.test(desc)) continue;
+      parsed.push({desc:desc,status:st,amount:amt,dt:fd(d),nd:nd,chq:chq,pct:(r[3]||'').trim()});
     }
     if(parsed.length>0){a.pays=parsed;a.synced=true;return true;}
   }catch(e){}return false;
@@ -612,7 +655,7 @@ var pi=null,bi=null;
 function renderCharts(){
   var cats={};
   accs.forEach(function(a){
-    var d=a.pays.filter(function(p){return p.status!=='paid';}).reduce(function(s,p){return s+p.amount;},0);
+    var d=visPays(a).filter(function(p){return p.status!=='paid';}).reduce(function(s,p){return s+p.amount;},0);
     if(d>0)cats[a.type]=(cats[a.type]||0)+d;
   });
   var lb=Object.keys(cats),dt=Object.values(cats);
@@ -693,7 +736,7 @@ function renderDash(){
   var sv=stocks.reduce(function(s,x){return s+x.qty*(x.cp||0);},0);
   var bal=sv-o;
   var gl=stocks.reduce(function(s,x){return s+x.qty*((x.cp||0)-(x.bp||0));},0);
-  var ovc=accs.reduce(function(s,a){return s+a.pays.filter(function(px){return px.status==='overdue';}).length;},0);
+  var ovc=accs.reduce(function(s,a){return s+visPays(a).filter(function(px){return px.status==='overdue';}).length;},0);
   document.getElementById('m1').textContent=fmt(o);
   document.getElementById('m2').textContent=fmt(p);
   var tot=o+p;
@@ -759,25 +802,30 @@ function renderDash(){
 
 function renderAccs(){
   document.getElementById('aclist').innerHTML=accs.map(function(a){
-    var debt=a.pays.filter(function(p){return p.status!=='paid';}).reduce(function(s,p){return s+p.amount;},0);
-    var paid=a.pays.filter(function(p){return p.status==='paid';}).reduce(function(s,p){return s+p.amount;},0);
-    var ov=a.pays.filter(function(p){return p.status==='overdue';}).reduce(function(s,p){return s+p.amount;},0);
+    var debt=visPays(a).filter(function(p){return p.status!=='paid';}).reduce(function(s,p){return s+p.amount;},0);
+    var paid=visPays(a).filter(function(p){return p.status==='paid';}).reduce(function(s,p){return s+p.amount;},0);
+    var ov=visPays(a).filter(function(p){return p.status==='overdue';}).reduce(function(s,p){return s+p.amount;},0);
     var tot=paid+debt,pct=tot>0?Math.round(paid/tot*100):0;
     var rows=a.pays.map(function(p,i){
+      if(p.forecast && !fcVisible()) return '';
       var hn=p.nd&&p.nd.trim();
-      return'<tr><td style="color:var(--t3);font-family:var(--m);font-size:10px">'+(i+1)+'</td><td style="font-family:var(--m);font-size:11px">'+eff(p)+(hn?'<br><span style="font-size:10px;color:var(--t3);text-decoration:line-through">'+p.dt+'</span>':'')+'</td><td style="color:var(--t2)">'+p.desc+'</td><td style="font-family:var(--m);font-size:10px;color:var(--t3)">'+(p.chq||'—')+'</td><td style="text-align:right;font-family:var(--m);font-weight:600">'+fmt(p.amount)+'</td><td style="color:var(--t3);font-size:11px">'+(p.pct||'')+'</td><td>'+sbdg(p.status)+'</td><td style="white-space:nowrap">'+payActions(a.id,p,i)+''+(a.defer&&p.status!=='paid'?' <button class="btn-s" onclick="deferP(\''+a.id+'\','+i+')">Defer</button>':'')+' <button class="btn-s" onclick="opEdit(\''+a.id+'\','+i+')">✎ Edit</button></td></tr>';
+      var fcRow=p.forecast?'background:rgba(167,139,250,.05);border-left:2px solid var(--purple)':'';var acts=p.forecast?'<button class="btn-s" onclick="confirmForecast(\''+a.id+'\','+i+')" style="color:var(--purple)">✓ Confirm real</button> <button class="btn-s" onclick="opEdit(\''+a.id+'\','+i+')">✎ Edit</button>':(payActions(a.id,p,i)+''+(a.defer&&p.status!=='paid'?' <button class="btn-s" onclick="deferP(\''+a.id+'\','+i+')">Defer</button>':'')+' <button class="btn-s" onclick="opEdit(\''+a.id+'\','+i+')">✎ Edit</button>');return'<tr style="'+fcRow+'"><td style="color:var(--t3);font-family:var(--m);font-size:10px">'+(i+1)+'</td><td style="font-family:var(--m);font-size:11px">'+eff(p)+(hn?'<br><span style="font-size:10px;color:var(--t3);text-decoration:line-through">'+p.dt+'</span>':'')+'</td><td style="color:var(--t2)">'+p.desc+(p.forecast?fcTag():'')+'</td><td style="font-family:var(--m);font-size:10px;color:var(--t3)">'+(p.chq||'—')+'</td><td style="text-align:right;font-family:var(--m);font-weight:600">'+fmt(p.amount)+'</td><td style="color:var(--t3);font-size:11px">'+(p.pct||'')+'</td><td>'+(p.forecast?'':sbdg(p.status))+'</td><td style="white-space:nowrap">'+acts+'</td></tr>';
     }).join('');
     var sb=a.synced?'<span style="background:rgba(62,207,142,.12);color:var(--green);font-size:10px;padding:1px 6px;border-radius:4px;font-weight:500">synced</span>':'';
-    return'<div class="ar"><div class="ah" onclick="togAcc(\'d-'+a.id+'\')"><div style="display:flex;align-items:center;gap:12px"><div style="width:36px;height:36px;border-radius:10px;background:rgba(91,156,246,.1);color:'+tcl(a.type)+';display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0"><i class="ti ti-'+tic(a.type)+'"></i></div><div><div style="font-weight:600;font-size:14px">'+a.name+' '+sb+'</div><div style="font-size:11px;color:var(--t2);margin-top:2px">'+a.type+' · Principal: '+fmt(a.principal)+(a.defer?' · <span style="color:var(--blue)">defer on</span>':'')+'</div><div class="prog"><div class="prog-f" style="width:'+pct+'%"></div></div><div style="font-size:10px;color:var(--t3);margin-top:2px">'+pct+'% paid</div></div></div><div style="text-align:right;display:flex;align-items:center;gap:12px"><div><div style="font-weight:600;font-size:15px;font-family:var(--m);color:var(--red)">'+fmt(debt)+'</div><div style="font-size:11px;color:var(--t2);margin-top:2px">'+fmt(paid)+' paid'+(ov?' · <span style="color:var(--red)">'+fmt(ov)+' overdue</span>':'')+'</div></div><button class="btn-d btn-s" onclick="event.stopPropagation();opDel(\''+a.id+'\')">Delete</button></div></div><div class="adet" id="d-'+a.id+'"><div class="syncbar"><i class="ti ti-table-import" style="color:var(--t3)"></i><input type="text" placeholder="Google Sheets CSV URL…" value="'+(a.url||'')+'" id="u-'+a.id+'" onchange="accs.find(function(x){return x.id===\''+a.id+'\';}).url=this.value;saveState()" style="font-size:11px;padding:4px 8px"><button class="btn-s" onclick="syncOne(\''+a.id+'\')">↻ Sync</button><span class="ss" id="ss-'+a.id+'">'+(a.url?(a.synced?'✓ synced':'not synced'):'no URL')+'</span></div><div style="padding:8px 14px;border-bottom:1px solid var(--b1)"><button class="btn-s" onclick="opAddPay(\''+a.id+'\')">+ Add payment</button></div>'+(a.pays.length?'<div style="overflow-x:auto"><table><thead><tr><th>#</th><th>Date</th><th>Description</th><th>Chq</th><th style="text-align:right">Amount</th><th>%</th><th>Status</th><th></th></tr></thead><tbody>'+rows+'</tbody></table></div>':'<p style="padding:1rem;font-size:12px;color:var(--t2)">No payments yet.</p>')+'</div></div>';
+    return'<div class="ar"><div class="ah" onclick="togAcc(\'d-'+a.id+'\')"><div style="display:flex;align-items:center;gap:12px"><div style="width:36px;height:36px;border-radius:10px;background:rgba(91,156,246,.1);color:'+tcl(a.type)+';display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0"><i class="ti ti-'+tic(a.type)+'"></i></div><div><div style="font-weight:600;font-size:14px">'+a.name+' '+sb+'</div><div style="font-size:11px;color:var(--t2);margin-top:2px">'+a.type+' · Principal: '+fmt(a.principal)+(a.defer?' · <span style="color:var(--blue)">defer on</span>':'')+'</div><div class="prog"><div class="prog-f" style="width:'+pct+'%"></div></div><div style="font-size:10px;color:var(--t3);margin-top:2px">'+pct+'% paid</div></div></div><div style="text-align:right;display:flex;align-items:center;gap:12px"><div><div style="font-weight:600;font-size:15px;font-family:var(--m);color:var(--red)">'+fmt(debt)+'</div><div style="font-size:11px;color:var(--t2);margin-top:2px">'+fmt(paid)+' paid'+(ov?' · <span style="color:var(--red)">'+fmt(ov)+' overdue</span>':'')+'</div></div><button class="btn-d btn-s" onclick="event.stopPropagation();opDel(\''+a.id+'\')">Delete</button></div></div><div class="adet" id="d-'+a.id+'"><div class="syncbar"><i class="ti ti-table-import" style="color:var(--t3)"></i><input type="text" placeholder="Google Sheets CSV URL…" value="'+(a.url||'')+'" id="u-'+a.id+'" onchange="accs.find(function(x){return x.id===\''+a.id+'\';}).url=this.value;saveState()" style="font-size:11px;padding:4px 8px"><button class="btn-s" onclick="syncOne(\''+a.id+'\')">↻ Sync</button><span class="ss" id="ss-'+a.id+'">'+(a.url?(a.synced?'✓ synced':'not synced'):'no URL')+'</span></div><div style="padding:8px 14px;border-bottom:1px solid var(--b1);display:flex;gap:8px"><button class="btn-s" onclick="opAddPay(\''+a.id+'\')">+ Add payment</button><button class="btn-s" onclick="openAutoForecast(\''+a.id+'\')" style="color:var(--purple)"><i class="ti ti-wand"></i> Auto-forecast</button><div id="pselbar-'+a.id+'" style="display:none;align-items:center;gap:8px;margin-left:auto"><span id="psellbl-'+a.id+'" style="font-size:11px;color:var(--t2)">0 selected</span><button class="btn-s btn-d" onclick="cfDelSelected(\''+a.id+'\')"><i class="ti ti-trash"></i> Delete selected</button></div></div>'+(a.pays.length?'<div style="overflow-x:auto"><table><thead><tr><th style="width:24px"><input type="checkbox" onchange="cfSelAll(\''+a.id+'\',this.checked)" style="width:auto" title="Select all"></th><th>#</th><th>Date</th><th>Description</th><th>Chq</th><th style="text-align:right">Amount</th><th>%</th><th>Status</th><th></th></tr></thead><tbody>'+rows+'</tbody></table></div>':'<p style="padding:1rem;font-size:12px;color:var(--t2)">No payments yet.</p>')+'</div></div>';
   }).join('');
+  // restore expanded panels after re-render
+  Object.keys(cfOpenAccs).forEach(function(id){ if(cfOpenAccs[id]){ var el=document.getElementById(id); if(el) el.classList.add('on'); } });
 }
-function togAcc(id){document.getElementById(id).classList.toggle('on');}
+var cfOpenAccs={};
+function togAcc(id){var el=document.getElementById(id);if(!el)return;el.classList.toggle('on');cfOpenAccs[id]=el.classList.contains('on');}
 
 function renderMonthly(){
   var yr=parseInt(document.getElementById('mo-yr').value)||2026;
   var mm={};
   accs.forEach(function(a){
     a.pays.forEach(function(p,i){
+      if(p.forecast && !fcVisible()) return;
       var d=pd(eff(p));if(!d||d.getFullYear()!==yr)return;
       var k=d.getMonth();
       if(!mm[k])mm[k]=[];
@@ -793,7 +841,7 @@ function renderMonthly(){
     var ovc=pays.filter(function(p){return p.status==='overdue';}).length;
     var rows=pays.map(function(p){
       var hn=p.nd&&p.nd.trim();
-      return'<tr><td style="font-weight:500">'+p.acc+'</td><td style="font-family:var(--m);font-size:11px">'+eff(p)+(hn?'<br><span style="font-size:10px;color:var(--t3);text-decoration:line-through">'+p.dt+'</span>':'')+'</td><td style="color:var(--t2)">'+p.desc+'</td><td style="font-family:var(--m);font-size:10px;color:var(--t3)">'+(p.chq||'—')+'</td><td style="text-align:right;font-family:var(--m);font-weight:600">'+fmt(p.amount)+'</td><td>'+sbdg(p.status)+'</td><td style="white-space:nowrap">'+payActions(p.aid,p,p.pi)+''+(p.defer&&p.status!=='paid'?' <button class="btn-s" onclick="deferP(\''+p.aid+'\','+p.pi+')">Defer</button>':'')+' <button class="btn-s" onclick="opEdit(\''+p.aid+'\','+p.pi+')">✎ Edit</button></td></tr>';
+      return'<tr style="'+(p.forecast?'background:rgba(167,139,250,.05)':'')+'"><td style="font-weight:500">'+p.acc+'</td><td style="font-family:var(--m);font-size:11px">'+eff(p)+(hn?'<br><span style="font-size:10px;color:var(--t3);text-decoration:line-through">'+p.dt+'</span>':'')+'</td><td style="color:var(--t2)">'+p.desc+(p.forecast?fcTag():'')+'</td><td style="font-family:var(--m);font-size:10px;color:var(--t3)">'+(p.chq||'—')+'</td><td style="text-align:right;font-family:var(--m);font-weight:600">'+fmt(p.amount)+'</td><td>'+(p.forecast?'':sbdg(p.status))+'</td><td style="white-space:nowrap">'+payActions(p.aid,p,p.pi)+''+(p.defer&&p.status!=='paid'?' <button class="btn-s" onclick="deferP(\''+p.aid+'\','+p.pi+')">Defer</button>':'')+' <button class="btn-s" onclick="opEdit(\''+p.aid+'\','+p.pi+')">✎ Edit</button></td></tr>';
     }).join('');
     return'<div class="ar" style="margin-bottom:10px"><div class="mh" onclick="this.nextElementSibling.classList.toggle(\'on\')"><div style="display:flex;align-items:center;gap:10px"><div style="width:36px;height:36px;background:rgba(91,156,246,.1);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--blue)">'+M3[m]+'</div><div><div style="font-size:13px;font-weight:600">'+MNS[m]+' '+yr+'<span class="mbadge">'+pays.length+' payments</span></div><div style="font-size:11px;color:var(--t2);margin-top:2px">'+fmt(paid)+' paid · '+(ovc>0?'<span style="color:var(--red)">'+ovc+' overdue</span>':'all on track')+'</div></div></div><div style="font-size:13px;font-weight:600;color:var(--amber);font-family:var(--m)">'+fmt(total)+'</div></div><div class="mb"><div style="overflow-x:auto"><table><thead><tr><th>Account</th><th>Date</th><th>Description</th><th>Chq</th><th style="text-align:right">Amount</th><th>Status</th><th></th></tr></thead><tbody>'+rows+'</tbody></table></div></div></div>';
   }).join('');
@@ -1121,7 +1169,7 @@ function expPDF(){
   var w=window.open('','_blank');
   var html='<!DOCTYPE html><html><head><meta charset="UTF-8"><title>PayTrack Report</title><style>body{font-family:Arial,sans-serif;font-size:12px;color:#1a1a1a;margin:2cm}h1{font-size:22px}h2{font-size:15px;margin:20px 0 8px;border-bottom:2px solid #eee;padding-bottom:4px}h3{font-size:13px;margin:14px 0 6px}table{width:100%;border-collapse:collapse;margin-bottom:10px}th{background:#f5f5f3;text-align:left;padding:6px 8px;font-size:11px;border:1px solid #ddd}td{padding:6px 8px;border:1px solid #ddd;font-size:11px}.r{color:#A32D2D}.g{color:#3B6D11}.am{color:#854F0B}@media print{body{margin:1cm}}<\/style><\/head><body>';
   html+='<h1>PayTrack Financial Report</h1><p style="color:#666;font-size:11px">Generated: '+fd(TODAY)+' | Raouf Andrea</p>';
-  var o=0,p=0,ov=0;accs.forEach(function(a){a.pays.forEach(function(x){if(x.status==='paid')p+=x.amount;else o+=x.amount;if(x.status==='overdue')ov+=x.amount;});});
+  var o=0,p=0,ov=0;accs.forEach(function(a){visPays(a).forEach(function(x){if(x.status==='paid')p+=x.amount;else o+=x.amount;if(x.status==='overdue')ov+=x.amount;});});
   html+='<h2>Summary</h2><table><tr><th>Metric</th><th>Value</th></tr><tr><td>Total outstanding</td><td class="r"><strong>'+fmt(o)+'</strong></td></tr><tr><td>Total paid</td><td class="g">'+fmt(p)+'</td></tr><tr><td>Total overdue</td><td class="r">'+fmt(ov)+'</td></tr><tr><td>Active accounts</td><td>'+accs.length+'</td></tr></table>';
   html+='<h2>Accounts</h2>';
   accs.forEach(function(a){
@@ -1137,6 +1185,37 @@ function expPDF(){
   w.document.write(html);w.document.close();setTimeout(function(){w.print();},600);
 }
 
+// ── Multi-select delete for payments ──
+var cfSelPay={}; // {accId: Set of indices}
+function cfTogSel(accId,i,checked){
+  cfSelPay[accId]=cfSelPay[accId]||{};
+  if(checked) cfSelPay[accId][i]=true; else delete cfSelPay[accId][i];
+  cfUpdSelBar(accId);
+}
+function cfSelAll(accId,checked){
+  var a=accs.find(function(x){return x.id===accId;}); if(!a) return;
+  cfSelPay[accId]={};
+  if(checked){ a.pays.forEach(function(p,i){ if(!(p.forecast&&!fcVisible())) cfSelPay[accId][i]=true; }); }
+  // reflect checkboxes without full re-render
+  a.pays.forEach(function(p,i){ var cb=document.getElementById('psel-'+accId+'-'+i); if(cb) cb.checked=!!(cfSelPay[accId]&&cfSelPay[accId][i]); });
+  cfUpdSelBar(accId);
+}
+function cfSelCount(accId){ return cfSelPay[accId]?Object.keys(cfSelPay[accId]).length:0; }
+function cfUpdSelBar(accId){
+  var n=cfSelCount(accId);
+  var bar=document.getElementById('pselbar-'+accId);
+  if(bar){ bar.style.display=n?'flex':'none'; var lbl=document.getElementById('psellbl-'+accId); if(lbl) lbl.textContent=n+' selected'; }
+}
+function cfDelSelected(accId){
+  var a=accs.find(function(x){return x.id===accId;}); if(!a) return;
+  var idx=Object.keys(cfSelPay[accId]||{}).map(Number).sort(function(x,y){return y-x;}); // desc
+  if(!idx.length) return;
+  if(!confirm('Delete '+idx.length+' selected payment'+(idx.length>1?'s':'')+'? This cannot be undone.')) return;
+  idx.forEach(function(i){ a.pays.splice(i,1); });
+  cfSelPay[accId]={};
+  saveState(); rAll();
+  if(typeof renderCashFlow==='function') renderCashFlow();
+}
 function mkPaid(id,i){var a=accs.find(function(x){return x.id===id;});if(a&&a.pays[i])a.pays[i].status='paid';saveState();rAll();}
 // Signed-cheque confirmation: user says the cheque cleared -> paid
 function payActions(aid,p,i){
@@ -1407,8 +1486,9 @@ async function loadFromServer(){
     accs=serverAccs.filter(function(a){return deletedIds.indexOf(a.id)===-1;});
     if(data.stocks&&Array.isArray(data.stocks)&&data.stocks.length)stocks=data.stocks;
     autoFlagOverdue();
+    try{ cfLoadConfig(); cfSyncForecastToAccounts(); }catch(ef){}
     try{
-      localStorage.setItem('pt_accs',JSON.stringify(accs));
+      localStorage.setItem('pt_accs',JSON.stringify(accs.map(function(a){var c=Object.assign({},a);if(c.pays)c.pays=c.pays.filter(function(p){return !p.forecast;});return c;})));
       localStorage.setItem('pt_stk',JSON.stringify(stocks));
       localStorage.setItem('pt_save_time',serverTime.toString());
     }catch(e2){}
@@ -1420,6 +1500,7 @@ async function loadFromServer(){
 
 window.addEventListener('load', function() {
   try { loadState(); } catch(e) { console.log('loadState error:', e); }
+  try { cfLoadConfig(); cfSyncForecastToAccounts(); } catch(e) { console.log('forecast sync error:', e); }
   try { renderDash(); } catch(e) { console.log('renderDash error:', e); }
   loadFromServer();
 });
@@ -1450,7 +1531,7 @@ function cfFixedMonthly(){
   var items=[];
   accs.forEach(function(a){
     if(CF_MONTHLY_TYPES.indexOf(a.type)===-1) return;
-    var unpaid=(a.pays||[]).filter(function(p){return p.status!=='paid';});
+    var unpaid=(a.pays||[]).filter(function(p){return p.status!=='paid' && !(p.forecast && !fcVisible());});
     var amounts=unpaid.map(function(p){return p.amount;});
     var amt=amounts.length?amounts.sort(function(x,y){
       return amounts.filter(function(v){return v===y;}).length-amounts.filter(function(v){return v===x;}).length;
@@ -1471,6 +1552,7 @@ function cfDatedPaymentsByMonth(){
     if(CF_MONTHLY_TYPES.indexOf(a.type)!==-1) return; // BMW/NBF already in fixed monthly
     (a.pays||[]).forEach(function(p){
       if(p.status==='paid') return;
+      if(p.forecast && !fcVisible()) return;
       var d=pd(eff(p)); if(!d) return;
       var k=cfMoKey(d);
       var amt=cfApplyIncreases(a.name,k,p.amount);
@@ -1483,7 +1565,7 @@ function cfDatedPaymentsByMonth(){
 function cfLiabilities(){
   var palette=['#a78bfa','#5b9cf6','#f5a623','#f26b6b','#2dd4bf','#3ecf8e','#e879f9'];
   var list=accs.map(function(a,i){
-    var bal=(a.pays||[]).filter(function(p){return p.status!=='paid';}).reduce(function(s,p){return s+p.amount;},0);
+    var bal=(a.pays||[]).filter(function(p){return p.status!=='paid' && !(p.forecast && !fcVisible());}).reduce(function(s,p){return s+p.amount;},0);
     return { label:a.name, amount:bal, color:palette[i%palette.length] };
   }).filter(function(l){ return l.amount>0; });
   list.sort(function(x,y){ return y.amount-x.amount; });
@@ -1516,17 +1598,17 @@ function cfOverdueBacklog(){
 //               last scheduled payment, for N months, optional % increase.
 //   'increase'— raise an existing future cost from a start month, by % or to a
 //               new absolute amount (applies to that account's dated payments).
-function cfFcMaster(on){ cfConfig.forecastOn=on; cfSaveConfig(); renderCashFlow(); }
+function cfFcMaster(on){ cfConfig.forecastOn=on; cfSaveConfig(); if(typeof rAll==='function')rAll(); renderCashFlow(); }
 function cfFcAdd(){
   cfConfig.forecasts=cfConfig.forecasts||[];
   cfConfig.forecasts.push({id:'f'+Date.now(),on:true,type:'renew',label:'New assumption',
     account:'', amount:57000, everyMonths:3, months:24, startKey:'', pctInc:0, mode:'pct', absAmount:0});
-  cfSaveConfig(); renderCashFlow();
+  cfSaveConfig(); cfSyncForecastToAccounts(); saveState(); if(typeof rAll==='function')rAll(); renderCashFlow();
 }
-function cfFcDel(id){ cfConfig.forecasts=(cfConfig.forecasts||[]).filter(function(f){return f.id!==id;}); cfSaveConfig(); renderCashFlow(); }
+function cfFcDel(id){ cfConfig.forecasts=(cfConfig.forecasts||[]).filter(function(f){return f.id!==id;}); cfSaveConfig(); cfSyncForecastToAccounts(); saveState(); if(typeof rAll==='function')rAll(); renderCashFlow(); }
 function cfFcSet(id,k,v){
   (cfConfig.forecasts||[]).forEach(function(f){ if(f.id===id) f[k]=v; });
-  cfSaveConfig(); renderCashFlow();
+  cfSaveConfig(); cfSyncForecastToAccounts(); saveState(); if(typeof rAll==='function')rAll(); renderCashFlow();
 }
 function cfAccountNames(){ return accs.map(function(a){return a.name;}); }
 
@@ -1581,50 +1663,199 @@ function cfApplyIncreases(accName, monthKey, amount){
 }
 
 function cfRenderForecasts(){
+  // Panel retired — forecasts are created in Accounts. Just sync the master
+  // checkbox and show a small count of forecast payments currently in accounts.
   var master=document.getElementById('cf-fc-master');
   if(master) master.checked=!!cfConfig.forecastOn;
-  var host=document.getElementById('cf-fc-list');
-  if(!host) return;
-  var fcs=cfConfig.forecasts||[];
-  if(!fcs.length){ host.innerHTML='<div style="font-size:12px;color:var(--t3);padding:8px 0">No assumptions yet. Add one to model renewals or price increases.</div>'; return; }
-  var names=cfAccountNames();
-  var dim=cfConfig.forecastOn?'':'opacity:.5;';
-  host.innerHTML=fcs.map(function(f){
-    var accOpts=names.map(function(n){return '<option value="'+n+'"'+(f.account===n?' selected':'')+'>'+n+'</option>';}).join('');
-    var typeSel='<select onchange="cfFcSet(\''+f.id+'\',\'type\',this.value)" style="font-size:11px;padding:4px 6px;width:auto">'
-      +'<option value="renew"'+(f.type==='renew'?' selected':'')+'>Renew / continue</option>'
-      +'<option value="increase"'+(f.type==='increase'?' selected':'')+'>Price increase</option></select>';
-    var body='';
-    if(f.type==='renew'){
-      body='<div style="display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr .8fr;gap:8px;align-items:end">'
-        +'<div><label style="font-size:10px">Continue which account</label><select onchange="cfFcSet(\''+f.id+'\',\'account\',this.value)" style="font-size:11px;padding:4px 6px">'+accOpts+'</select></div>'
-        +'<div><label style="font-size:10px">Amount / payment</label><input type="number" value="'+(f.amount||0)+'" onchange="cfFcSet(\''+f.id+'\',\'amount\',+this.value)" style="font-size:11px;padding:4px 6px"></div>'
-        +'<div><label style="font-size:10px">Every (months)</label><input type="number" value="'+(f.everyMonths||3)+'" onchange="cfFcSet(\''+f.id+'\',\'everyMonths\',+this.value)" style="font-size:11px;padding:4px 6px"></div>'
-        +'<div><label style="font-size:10px">For (months)</label><input type="number" value="'+(f.months||24)+'" onchange="cfFcSet(\''+f.id+'\',\'months\',+this.value)" style="font-size:11px;padding:4px 6px"></div>'
-        +'<div><label style="font-size:10px">Increase %</label><input type="number" value="'+(f.pctInc||0)+'" onchange="cfFcSet(\''+f.id+'\',\'pctInc\',+this.value)" style="font-size:11px;padding:4px 6px"></div>'
-      +'</div>';
-    } else {
-      var modeSel='<select onchange="cfFcSet(\''+f.id+'\',\'mode\',this.value)" style="font-size:11px;padding:4px 6px"><option value="pct"'+(f.mode==='pct'?' selected':'')+'>By %</option><option value="abs"'+(f.mode==='abs'?' selected':'')+'>New amount</option></select>';
-      var valField=f.mode==='abs'
-        ?'<div><label style="font-size:10px">New amount</label><input type="number" value="'+(f.absAmount||0)+'" onchange="cfFcSet(\''+f.id+'\',\'absAmount\',+this.value)" style="font-size:11px;padding:4px 6px"></div>'
-        :'<div><label style="font-size:10px">Increase %</label><input type="number" value="'+(f.pctInc||0)+'" onchange="cfFcSet(\''+f.id+'\',\'pctInc\',+this.value)" style="font-size:11px;padding:4px 6px"></div>';
-      body='<div style="display:grid;grid-template-columns:1.4fr 1fr 1fr 1.2fr;gap:8px;align-items:end">'
-        +'<div><label style="font-size:10px">Which account</label><select onchange="cfFcSet(\''+f.id+'\',\'account\',this.value)" style="font-size:11px;padding:4px 6px">'+accOpts+'</select></div>'
-        +'<div><label style="font-size:10px">Mode</label>'+modeSel+'</div>'
-        +valField
-        +'<div><label style="font-size:10px">From month (YYYY-MM)</label><input type="text" value="'+(f.startKey||'')+'" placeholder="2026-09" onchange="cfFcSet(\''+f.id+'\',\'startKey\',this.value.trim())" style="font-size:11px;padding:4px 6px"></div>'
-      +'</div>';
-    }
-    return '<div style="border:1px solid var(--b1);border-radius:10px;padding:10px 12px;margin-bottom:8px;'+dim+'background:var(--bg2)">'
-      +'<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">'
-        +'<input type="checkbox" '+(f.on?'checked':'')+' onchange="cfFcSet(\''+f.id+'\',\'on\',this.checked)" style="width:auto">'
-        +'<input type="text" value="'+(f.label||'')+'" onchange="cfFcSet(\''+f.id+'\',\'label\',this.value)" placeholder="Label (e.g. Noya renewal)" style="font-size:12px;font-weight:600;padding:3px 6px;flex:1">'
-        +typeSel
-        +'<button class="btn-s btn-d" onclick="cfFcDel(\''+f.id+'\')" style="font-size:11px">Delete</button>'
-      +'</div>'
-      +body
-    +'</div>';
-  }).join('');
+  var cnt=0;
+  accs.forEach(function(a){ (a.pays||[]).forEach(function(p){ if(p.forecast) cnt++; }); });
+  var el=document.getElementById('cf-fc-count');
+  if(el) el.textContent=cnt?('· '+cnt+' forecast payment'+(cnt>1?'s':'')+' in accounts'):'· none yet';
+}
+
+// ── FORECAST → ACCOUNTS MATERIALIZATION ──────────────────────────────────────
+// Forecast payments live INSIDE their target account, tagged forecast:true.
+// They are (re)generated from cfConfig.forecasts whenever forecasts change.
+// A stable per-payment id (fpid) lets us replace them cleanly without duplicates.
+
+// Remove all forecast-generated payments from every account.
+function cfClearForecastPayments(){
+  accs.forEach(function(a){
+    if(!a.pays) return;
+    a.pays=a.pays.filter(function(p){ return !p.forecast; });
+  });
+}
+
+// Find the account object a forecast points at (by name).
+function cfFindAcc(name){ return accs.find(function(a){return a.name===name;}); }
+
+// Rebuild forecast payments inside accounts from the current assumptions.
+// Only 'renew' forecasts create NEW payment rows. 'increase' forecasts adjust
+// existing (real) future payments at render time via cfApplyIncreases and are
+// NOT materialized as separate rows (they modify amounts in place visually).
+function cfSyncForecastToAccounts(){
+  // No-op: forecast payments are created directly in accounts by the Auto-forecast
+  // button and persist as forecast:true rows. The master switch controls their
+  // visibility (see cfConfig.forecastOn), it does not regenerate them.
+  return;
+}
+
+// Convert a forecast payment into a real one (user confirmed it happened).
+// Strips the forecast flag; it becomes a normal, editable payment.
+function confirmForecast(accId,i){
+  var a=accs.find(function(x){return x.id===accId;}); if(!a||!a.pays[i]) return;
+  var p=a.pays[i];
+  delete p.forecast; delete p.fpid;
+  p.desc=p.desc.replace(/ #\d+.*$/,'').replace(/^.*?renewal/i,'Renewal')||'Payment';
+  saveState(); rAll();
+  if(typeof renderCashFlow==='function') renderCashFlow();
+}
+
+// ── AUTO-FORECAST per account ────────────────────────────────────────────────
+// Detects the payment interval from the account's own history, then generates
+// 12 months of same-term forecast payments. Asks same-price vs new-total + %.
+var afcCtx={id:null,detected:null};
+
+// Detect the typical interval (in months) between the last few payments.
+function afcDetectInterval(a){
+  var dates=(a.pays||[]).map(function(p){return pd(eff(p));}).filter(Boolean).sort(function(x,y){return x-y;});
+  if(dates.length<2) return 1; // default monthly
+  var gaps=[];
+  for(var i=Math.max(1,dates.length-4);i<dates.length;i++){
+    var mo=(dates[i].getFullYear()-dates[i-1].getFullYear())*12+(dates[i].getMonth()-dates[i-1].getMonth());
+    if(mo>0) gaps.push(mo);
+  }
+  if(!gaps.length) return 1;
+  // mode of gaps
+  gaps.sort(function(x,y){return gaps.filter(function(v){return v===y;}).length-gaps.filter(function(v){return v===x;}).length;});
+  return gaps[0]||1;
+}
+// Typical amount = most common unpaid amount, else last payment amount.
+function afcTypicalAmount(a){
+  var amts=(a.pays||[]).map(function(p){return p.amount;}).filter(function(v){return v>0;});
+  if(!amts.length) return 0;
+  var m=amts.slice();
+  m.sort(function(x,y){return amts.filter(function(v){return v===y;}).length-amts.filter(function(v){return v===x;}).length;});
+  return m[0];
+}
+// Typical description = last payment's description (stripped of numbering).
+function afcTypicalDesc(a){
+  var ps=(a.pays||[]).filter(function(p){return !p.forecast;});
+  if(!ps.length) return 'Payment';
+  return (ps[ps.length-1].desc||'Payment').replace(/\s*#?\d+\s*$/,'');
+}
+
+// School fees follow an academic-year cycle: 3 unequal terms (Aug/Dec/Mar by
+// default), repeating each year with an optional KHDA-style % increase.
+// Default per Raouf's data: T1 23,200 (Aug) / T2 19,500 (Dec) / T3 19,500 (Mar).
+var SCHOOL_DEFAULT_TERMS=[
+  {name:'Term 1',amount:23200,month:7},  // Aug (0-indexed)
+  {name:'Term 2',amount:19500,month:11}, // Dec
+  {name:'Term 3',amount:19500,month:2}   // Mar
+];
+function isSchoolAcct(a){ return a && a.type==='School Fees'; }
+
+// Generate forecast rows for N future academic years from the account.
+// yearsAhead: how many academic years to project. incPct: yearly fee rise.
+function schoolForecastRows(a, yearsAhead, incPct){
+  var rows=[];
+  // Determine the current academic year's September as the anchor.
+  // Academic year starts in Aug/Sep; if we're past July, current AY started this year.
+  var now=TODAY;
+  var ayStartYear = now.getMonth()>=7 ? now.getFullYear() : now.getFullYear()-1;
+  // Try to read the account's own term amounts if they look like 3 terms; else defaults.
+  var terms=SCHOOL_DEFAULT_TERMS;
+  for(var y=0; y<yearsAhead; y++){
+    var factor=Math.pow(1+(incPct||0)/100, y+1); // increase applies to future years
+    var baseYear=ayStartYear+1+y; // next academic year onward (this year already scheduled)
+    terms.forEach(function(t){
+      // Term 1 (Aug) and Term 2 (Dec) fall in baseYear; Term 3 (Mar) falls in baseYear+1
+      var calYear = t.month>=7 ? baseYear : baseYear+1;
+      var amt=Math.round(t.amount*factor);
+      rows.push({
+        desc:t.name+' '+baseYear+'/'+(baseYear+1)+(incPct?(' +'+incPct+'%'):''),
+        amount:amt,
+        dt:fd(new Date(calYear, t.month, 1)),
+        forecast:true
+      });
+    });
+  }
+  return rows;
+}
+
+function openAutoForecast(id){
+  var a=accs.find(function(x){return x.id===id;}); if(!a) return;
+  if(isSchoolAcct(a)){
+    afcCtx={id:id,school:true};
+    var terms=SCHOOL_DEFAULT_TERMS;
+    var yearTotal=terms.reduce(function(s,t){return s+t.amount;},0);
+    document.getElementById('afc-summary').innerHTML='<b style="color:var(--t1)">'+a.name+'</b> follows a 3-term academic year: '
+      +'<span style="color:var(--t1)">Term 1 '+fmt(terms[0].amount)+' (Aug)</span>, '
+      +'<span style="color:var(--t1)">Term 2 '+fmt(terms[1].amount)+' (Dec)</span>, '
+      +'<span style="color:var(--t1)">Term 3 '+fmt(terms[2].amount)+' (Mar)</span> — total '+fmt(yearTotal)+'/year. '
+      +'Each new academic year repeats with an optional fee rise.';
+    document.getElementById('afc-count').value=2;        // years ahead
+    document.getElementById('afc-count-lbl').textContent='How many academic years ahead?';
+    document.getElementById('afc-price-row').style.display='none';   // price fixed by terms
+    document.getElementById('afc-newtotal-wrap').style.display='none';
+    document.getElementById('afc-inc').value=2.5;        // KHDA-typical default
+    document.getElementById('afc-inc-lbl').textContent='Yearly fee increase % (KHDA typical ~2.5%)';
+    oM('m-afc');
+    return;
+  }
+  var iv=afcDetectInterval(a), amt=afcTypicalAmount(a), desc=afcTypicalDesc(a);
+  afcCtx={id:id,detected:{interval:iv,amount:amt,desc:desc}};
+  var ivLabel=iv===1?'monthly':iv===3?'quarterly':iv===6?'every 6 months':iv===12?'annual':('every '+iv+' months');
+  document.getElementById('afc-summary').innerHTML='Detected pattern for <b style="color:var(--t1)">'+a.name+'</b>: '+ivLabel+' payments of about <b style="color:var(--t1)">'+fmt(amt)+'</b>.';
+  document.getElementById('afc-count').value=Math.max(1,Math.round(12/iv));
+  document.getElementById('afc-count-lbl').textContent='How many future payments to add?';
+  document.getElementById('afc-price-row').style.display='block';
+  document.getElementById('afc-price-same').checked=true;
+  document.getElementById('afc-newtotal').value='';
+  document.getElementById('afc-inc').value=0;
+  document.getElementById('afc-inc-lbl').textContent='Increase % (optional)';
+  afcPriceMode();
+  oM('m-afc');
+}
+function afcPriceMode(){
+  var same=document.getElementById('afc-price-same').checked;
+  document.getElementById('afc-newtotal-wrap').style.display=same?'none':'block';
+}
+function doAutoForecast(){
+  var a=accs.find(function(x){return x.id===afcCtx.id;}); if(!a){cM('m-afc');return;}
+  var inc=+document.getElementById('afc-inc').value||0;
+  a.pays=a.pays||[];
+  var stamp=Date.now();
+  if(afcCtx.school){
+    var years=Math.max(1,+document.getElementById('afc-count').value||1);
+    var rows=schoolForecastRows(a, years, inc);
+    rows.forEach(function(r,idx){
+      a.pays.push({desc:r.desc,amount:r.amount,dt:r.dt,nd:'',chq:'',pct:'',status:'notpaid',forecast:true,fpid:'afc_'+a.id+'_'+stamp+'_'+idx});
+    });
+    cM('m-afc'); saveState(); rAll();
+    if(typeof renderCashFlow==='function') renderCashFlow();
+    return;
+  }
+  var d=afcCtx.detected;
+  var count=Math.max(1,+document.getElementById('afc-count').value||1);
+  var same=document.getElementById('afc-price-same').checked;
+  var perAmt;
+  if(same){ perAmt=d.amount*(1+inc/100); }
+  else {
+    var newTotal=+document.getElementById('afc-newtotal').value||0;
+    perAmt=(newTotal/count)*(1+inc/100);
+  }
+  perAmt=Math.round(perAmt);
+  var last=null;
+  (a.pays||[]).forEach(function(p){var dd=pd(eff(p));if(dd&&(!last||dd>last))last=dd;});
+  var base=last?new Date(last.getTime()):new Date(TODAY.getFullYear(),TODAY.getMonth(),1);
+  var day=last?last.getDate():1;
+  for(var n=1;n<=count;n++){
+    var dt=new Date(base.getFullYear(),base.getMonth()+d.interval*n,Math.min(day,28));
+    a.pays.push({desc:d.desc+' (forecast #'+n+')'+(inc?(' +'+inc+'%'):''),amount:perAmt,dt:fd(dt),nd:'',chq:'',pct:'',status:'notpaid',forecast:true,fpid:'afc_'+a.id+'_'+stamp+'_'+n});
+  }
+  cM('m-afc'); saveState(); rAll();
+  if(typeof renderCashFlow==='function') renderCashFlow();
 }
 
 function renderCashFlow(){
@@ -1644,7 +1875,7 @@ function renderCashFlow(){
   var fixed=cfFixedMonthly();
   var fixedTotal=fixed.reduce(function(s,o){return s+o.amount;},0);
   var datedByMonth=cfDatedPaymentsByMonth();
-  var fcByMonth=cfForecastByMonth();
+  var fcByMonth={}; // forecasts now materialized in accounts
   var MN=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
   // Build 12 months from current month
@@ -1658,7 +1889,7 @@ function renderCashFlow(){
   var lowest={bal:Infinity,label:''};
   var thisMonthIn=0,thisMonthOut=0,endOfMonthBal=0;
   months.forEach(function(m,idx){
-    var dated=(datedByMonth[m.key]||[]).concat(fcByMonth[m.key]||[]);
+    var dated=datedByMonth[m.key]||[];
     var datedSum=dated.reduce(function(s,x){return s+x.amount;},0);
     // Month 0 = current month. If salary already landed, it's baked into the balance
     // you typed, so don't add it again this month. Every future month gets full salary.
