@@ -339,6 +339,15 @@ label{display:block;font-size:11px;color:var(--t2);margin-bottom:4px;font-weight
 
   <div id="cf-kpi" style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:1.25rem"></div>
   <div id="cf-overdue" style="margin-bottom:1.25rem"></div>
+  <div class="card" style="margin-bottom:1.25rem">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+      <div class="card-t" style="margin-bottom:0"><i class="ti ti-crystal-ball" style="color:var(--purple);margin-right:5px"></i>Forecast Assumptions</div>
+      <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--t2);cursor:pointer"><span>Show forecast</span><input type="checkbox" id="cf-fc-master" onchange="cfFcMaster(this.checked)" style="width:auto"></label>
+    </div>
+    <div style="font-size:11px;color:var(--t3);margin-bottom:12px">What-if scenarios layered on the projection only — your actual accounts are never changed.</div>
+    <div id="cf-fc-list"></div>
+    <button class="btn-s" onclick="cfFcAdd()" style="margin-top:8px">+ Add assumption</button>
+  </div>
 
   <div class="card" style="margin-bottom:1.25rem">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
@@ -1423,12 +1432,12 @@ if(document.readyState === 'complete') {
 
 // Cash Flow Tab (v2 running-balance)
 // ── Cash Flow — running-balance-first, derived from accs[] + saved manual inputs ──
-var cfConfig = { income:0, startBalance:0, living:0, invest:0, salaryLanded:true };
+var cfConfig = { income:0, startBalance:0, living:0, invest:0, salaryLanded:true, forecastOn:false, forecasts:[] };
 var CF_MONTHLY_TYPES = ['Car Loan','Cash Loan'];  // truly-monthly loans
 
 function cfLoadConfig(){
   try{ var d=JSON.parse(localStorage.getItem('pt_cf')||'{}');
-    ['income','startBalance','living','invest','salaryLanded'].forEach(function(k){ if(d[k]!=null)cfConfig[k]=d[k]; });
+    ['income','startBalance','living','invest','salaryLanded','forecastOn','forecasts'].forEach(function(k){ if(d[k]!=null)cfConfig[k]=d[k]; });
   }catch(e){}
 }
 function cfSaveConfig(){ try{ localStorage.setItem('pt_cf',JSON.stringify(cfConfig)); }catch(e){} }
@@ -1464,7 +1473,8 @@ function cfDatedPaymentsByMonth(){
       if(p.status==='paid') return;
       var d=pd(eff(p)); if(!d) return;
       var k=cfMoKey(d);
-      (byMonth[k]=byMonth[k]||[]).push({acc:a.name,desc:p.desc,amount:p.amount,status:p.status,date:d});
+      var amt=cfApplyIncreases(a.name,k,p.amount);
+      (byMonth[k]=byMonth[k]||[]).push({acc:a.name,desc:p.desc,amount:amt,status:p.status,date:d});
     });
   });
   return byMonth;
@@ -1499,6 +1509,124 @@ function cfOverdueBacklog(){
   items.sort(function(x,y){ return x.date-y.date; });
   return items;
 }
+// ── FORECAST ASSUMPTIONS ─────────────────────────────────────────────────────
+// Each forecast never touches accs[]; it only injects extra dated amounts into
+// the projection. Types:
+//   'renew'   — continue a recurring lump (e.g. Noya rent) quarterly after its
+//               last scheduled payment, for N months, optional % increase.
+//   'increase'— raise an existing future cost from a start month, by % or to a
+//               new absolute amount (applies to that account's dated payments).
+function cfFcMaster(on){ cfConfig.forecastOn=on; cfSaveConfig(); renderCashFlow(); }
+function cfFcAdd(){
+  cfConfig.forecasts=cfConfig.forecasts||[];
+  cfConfig.forecasts.push({id:'f'+Date.now(),on:true,type:'renew',label:'New assumption',
+    account:'', amount:57000, everyMonths:3, months:24, startKey:'', pctInc:0, mode:'pct', absAmount:0});
+  cfSaveConfig(); renderCashFlow();
+}
+function cfFcDel(id){ cfConfig.forecasts=(cfConfig.forecasts||[]).filter(function(f){return f.id!==id;}); cfSaveConfig(); renderCashFlow(); }
+function cfFcSet(id,k,v){
+  (cfConfig.forecasts||[]).forEach(function(f){ if(f.id===id) f[k]=v; });
+  cfSaveConfig(); renderCashFlow();
+}
+function cfAccountNames(){ return accs.map(function(a){return a.name;}); }
+
+// Given the accounts, find the last scheduled (effective) date for an account name
+function cfLastDateFor(name){
+  var last=null;
+  accs.forEach(function(a){ if(a.name!==name)return;
+    (a.pays||[]).forEach(function(p){ var d=pd(eff(p)); if(d&&(!last||d>last))last=d; });
+  });
+  return last;
+}
+
+// Produce extra dated payments injected by active forecasts, keyed by month.
+// Returns { 'YYYY-MM': [ {acc,desc,amount,status,forecast:true}, ... ] }
+function cfForecastByMonth(){
+  var out={};
+  if(!cfConfig.forecastOn) return out;
+  (cfConfig.forecasts||[]).forEach(function(f){
+    if(!f.on) return;
+    if(f.type==='renew'){
+      var base=cfLastDateFor(f.account);
+      var start=base?new Date(base.getFullYear(),base.getMonth(),1):new Date(TODAY.getFullYear(),TODAY.getMonth(),1);
+      var every=Math.max(1,+f.everyMonths||3);
+      var span=Math.max(1,+f.months||12);
+      var amt=(+f.amount||0)*(1+(+f.pctInc||0)/100);
+      // step from first renewal (one 'every' after the last existing payment)
+      var cur=new Date(start.getFullYear(),start.getMonth()+every,1);
+      var elapsed=0;
+      while(elapsed<span){
+        var k=cfMoKey(cur);
+        (out[k]=out[k]||[]).push({acc:(f.label||f.account||'Renewal'),desc:'Forecast renewal'+((+f.pctInc)?(' +'+f.pctInc+'%'):''),amount:amt,status:'forecast',forecast:true});
+        cur=new Date(cur.getFullYear(),cur.getMonth()+every,1);
+        elapsed+=every;
+      }
+    } else if(f.type==='increase'){
+      // handled inside cfDatedPaymentsByMonth via cfApplyIncreases (adjusts existing)
+    }
+  });
+  return out;
+}
+
+// Apply 'increase' forecasts to an existing dated payment amount for a given account+month.
+function cfApplyIncreases(accName, monthKey, amount){
+  if(!cfConfig.forecastOn) return amount;
+  (cfConfig.forecasts||[]).forEach(function(f){
+    if(!f.on || f.type!=='increase' || f.account!==accName) return;
+    if(f.startKey && monthKey < f.startKey) return; // only from start month onward
+    if(f.mode==='abs' && +f.absAmount>0) amount=+f.absAmount;
+    else amount=amount*(1+(+f.pctInc||0)/100);
+  });
+  return amount;
+}
+
+function cfRenderForecasts(){
+  var master=document.getElementById('cf-fc-master');
+  if(master) master.checked=!!cfConfig.forecastOn;
+  var host=document.getElementById('cf-fc-list');
+  if(!host) return;
+  var fcs=cfConfig.forecasts||[];
+  if(!fcs.length){ host.innerHTML='<div style="font-size:12px;color:var(--t3);padding:8px 0">No assumptions yet. Add one to model renewals or price increases.</div>'; return; }
+  var names=cfAccountNames();
+  var dim=cfConfig.forecastOn?'':'opacity:.5;';
+  host.innerHTML=fcs.map(function(f){
+    var accOpts=names.map(function(n){return '<option value="'+n+'"'+(f.account===n?' selected':'')+'>'+n+'</option>';}).join('');
+    var typeSel='<select onchange="cfFcSet(\''+f.id+'\',\'type\',this.value)" style="font-size:11px;padding:4px 6px;width:auto">'
+      +'<option value="renew"'+(f.type==='renew'?' selected':'')+'>Renew / continue</option>'
+      +'<option value="increase"'+(f.type==='increase'?' selected':'')+'>Price increase</option></select>';
+    var body='';
+    if(f.type==='renew'){
+      body='<div style="display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr .8fr;gap:8px;align-items:end">'
+        +'<div><label style="font-size:10px">Continue which account</label><select onchange="cfFcSet(\''+f.id+'\',\'account\',this.value)" style="font-size:11px;padding:4px 6px">'+accOpts+'</select></div>'
+        +'<div><label style="font-size:10px">Amount / payment</label><input type="number" value="'+(f.amount||0)+'" onchange="cfFcSet(\''+f.id+'\',\'amount\',+this.value)" style="font-size:11px;padding:4px 6px"></div>'
+        +'<div><label style="font-size:10px">Every (months)</label><input type="number" value="'+(f.everyMonths||3)+'" onchange="cfFcSet(\''+f.id+'\',\'everyMonths\',+this.value)" style="font-size:11px;padding:4px 6px"></div>'
+        +'<div><label style="font-size:10px">For (months)</label><input type="number" value="'+(f.months||24)+'" onchange="cfFcSet(\''+f.id+'\',\'months\',+this.value)" style="font-size:11px;padding:4px 6px"></div>'
+        +'<div><label style="font-size:10px">Increase %</label><input type="number" value="'+(f.pctInc||0)+'" onchange="cfFcSet(\''+f.id+'\',\'pctInc\',+this.value)" style="font-size:11px;padding:4px 6px"></div>'
+      +'</div>';
+    } else {
+      var modeSel='<select onchange="cfFcSet(\''+f.id+'\',\'mode\',this.value)" style="font-size:11px;padding:4px 6px"><option value="pct"'+(f.mode==='pct'?' selected':'')+'>By %</option><option value="abs"'+(f.mode==='abs'?' selected':'')+'>New amount</option></select>';
+      var valField=f.mode==='abs'
+        ?'<div><label style="font-size:10px">New amount</label><input type="number" value="'+(f.absAmount||0)+'" onchange="cfFcSet(\''+f.id+'\',\'absAmount\',+this.value)" style="font-size:11px;padding:4px 6px"></div>'
+        :'<div><label style="font-size:10px">Increase %</label><input type="number" value="'+(f.pctInc||0)+'" onchange="cfFcSet(\''+f.id+'\',\'pctInc\',+this.value)" style="font-size:11px;padding:4px 6px"></div>';
+      body='<div style="display:grid;grid-template-columns:1.4fr 1fr 1fr 1.2fr;gap:8px;align-items:end">'
+        +'<div><label style="font-size:10px">Which account</label><select onchange="cfFcSet(\''+f.id+'\',\'account\',this.value)" style="font-size:11px;padding:4px 6px">'+accOpts+'</select></div>'
+        +'<div><label style="font-size:10px">Mode</label>'+modeSel+'</div>'
+        +valField
+        +'<div><label style="font-size:10px">From month (YYYY-MM)</label><input type="text" value="'+(f.startKey||'')+'" placeholder="2026-09" onchange="cfFcSet(\''+f.id+'\',\'startKey\',this.value.trim())" style="font-size:11px;padding:4px 6px"></div>'
+      +'</div>';
+    }
+    return '<div style="border:1px solid var(--b1);border-radius:10px;padding:10px 12px;margin-bottom:8px;'+dim+'background:var(--bg2)">'
+      +'<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">'
+        +'<input type="checkbox" '+(f.on?'checked':'')+' onchange="cfFcSet(\''+f.id+'\',\'on\',this.checked)" style="width:auto">'
+        +'<input type="text" value="'+(f.label||'')+'" onchange="cfFcSet(\''+f.id+'\',\'label\',this.value)" placeholder="Label (e.g. Noya renewal)" style="font-size:12px;font-weight:600;padding:3px 6px;flex:1">'
+        +typeSel
+        +'<button class="btn-s btn-d" onclick="cfFcDel(\''+f.id+'\')" style="font-size:11px">Delete</button>'
+      +'</div>'
+      +body
+    +'</div>';
+  }).join('');
+}
+
 function renderCashFlow(){
   cfLoadConfig();
   [['cf-income','income'],['cf-balance','startBalance'],['cf-living','living'],['cf-invest','invest']].forEach(function(pr){
@@ -1516,6 +1644,7 @@ function renderCashFlow(){
   var fixed=cfFixedMonthly();
   var fixedTotal=fixed.reduce(function(s,o){return s+o.amount;},0);
   var datedByMonth=cfDatedPaymentsByMonth();
+  var fcByMonth=cfForecastByMonth();
   var MN=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
   // Build 12 months from current month
@@ -1529,7 +1658,7 @@ function renderCashFlow(){
   var lowest={bal:Infinity,label:''};
   var thisMonthIn=0,thisMonthOut=0,endOfMonthBal=0;
   months.forEach(function(m,idx){
-    var dated=datedByMonth[m.key]||[];
+    var dated=(datedByMonth[m.key]||[]).concat(fcByMonth[m.key]||[]);
     var datedSum=dated.reduce(function(s,x){return s+x.amount;},0);
     // Month 0 = current month. If salary already landed, it's baked into the balance
     // you typed, so don't add it again this month. Every future month gets full salary.
@@ -1565,6 +1694,7 @@ function renderCashFlow(){
   }
 
   // ── OVERDUE BACKLOG BANNER ──
+  cfRenderForecasts();
   var backlog=cfOverdueBacklog();
   var boEl=document.getElementById('cf-overdue');
   if(boEl){
