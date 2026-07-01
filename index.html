@@ -321,81 +321,58 @@ label{display:block;font-size:11px;color:var(--t2);margin-bottom:4px;font-weight
   </div>
   <div class="card"><div class="card-t"><i class="ti ti-table-import" style="color:var(--blue);margin-right:5px"></i>Google Sheets sync</div><p style="font-size:12px;color:var(--t2);margin-bottom:1rem;line-height:1.7">Connect each account to its Google Sheets CSV URL (File → Share → Publish to web → CSV).</p><div id="exp-sync"></div></div>
 </div>
+<!-- CASH FLOW PAGE HTML -->
+<div id="p-cf" class="pg">
+  <div class="card" style="margin-bottom:1.25rem;padding:1rem 1.25rem">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+      <div class="card-t" style="margin-bottom:0"><i class="ti ti-adjustments" style="color:var(--blue);margin-right:5px"></i>My Numbers</div>
+      <div style="font-size:11px;color:var(--t3)"><i class="ti ti-device-floppy" style="margin-right:4px;color:var(--green)"></i>Saved automatically · everything else is live from Accounts</div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px">
+      <div><label>Monthly salary (income)</label><input type="number" id="cf-income" onchange="cfSet('income',+this.value)"></div>
+      <div><label>Money in account today</label><input type="number" id="cf-balance" onchange="cfSet('startBalance',+this.value)"></div>
+      <div><label>This month's salary already landed?</label><div style="display:flex;gap:6px;margin-top:2px"><button type="button" id="cf-sal-yes" onclick="cfSet('salaryLanded',true)" style="flex:1;font-size:12px">Yes</button><button type="button" id="cf-sal-no" onclick="cfSet('salaryLanded',false)" style="flex:1;font-size:12px">No</button></div></div>
+      <div><label>Living expenses / month</label><input type="number" id="cf-living" onchange="cfSet('living',+this.value)"></div>
+      <div><label>Monthly investment</label><input type="number" id="cf-invest" onchange="cfSet('invest',+this.value)"></div>
+    </div>
+  </div>
+
+  <div id="cf-kpi" style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:1.25rem"></div>
+  <div id="cf-overdue" style="margin-bottom:1.25rem"></div>
+
+  <div class="card" style="margin-bottom:1.25rem">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+      <div class="card-t" style="margin-bottom:0"><i class="ti ti-calendar-stats" style="color:var(--green);margin-right:5px"></i>12-Month Running Balance — <span id="cf-range" style="color:var(--t3);font-weight:400"></span></div>
+      <div style="font-size:10px;color:var(--t3)">Click any month to expand</div>
+    </div>
+    <div style="font-size:11px;color:var(--t3);margin-bottom:10px">Starts from your money-in-account today, rolls forward each month.</div>
+    <div id="cf-months"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-t"><i class="ti ti-building-bank" style="color:var(--amber);margin-right:5px"></i>Outstanding Liabilities</div>
+    <div id="cf-liab-cards" style="display:flex;flex-direction:column;gap:8px;margin-top:4px"></div>
+    <div style="border-top:1px solid var(--b1);margin-top:12px;padding-top:10px" id="cf-liab-total"></div>
+  </div>
+</div>
+
+
+
 
 </div>
 </div>
 </div>
 
 <!-- MODALS -->
-<!-- CASH FLOW PAGE HTML -->
-<div id="p-cf" class="pg">
-  <!-- KPI Cards -->
-  <div id="cf-kpi" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:1.25rem"></div>
-
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:1.25rem">
-    <!-- Monthly Outflows Table -->
-    <div class="card">
-      <div class="card-t"><i class="ti ti-list-details" style="color:var(--red);margin-right:5px"></i>Monthly Outflows</div>
-      <table id="cf-out-table">
-        <thead><tr><th>Line item</th><th style="text-align:right">AED/mo</th><th>Remaining</th></tr></thead>
-        <tbody id="cf-out-body"></tbody>
-        <tfoot id="cf-out-foot"></tfoot>
-      </table>
-    </div>
-
-    <!-- Outstanding Liabilities -->
-    <div class="card">
-      <div class="card-t"><i class="ti ti-building-bank" style="color:var(--amber);margin-right:5px"></i>Outstanding Liabilities</div>
-      <div id="cf-liab-cards" style="display:flex;flex-direction:column;gap:8px;margin-top:4px"></div>
-      <div style="border-top:1px solid var(--b1);margin-top:12px;padding-top:10px" id="cf-liab-total"></div>
-    </div>
-  </div>
-
-  <!-- 12-Month Chart -->
-  <div class="card" style="margin-bottom:1.25rem">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-      <div class="card-t" style="margin-bottom:0"><i class="ti ti-chart-bar" style="color:var(--blue);margin-right:5px"></i>12-Month Cash Flow — Jul 2026 to Jun 2027</div>
-      <div style="display:flex;gap:12px;font-size:11px;color:var(--t2)">
-        <span><span style="display:inline-block;width:10px;height:10px;background:rgba(91,156,246,.5);border-radius:2px;margin-right:4px"></span>Fixed costs</span>
-        <span><span style="display:inline-block;width:10px;height:10px;background:#f26b6b;border-radius:2px;margin-right:4px"></span>Property payment</span>
-      </div>
-    </div>
-    <div style="height:220px;position:relative"><canvas id="cf-chart"></canvas></div>
-  </div>
-
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:1.25rem">
-    <!-- Property Payment Schedule -->
-    <div class="card">
-      <div class="card-t"><i class="ti ti-home-2" style="color:var(--green);margin-right:5px"></i>Property Payment Schedule</div>
-      <div style="overflow-x:auto">
-        <table id="cf-prop-table">
-          <thead><tr><th>Project</th><th>Milestone</th><th>Due</th><th style="text-align:right">Amount</th><th>Status</th></tr></thead>
-          <tbody id="cf-prop-body"></tbody>
-        </table>
-      </div>
-    </div>
-
-    <!-- 12-Month Running Balance -->
-    <div class="card">
-      <div class="card-t"><i class="ti ti-trending-up" style="color:var(--green);margin-right:5px"></i>12-Month Running Balance</div>
-      <div style="overflow-x:auto">
-        <table id="cf-bal-table">
-          <thead><tr><th>Month</th><th style="text-align:right">In</th><th style="text-align:right">Out</th><th style="text-align:right">Balance</th></tr></thead>
-          <tbody id="cf-bal-body"></tbody>
-        </table>
-      </div>
-    </div>
-  </div>
-</div>
-
-<div class="ovlay" id="m-add" style="display:none"><div class="modal"><div class="modal-t">+Add account</div><div class="fr"><label>Name</label><input id="a-n" placeholder="e.g. Marina Villa"></div><div class="fr2"><div><label>Type</label><select id="a-t"><option>Installments</option><option>Car Loan</option><option>Cash Loan</option><option>School Fees</option><option>Mortgage</option><option>Lender</option><option>Other</option></select></div><div><label>Principal (AED)</label><input type="number" id="a-p" placeholder="0"></div></div><div class="fr"><label style="display:flex;align-items:center;gap:6px"><input type="checkbox" id="a-d" style="width:auto">Enable defer option (loans)</label></div><div class="fa"><button onclick="cM('m-add')">Cancel</button><button class="btn-p" onclick="doAdd()">✓ Add</button></div></div></div>
+<div class="ovlay" id="m-add" style="display:none"><div class="modal"><div class="modal-t">+Add account</div><div class="fr"><label>Name</label><input id="a-n" placeholder="e.g. Marina Villa"></div><div class="fr2"><div><label>Type</label><select id="a-t"><option>Installments</option><option>Car Loan</option><option>Cash Loan</option><option>School Fees</option><option>Mortgage</option><option>Lender</option><option>Other</option></select></div><div><label>Principal (AED)</label><input type="number" id="a-p" placeholder="0"></div></div><div class="fr"><label style="display:flex;align-items:center;gap:6px"><input type="checkbox" id="a-d" style="width:auto">Enable defer option (loans)</label></div><div class="fr"><label style="display:flex;align-items:center;gap:6px"><input type="checkbox" id="a-cc" style="width:auto">Signed cheques — prompt to confirm cleared on passed dates</label></div><div class="fa"><button onclick="cM('m-add')">Cancel</button><button class="btn-p" onclick="doAdd()">✓ Add</button></div></div></div>
 
 <div class="ovlay" id="m-del" style="display:none"><div class="modal"><div class="modal-t" style="color:var(--red)">🗑Delete account</div><p style="font-size:13px;color:var(--t2);margin-bottom:1rem">Delete <strong id="d-n" style="color:var(--t1)"></strong>? This cannot be undone.</p><div class="fa"><button onclick="cM('m-del')">Cancel</button><button class="btn-d" onclick="doDel()">🗑 Delete</button></div></div></div>
 
-<div class="ovlay" id="m-edit" style="display:none"><div class="modal"><div class="modal-t">✎Edit payment</div><div class="fr"><label>Description</label><input id="e-d"></div><div class="fr2"><div><label>Amount (AED)</label><input type="number" id="e-a"></div><div><label>Cheque #</label><input id="e-c"></div></div><div class="fr2"><div><label>Due date</label><input type="date" id="e-dt"></div><div><label>Revised date</label><input type="date" id="e-nd"></div></div><div class="fr"><label>Status</label><select id="e-s"><option value="paid">Paid</option><option value="notpaid">Not paid</option><option value="overdue">Overdue</option><option value="deferred">Deferred</option></select></div><div class="fa"><button onclick="cM('m-edit')">Cancel</button><button class="btn-p" onclick="saveEdit()">✓ Save</button></div></div></div>
+<div class="ovlay" id="m-edit" style="display:none"><div class="modal"><div class="modal-t">✎Edit payment</div><div class="fr"><label>Description</label><input id="e-d"></div><div class="fr2"><div><label>Amount (AED)</label><input type="number" id="e-a"></div><div><label>Cheque #</label><input id="e-c"></div></div><div class="fr2"><div><label>Due date</label><input type="date" id="e-dt"></div><div><label>Revised date</label><input type="date" id="e-nd"></div></div><div class="fr"><label>Status</label><select id="e-s"><option value="paid">Paid</option><option value="notpaid">Not paid</option><option value="overdue">Overdue</option><option value="deferred">Deferred</option><option value="confirm">Confirm cheque?</option><option value="delayed">Delayed</option></select></div><div class="fa"><button onclick="cM('m-edit')">Cancel</button><button class="btn-p" onclick="saveEdit()">✓ Save</button></div></div></div>
 
 <div class="ovlay" id="m-pay" style="display:none"><div class="modal"><div class="modal-t">+Add payment</div><div class="fr"><label>Description</label><input id="p-d" placeholder="e.g. 5th instalment"></div><div class="fr2"><div><label>Amount (AED)</label><input type="number" id="p-a" placeholder="0"></div><div><label>Cheque #</label><input id="p-c" placeholder="optional"></div></div><div class="fr2"><div><label>Due date</label><input type="date" id="p-dt"></div><div><label>%</label><input id="p-pct" placeholder="e.g. 5%"></div></div><div class="fr"><label>Status</label><select id="p-s"><option value="notpaid">Not paid</option><option value="paid">Paid</option><option value="overdue">Overdue</option></select></div><div class="fa"><button onclick="cM('m-pay')">Cancel</button><button class="btn-p" onclick="doAddPay()">✓ Add</button></div></div></div>
 
+<div class="ovlay" id="m-defer" style="display:none"><div class="modal"><div class="modal-t">↻ Defer payment</div><p style="font-size:12px;color:var(--t2);margin-bottom:1rem;line-height:1.6">This pushes <strong id="df-desc" style="color:var(--t1)"></strong> out one month and appends a new instalment at the end of the schedule, so your total owed stays correct.</p><div class="fr"><label>Deferment fee / added profit (AED) — optional</label><input type="number" id="df-fee" placeholder="0"></div><div class="fa"><button onclick="cM('m-defer')">Cancel</button><button class="btn-p" onclick="doDefer()">↻ Defer &amp; add instalment</button></div></div></div>
 <div class="ovlay" id="m-stk" style="display:none"><div class="modal"><div class="modal-t">📈Add stock</div><div class="fr2"><div><label>Ticker</label><input id="s-t" placeholder="e.g. EMAAR"></div><div><label>Company name</label><input id="s-n" placeholder="e.g. Emaar Properties"></div></div><div class="fr2"><div><label>Market</label><select id="s-m"><option>DFM</option><option>ADX</option><option>NYSE</option><option>NASDAQ</option><option>LSE</option><option>Other</option></select></div><div><label>Currency</label><select id="s-cur"><option>AED</option><option>USD</option><option>GBP</option><option>EUR</option></select></div></div><div class="fr2"><div><label>Quantity</label><input type="number" id="s-q" placeholder="0"></div><div><label>Avg buy price</label><input type="number" id="s-b" placeholder="0.00" step="0.01"></div></div><div class="fr2"><div><label>Current price</label><input type="number" id="s-p" placeholder="0.00" step="0.01"></div><div><label>Broker</label><input id="s-br" placeholder="e.g. BHM Capital"></div></div><div class="fa"><button onclick="cM('m-stk')">Cancel</button><button class="btn-p" onclick="doAddStk()">✓ Add</button></div></div></div>
 
 <div class="ovlay" id="m-cal" style="display:none"><div class="modal"><div class="modal-t">📅<span id="cal-dt">Payments</span></div><div id="cal-dc"></div><div class="fa"><button onclick="cM('m-cal')">Close</button></div></div></div>
@@ -423,7 +400,7 @@ function pd(s){
 }
 function fmt(n){return'AED '+Math.round(n).toLocaleString();}
 function eff(p){return(p.nd&&p.nd.trim())?p.nd:p.dt;}
-function sbdg(s){var m={paid:'Paid',overdue:'Overdue',notpaid:'Not paid',deferred:'Deferred'};var c={paid:'bp',overdue:'bo',notpaid:'bn',deferred:'bd'};return'<span class="bdg '+(c[s]||'bn')+'">'+(m[s]||s)+'</span>';}
+function sbdg(s){var m={paid:'Paid',overdue:'Overdue',notpaid:'Not paid',deferred:'Deferred',confirm:'Confirm?',delayed:'Delayed'};var c={paid:'bp',overdue:'bo',notpaid:'bn',deferred:'bd',confirm:'bn',delayed:'bo'};return'<span class="bdg '+(c[s]||'bn')+'">'+(m[s]||s)+'</span>';}
 function tic(t){var m={Installments:'home','Car Loan':'car','Cash Loan':'cash','School Fees':'school',Lender:'user',Mortgage:'home-2'};return m[t]||'building-bank';}
 function tcl(t){var m={Installments:'#5b9cf6','Car Loan':'#f5a623','Cash Loan':'#3ecf8e','School Fees':'#a78bfa',Lender:'#f26b6b',Mortgage:'#2dd4bf'};return m[t]||'#8888a0';}
 function oM(id){document.getElementById(id).style.display='flex';}
@@ -450,16 +427,6 @@ var accs=[
     {desc:'100% super structure',status:'notpaid',amount:193957,dt:'30-12-2026',nd:'',chq:''},
     {desc:'Completion of super structure',status:'notpaid',amount:193957,dt:'30-06-2027',nd:'',chq:''},
     {desc:'At completion BCC',status:'notpaid',amount:2327479,dt:'30-12-2027',nd:'',chq:''}
-  ]},
-  {id:'sea',name:'Sea la vie',type:'Installments',principal:6362872,url:'',defer:false,remDays:7,pays:[
-    {desc:'On booking',status:'paid',amount:127257,dt:'23-01-2024',nd:'',chq:''},
-    {desc:'On booking',status:'paid',amount:318144,dt:'23-01-2024',nd:'',chq:''},
-    {desc:'During construction',status:'paid',amount:318144,dt:'01-07-2024',nd:'',chq:''},
-    {desc:'During construction',status:'overdue',amount:318144,dt:'01-12-2024',nd:'',chq:''},
-    {desc:'During construction',status:'overdue',amount:318144,dt:'01-05-2025',nd:'',chq:''},
-    {desc:'During construction',status:'overdue',amount:318144,dt:'01-10-2025',nd:'',chq:''},
-    {desc:'During construction',status:'overdue',amount:318144,dt:'01-01-2026',nd:'',chq:''},
-    {desc:'On handover',status:'overdue',amount:4454010,dt:'30-03-2026',nd:'',chq:''}
   ]},
   {id:'bmw',name:'BMW X4',type:'Car Loan',principal:305000,url:'',defer:false,remDays:7,pays:(function(){var r=[];for(var i=0;i<61;i++){var d=new Date('2023-08-20');d.setMonth(d.getMonth()+i);r.push({desc:'Monthly car payment',status:d>TODAY?'notpaid':'paid',amount:5765,dt:fd(d),nd:'',chq:''});}return r;})()},
   {id:'nbf',name:'Cash Loan NBF',type:'Cash Loan',principal:1000000,url:'',defer:true,remDays:7,pays:(function(){var r=[];for(var i=0;i<48;i++){var d=new Date('2024-12-10');d.setMonth(d.getMonth()+i);r.push({desc:'Monthly loan payment',status:d>TODAY?'notpaid':'paid',amount:23081,dt:fd(d),nd:'',chq:''});}return r;})()},
@@ -534,12 +501,13 @@ function loadState(){
             def.pays=saved.pays&&saved.pays.length?saved.pays:def.pays;
             def.url=saved.url||def.url;
             def.defer=saved.defer!==undefined?saved.defer:def.defer;
+            def.autoConfirm=saved.autoConfirm!==undefined?saved.autoConfirm:def.autoConfirm;
             def.remDays=saved.remDays||def.remDays;
             def.synced=saved.synced||false;
           }
         });
         // Add user-added accounts (not in hardcoded defaults)
-        var defaultIds=['nawayef','mayar','sea','bmw','nbf','school','noya','ali'];
+        var defaultIds=['nawayef','mayar','bmw','nbf','school','noya','ali'];
         parsed.forEach(function(saved){
           if(defaultIds.indexOf(saved.id)===-1&&deletedIds.indexOf(saved.id)===-1){
             if(!accs.find(function(x){return x.id===saved.id;})){
@@ -561,11 +529,19 @@ function autoFlagOverdue(){
   var today=new Date(now.getFullYear(),now.getMonth(),now.getDate());
   accs.forEach(function(a){
     a.pays.forEach(function(p){
-      if(p.status==='notpaid'||p.status==='overdue'){
+      // 'confirm' = passed date on a signed-cheque account, awaiting user confirmation.
+      // 'delayed' = user said not-yet-cleared; keep as overdue, don't re-prompt.
+      if(p.status==='notpaid'||p.status==='overdue'||p.status==='confirm'){
         var d=pd(eff(p));
         if(!d)return;
-        if(d<today)p.status='overdue';
-        else if(p.status==='overdue')p.status='notpaid'; // fix incorrectly flagged future payments
+        if(d<today){
+          // Signed-cheque account: ask instead of assuming overdue
+          if(a.autoConfirm && p.status!=='delayed'){ p.status='confirm'; }
+          else { p.status='overdue'; }
+        } else {
+          // future date: reset any stale flags
+          if(p.status==='overdue'||p.status==='confirm')p.status='notpaid';
+        }
       }
     });
   });
@@ -780,7 +756,7 @@ function renderAccs(){
     var tot=paid+debt,pct=tot>0?Math.round(paid/tot*100):0;
     var rows=a.pays.map(function(p,i){
       var hn=p.nd&&p.nd.trim();
-      return'<tr><td style="color:var(--t3);font-family:var(--m);font-size:10px">'+(i+1)+'</td><td style="font-family:var(--m);font-size:11px">'+eff(p)+(hn?'<br><span style="font-size:10px;color:var(--t3);text-decoration:line-through">'+p.dt+'</span>':'')+'</td><td style="color:var(--t2)">'+p.desc+'</td><td style="font-family:var(--m);font-size:10px;color:var(--t3)">'+(p.chq||'—')+'</td><td style="text-align:right;font-family:var(--m);font-weight:600">'+fmt(p.amount)+'</td><td style="color:var(--t3);font-size:11px">'+(p.pct||'')+'</td><td>'+sbdg(p.status)+'</td><td style="white-space:nowrap"><button class="btn-s" onclick="mkPaid(\''+a.id+'\','+i+')" style="color:#3ecf8e">✓ Paid</button>'+(a.defer&&p.status!=='paid'?' <button class="btn-s" onclick="deferP(\''+a.id+'\','+i+')">Defer</button>':'')+' <button class="btn-s" onclick="opEdit(\''+a.id+'\','+i+')">✎ Edit</button></td></tr>';
+      return'<tr><td style="color:var(--t3);font-family:var(--m);font-size:10px">'+(i+1)+'</td><td style="font-family:var(--m);font-size:11px">'+eff(p)+(hn?'<br><span style="font-size:10px;color:var(--t3);text-decoration:line-through">'+p.dt+'</span>':'')+'</td><td style="color:var(--t2)">'+p.desc+'</td><td style="font-family:var(--m);font-size:10px;color:var(--t3)">'+(p.chq||'—')+'</td><td style="text-align:right;font-family:var(--m);font-weight:600">'+fmt(p.amount)+'</td><td style="color:var(--t3);font-size:11px">'+(p.pct||'')+'</td><td>'+sbdg(p.status)+'</td><td style="white-space:nowrap">'+payActions(a.id,p,i)+''+(a.defer&&p.status!=='paid'?' <button class="btn-s" onclick="deferP(\''+a.id+'\','+i+')">Defer</button>':'')+' <button class="btn-s" onclick="opEdit(\''+a.id+'\','+i+')">✎ Edit</button></td></tr>';
     }).join('');
     var sb=a.synced?'<span style="background:rgba(62,207,142,.12);color:var(--green);font-size:10px;padding:1px 6px;border-radius:4px;font-weight:500">synced</span>':'';
     return'<div class="ar"><div class="ah" onclick="togAcc(\'d-'+a.id+'\')"><div style="display:flex;align-items:center;gap:12px"><div style="width:36px;height:36px;border-radius:10px;background:rgba(91,156,246,.1);color:'+tcl(a.type)+';display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0"><i class="ti ti-'+tic(a.type)+'"></i></div><div><div style="font-weight:600;font-size:14px">'+a.name+' '+sb+'</div><div style="font-size:11px;color:var(--t2);margin-top:2px">'+a.type+' · Principal: '+fmt(a.principal)+(a.defer?' · <span style="color:var(--blue)">defer on</span>':'')+'</div><div class="prog"><div class="prog-f" style="width:'+pct+'%"></div></div><div style="font-size:10px;color:var(--t3);margin-top:2px">'+pct+'% paid</div></div></div><div style="text-align:right;display:flex;align-items:center;gap:12px"><div><div style="font-weight:600;font-size:15px;font-family:var(--m);color:var(--red)">'+fmt(debt)+'</div><div style="font-size:11px;color:var(--t2);margin-top:2px">'+fmt(paid)+' paid'+(ov?' · <span style="color:var(--red)">'+fmt(ov)+' overdue</span>':'')+'</div></div><button class="btn-d btn-s" onclick="event.stopPropagation();opDel(\''+a.id+'\')">Delete</button></div></div><div class="adet" id="d-'+a.id+'"><div class="syncbar"><i class="ti ti-table-import" style="color:var(--t3)"></i><input type="text" placeholder="Google Sheets CSV URL…" value="'+(a.url||'')+'" id="u-'+a.id+'" onchange="accs.find(function(x){return x.id===\''+a.id+'\';}).url=this.value;saveState()" style="font-size:11px;padding:4px 8px"><button class="btn-s" onclick="syncOne(\''+a.id+'\')">↻ Sync</button><span class="ss" id="ss-'+a.id+'">'+(a.url?(a.synced?'✓ synced':'not synced'):'no URL')+'</span></div><div style="padding:8px 14px;border-bottom:1px solid var(--b1)"><button class="btn-s" onclick="opAddPay(\''+a.id+'\')">+ Add payment</button></div>'+(a.pays.length?'<div style="overflow-x:auto"><table><thead><tr><th>#</th><th>Date</th><th>Description</th><th>Chq</th><th style="text-align:right">Amount</th><th>%</th><th>Status</th><th></th></tr></thead><tbody>'+rows+'</tbody></table></div>':'<p style="padding:1rem;font-size:12px;color:var(--t2)">No payments yet.</p>')+'</div></div>';
@@ -808,7 +784,7 @@ function renderMonthly(){
     var ovc=pays.filter(function(p){return p.status==='overdue';}).length;
     var rows=pays.map(function(p){
       var hn=p.nd&&p.nd.trim();
-      return'<tr><td style="font-weight:500">'+p.acc+'</td><td style="font-family:var(--m);font-size:11px">'+eff(p)+(hn?'<br><span style="font-size:10px;color:var(--t3);text-decoration:line-through">'+p.dt+'</span>':'')+'</td><td style="color:var(--t2)">'+p.desc+'</td><td style="font-family:var(--m);font-size:10px;color:var(--t3)">'+(p.chq||'—')+'</td><td style="text-align:right;font-family:var(--m);font-weight:600">'+fmt(p.amount)+'</td><td>'+sbdg(p.status)+'</td><td style="white-space:nowrap"><button class="btn-s" onclick="mkPaid(\''+p.aid+'\','+p.pi+')" style="color:#3ecf8e">✓ Paid</button>'+(p.defer&&p.status!=='paid'?' <button class="btn-s" onclick="deferP(\''+p.aid+'\','+p.pi+')">Defer</button>':'')+' <button class="btn-s" onclick="opEdit(\''+p.aid+'\','+p.pi+')">✎ Edit</button></td></tr>';
+      return'<tr><td style="font-weight:500">'+p.acc+'</td><td style="font-family:var(--m);font-size:11px">'+eff(p)+(hn?'<br><span style="font-size:10px;color:var(--t3);text-decoration:line-through">'+p.dt+'</span>':'')+'</td><td style="color:var(--t2)">'+p.desc+'</td><td style="font-family:var(--m);font-size:10px;color:var(--t3)">'+(p.chq||'—')+'</td><td style="text-align:right;font-family:var(--m);font-weight:600">'+fmt(p.amount)+'</td><td>'+sbdg(p.status)+'</td><td style="white-space:nowrap">'+payActions(p.aid,p,p.pi)+''+(p.defer&&p.status!=='paid'?' <button class="btn-s" onclick="deferP(\''+p.aid+'\','+p.pi+')">Defer</button>':'')+' <button class="btn-s" onclick="opEdit(\''+p.aid+'\','+p.pi+')">✎ Edit</button></td></tr>';
     }).join('');
     return'<div class="ar" style="margin-bottom:10px"><div class="mh" onclick="this.nextElementSibling.classList.toggle(\'on\')"><div style="display:flex;align-items:center;gap:10px"><div style="width:36px;height:36px;background:rgba(91,156,246,.1);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--blue)">'+M3[m]+'</div><div><div style="font-size:13px;font-weight:600">'+MNS[m]+' '+yr+'<span class="mbadge">'+pays.length+' payments</span></div><div style="font-size:11px;color:var(--t2);margin-top:2px">'+fmt(paid)+' paid · '+(ovc>0?'<span style="color:var(--red)">'+ovc+' overdue</span>':'all on track')+'</div></div></div><div style="font-size:13px;font-weight:600;color:var(--amber);font-family:var(--m)">'+fmt(total)+'</div></div><div class="mb"><div style="overflow-x:auto"><table><thead><tr><th>Account</th><th>Date</th><th>Description</th><th>Chq</th><th style="text-align:right">Amount</th><th>Status</th><th></th></tr></thead><tbody>'+rows+'</tbody></table></div></div></div>';
   }).join('');
@@ -1153,12 +1129,49 @@ function expPDF(){
 }
 
 function mkPaid(id,i){var a=accs.find(function(x){return x.id===id;});if(a&&a.pays[i])a.pays[i].status='paid';saveState();rAll();}
+// Signed-cheque confirmation: user says the cheque cleared -> paid
+function payActions(aid,p,i){
+  var esc=String(aid).replace(/'/g,"\\'");
+  var btns='';
+  if(p.status==='confirm'){
+    btns+='<button class="btn-s" onclick="confirmCleared(\''+esc+'\','+i+')" style="color:#3ecf8e">✓ Cleared</button> ';
+    btns+='<button class="btn-s" onclick="markDelayed(\''+esc+'\','+i+')" style="color:#f5a623">⏱ Delayed</button>';
+  } else {
+    btns+='<button class="btn-s" onclick="mkPaid(\''+esc+'\','+i+')" style="color:#3ecf8e">✓ Paid</button>';
+  }
+  return btns;
+}
+function confirmCleared(id,i){var a=accs.find(function(x){return x.id===id;});if(a&&a.pays[i]){a.pays[i].status='paid';}saveState();rAll();}
+// User says not cleared yet (delay / terms changed) -> keep overdue, stop prompting
+function markDelayed(id,i){var a=accs.find(function(x){return x.id===id;});if(a&&a.pays[i]){a.pays[i].status='delayed';}saveState();rAll();}
+
+// Deferment (loans): push current payment out one cycle AND append a new
+// instalment at the end so total owed is preserved. Optional deferment fee
+// is added to the appended instalment.
+var deferCtx={id:null,i:null};
 function deferP(id,i){
   var a=accs.find(function(x){return x.id===id;});if(!a||!a.defer)return;
   var p=a.pays[i];if(!p)return;
-  var d=pd(p.nd||p.dt);if(!d)return;
+  deferCtx={id:id,i:i};
+  document.getElementById('df-desc').textContent=p.desc+' · '+fmt(p.amount);
+  document.getElementById('df-fee').value='';
+  oM('m-defer');
+}
+function doDefer(){
+  var a=accs.find(function(x){return x.id===deferCtx.id;});if(!a)return;
+  var p=a.pays[deferCtx.i];if(!p)return;
+  var fee=+document.getElementById('df-fee').value||0;
+  // 1) push the current instalment one month out, tag as deferred
+  var d=pd(p.nd||p.dt);if(!d){cM('m-defer');return;}
   d.setMonth(d.getMonth()+1);p.nd=fd(d);p.status='deferred';
-  saveState();rAll();alert('Deferred to '+p.nd);
+  // 2) find the latest scheduled date in this account, append a new instalment after it
+  var last=null;
+  a.pays.forEach(function(x){var xd=pd(eff(x));if(xd&&(!last||xd>last))last=xd;});
+  var nd=last?new Date(last.getTime()):new Date(d.getTime());
+  nd.setMonth(nd.getMonth()+1);
+  a.pays.push({desc:'Deferred instalment'+(fee>0?' (incl. fee)':''),amount:p.amount+fee,dt:fd(nd),nd:'',chq:'',pct:'',status:'notpaid',deferAdded:true});
+  cM('m-defer');saveState();rAll();
+  alert('Deferred to '+p.nd+'. Extra instalment of '+fmt(p.amount+fee)+' added on '+fd(nd)+'.');
 }
 var eId=null,eIdx=null,pId=null;
 function opEdit(id,i){
@@ -1187,8 +1200,8 @@ function doAddPay(){
 function openAdd(){oM('m-add');}
 function doAdd(){
   var name=document.getElementById('a-n').value.trim();if(!name){alert('Enter a name.');return;}
-  accs.push({id:'a'+Date.now(),name:name,type:document.getElementById('a-t').value,principal:+document.getElementById('a-p').value||0,url:'',defer:document.getElementById('a-d').checked,remDays:7,pays:[]});
-  cM('m-add');saveState();document.getElementById('a-n').value='';document.getElementById('a-p').value='';document.getElementById('a-d').checked=false;
+  accs.push({id:'a'+Date.now(),name:name,type:document.getElementById('a-t').value,principal:+document.getElementById('a-p').value||0,url:'',defer:document.getElementById('a-d').checked,autoConfirm:document.getElementById('a-cc').checked,remDays:7,pays:[]});
+  cM('m-add');saveState();document.getElementById('a-n').value='';document.getElementById('a-p').value='';document.getElementById('a-d').checked=false;var acc=document.getElementById('a-cc');if(acc)acc.checked=false;
   rAll();
 }
 function opDel(id){var a=accs.find(function(x){return x.id===id;});if(!a)return;delId=id;document.getElementById('d-n').textContent=a.name;oM('m-del');}
@@ -1203,7 +1216,7 @@ function doDel(){
   cM('m-del');saveState();rAll();
 }
 
-var ASYS='Financial assistant for Raouf Andrea. May 28 2026. Outstanding AED 9.5M, Paid AED 2.96M. 8 accounts: Nawayef Villa (Installments AED 5.98M, next AED 293k revised Aug 2026 Chq 000044), Mayar M13-03 (Installments AED 3.88M, AED 194k overdue Dec 2025, AED 2.33M due Dec 2027), Sea la vie (Installments AED 6.36M 5%, AED 5.73M overdue incl AED 4.45M handover), BMW X4 (Car Loan AED 305k AED 5765/mo 34 paid 27 left closes Aug 2028 balance AED 148k), Cash Loan NBF (AED 1M 5% 48mo AED 23081/mo 18 paid 30 left balance AED 690k closes Nov 2028 defer enabled), School Fees (AED 62.2k AED 39k overdue Terms 2-3), Noya Villa (AED 230k AED 183k overdue AED 57k due Jun 2026), Ali Al Gebely (Lender AED 1.09M no schedule). Be concise, AED, bullet points.';
+var ASYS='Financial assistant for Raouf Andrea. May 28 2026. Outstanding AED 9.5M, Paid AED 2.96M. 7 accounts: Nawayef Villa (Installments AED 5.98M, next AED 293k revised Aug 2026 Chq 000044), Mayar M13-03 (Installments AED 3.88M, AED 194k overdue Dec 2025, AED 2.33M due Dec 2027), BMW X4 (Car Loan AED 305k AED 5765/mo 34 paid 27 left closes Aug 2028 balance AED 148k), Cash Loan NBF (AED 1M 5% 48mo AED 23081/mo 18 paid 30 left balance AED 690k closes Nov 2028 defer enabled), School Fees (AED 62.2k AED 39k overdue Terms 2-3), Noya Villa (AED 230k AED 183k overdue AED 57k due Jun 2026), Ali Al Gebely (Lender AED 1.09M no schedule). Be concise, AED, bullet points.';
 var ah=[];
 async function doAI(){
   var inp=document.getElementById('ai-in');var q=inp.value.trim();if(!q)return;inp.value='';
@@ -1406,258 +1419,231 @@ if(document.readyState === 'complete') {
   try { loadState(); renderDash(); } catch(e) {}
 }
 
-// ── Cash Flow Tab ────────────────────────
-// ── Cash Flow State ──────────────────────────────────────────────────────────
-var cfState = {
-  income: 100000,
-  nbfBalance: 0,
-  outflows: [
-    { label:'NBF Personal Loan', amount:23081, months:29 },
-    { label:'BMW X4 Finance',    amount:5765,  months:26 },
-    { label:'Noya Villa Rent',   amount:19000, months:null, note:'Paid quarterly (AED 57k)' },
-    { label:'School Fees',       amount:4000,  months:null, note:'AED 62,200/yr, 3 terms' },
-    { label:'Living Expenses',   amount:30000, months:null }
-  ],
-  propPayments: [
-    { project:'Nawayef', milestone:'Commencement of construction',   date:'2026-08-30', amount:292950  },
-    { project:'Mayar',   milestone:'50% foundation works',           date:'2026-08-30', amount:193957  },
-    { project:'Mayar',   milestone:'50% superstructure',             date:'2027-02-28', amount:193957  },
-    { project:'Nawayef', milestone:'Commencement of townhouses',     date:'2027-03-30', amount:585900  },
-    { project:'Mayar',   milestone:'100% superstructure',            date:'2027-06-30', amount:193957  },
-    { project:'Nawayef', milestone:'Superstructure 100%',            date:'2027-09-30', amount:292950  },
-    { project:'Mayar',   milestone:'Weathertight completion',        date:'2027-12-30', amount:193957  },
-    { project:'Nawayef', milestone:'Facade completion',              date:'2028-03-30', amount:292950  },
-    { project:'Mayar',   milestone:'Building completion cert. (60%)',date:'2028-06-30', amount:2327479 },
-    { project:'Nawayef', milestone:'Completion / BCC',               date:'2028-12-30', amount:585900  },
-    { project:'Nawayef', milestone:'Handover (50%)',                 date:'2029-04-30', amount:2929500 }
-  ],
-  liabilities: [
-    { label:'Nawayef total',  amount:5273100, color:'#a78bfa' },
-    { label:'Mayar total',    amount:3103305, color:'#5b9cf6' },
-    { label:'NBF Loan bal.',  amount:667032,  color:'#f5a623' },
-    { label:'BMW X4 bal.',    amount:151090,  color:'#f26b6b' }
-  ]
-};
 
-var cfChart = null;
 
-function cfSave() {
-  try { localStorage.setItem('pt_cf', JSON.stringify({income:cfState.income,nbfBalance:cfState.nbfBalance,outflows:cfState.outflows,propPayments:cfState.propPayments})); } catch(e){}
+// Cash Flow Tab (v2 running-balance)
+// ── Cash Flow — running-balance-first, derived from accs[] + saved manual inputs ──
+var cfConfig = { income:0, startBalance:0, living:0, invest:0, salaryLanded:true };
+var CF_MONTHLY_TYPES = ['Car Loan','Cash Loan'];  // truly-monthly loans
+
+function cfLoadConfig(){
+  try{ var d=JSON.parse(localStorage.getItem('pt_cf')||'{}');
+    ['income','startBalance','living','invest','salaryLanded'].forEach(function(k){ if(d[k]!=null)cfConfig[k]=d[k]; });
+  }catch(e){}
 }
-function cfLoad() {
-  try {
-    var d = JSON.parse(localStorage.getItem('pt_cf')||'{}');
-    if(d.income)      cfState.income      = d.income;
-    if(d.nbfBalance !== undefined) cfState.nbfBalance = d.nbfBalance;
-    if(d.outflows && d.outflows.length === cfState.outflows.length)
-      cfState.outflows = d.outflows;
-    if(d.propPayments && d.propPayments.length === cfState.propPayments.length)
-      cfState.propPayments = d.propPayments;
-  } catch(e){}
+function cfSaveConfig(){ try{ localStorage.setItem('pt_cf',JSON.stringify(cfConfig)); }catch(e){} }
+function cfSet(k,v){ cfConfig[k]=v||0; cfSaveConfig(); renderCashFlow(); }
+function cfMoKey(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'); }
+
+// Fixed recurring monthly out = monthly-loan instalments (BMW, NBF) + living + investment.
+// School fees & property & rent are NOT here — they hit as dated payments from accounts.
+function cfFixedMonthly(){
+  var items=[];
+  accs.forEach(function(a){
+    if(CF_MONTHLY_TYPES.indexOf(a.type)===-1) return;
+    var unpaid=(a.pays||[]).filter(function(p){return p.status!=='paid';});
+    var amounts=unpaid.map(function(p){return p.amount;});
+    var amt=amounts.length?amounts.sort(function(x,y){
+      return amounts.filter(function(v){return v===y;}).length-amounts.filter(function(v){return v===x;}).length;
+    })[0]:0;
+    if(amt>0) items.push({name:a.name,amount:amt,kind:'loan'});
+  });
+  if(cfConfig.living>0) items.push({name:'Living expenses',amount:cfConfig.living,kind:'living'});
+  if(cfConfig.invest>0) items.push({name:'Monthly investment',amount:cfConfig.invest,kind:'invest'});
+  return items;
 }
 
-function cfFmt(n) {
-  if(n >= 1e6) return 'AED ' + (n/1e6).toFixed(2) + 'M';
-  if(n >= 1e3) return 'AED ' + Math.round(n).toLocaleString();
-  return 'AED ' + Math.round(n);
+// Dated payments (property milestones, school terms, Noya rent lumps) that land in a given month,
+// pulled straight from accounts by effective date. Excludes the monthly-loan accounts (counted above)
+// and excludes already-paid items.
+function cfDatedPaymentsByMonth(){
+  var byMonth={};
+  accs.forEach(function(a){
+    if(CF_MONTHLY_TYPES.indexOf(a.type)!==-1) return; // BMW/NBF already in fixed monthly
+    (a.pays||[]).forEach(function(p){
+      if(p.status==='paid') return;
+      var d=pd(eff(p)); if(!d) return;
+      var k=cfMoKey(d);
+      (byMonth[k]=byMonth[k]||[]).push({acc:a.name,desc:p.desc,amount:p.amount,status:p.status,date:d});
+    });
+  });
+  return byMonth;
 }
 
-function cfMoKey(date) { // returns "2026-08"
-  var d = new Date(date);
-  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
+function cfLiabilities(){
+  var palette=['#a78bfa','#5b9cf6','#f5a623','#f26b6b','#2dd4bf','#3ecf8e','#e879f9'];
+  var list=accs.map(function(a,i){
+    var bal=(a.pays||[]).filter(function(p){return p.status!=='paid';}).reduce(function(s,p){return s+p.amount;},0);
+    return { label:a.name, amount:bal, color:palette[i%palette.length] };
+  }).filter(function(l){ return l.amount>0; });
+  list.sort(function(x,y){ return y.amount-x.amount; });
+  return list;
 }
 
-function cfMonths12() { // Jul 2026 - Jun 2027
-  var months = [];
-  for(var i = 0; i < 12; i++) {
-    var d = new Date(2026, 6 + i, 1); // month 6 = July
-    months.push({ key: d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'), yr: d.getFullYear(), mo: d.getMonth() });
+var cfExpanded={}; // remember which months are open
+function cfToggleMonth(k){ cfExpanded[k]=!cfExpanded[k]; renderCashFlow(); }
+
+// Overdue backlog: unpaid items whose effective date falls before the current month.
+// These sit outside the forward 12-month window, so we surface them as a banner total.
+function cfOverdueBacklog(){
+  var items=[];
+  var curKey=cfMoKey(new Date(TODAY.getFullYear(),TODAY.getMonth(),1));
+  accs.forEach(function(a){
+    (a.pays||[]).forEach(function(p){
+      if(p.status==='paid') return;
+      var d=pd(eff(p)); if(!d) return;
+      var k=cfMoKey(d);
+      if(k < curKey){ items.push({acc:a.name,desc:p.desc,amount:p.amount,status:p.status,date:d,key:k}); }
+    });
+  });
+  items.sort(function(x,y){ return x.date-y.date; });
+  return items;
+}
+function renderCashFlow(){
+  cfLoadConfig();
+  [['cf-income','income'],['cf-balance','startBalance'],['cf-living','living'],['cf-invest','invest']].forEach(function(pr){
+    var el=document.getElementById(pr[0]); if(el && document.activeElement!==el) el.value=cfConfig[pr[1]]||'';
+  });
+  // reflect salary-landed toggle state
+  var syes=document.getElementById('cf-sal-yes'), sno=document.getElementById('cf-sal-no');
+  if(syes&&sno){
+    syes.style.background=cfConfig.salaryLanded?'var(--green)':'var(--bg3)';
+    syes.style.color=cfConfig.salaryLanded?'#fff':'var(--t2)';
+    sno.style.background=!cfConfig.salaryLanded?'var(--amber)':'var(--bg3)';
+    sno.style.color=!cfConfig.salaryLanded?'#fff':'var(--t2)';
   }
-  return months;
-}
 
-function renderCashFlow() {
-  cfLoad();
-  var totalOut = cfState.outflows.reduce(function(s,o){ return s + o.amount; }, 0);
-  var surplus  = cfState.income - totalOut;
+  var fixed=cfFixedMonthly();
+  var fixedTotal=fixed.reduce(function(s,o){return s+o.amount;},0);
+  var datedByMonth=cfDatedPaymentsByMonth();
+  var MN=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
-  // ── KPI Cards ──
-  var runway = cfState.nbfBalance > 0 ? Math.floor(cfState.nbfBalance / Math.max(totalOut - cfState.income, 1)) : 0;
-  var kpiEl = document.getElementById('cf-kpi');
-  if(!kpiEl) return;
-  var kpiData = [
-    { icon:'ti-cash', color:'var(--green)', label:'Monthly Income',    val:'AED '+cfState.income.toLocaleString(), sub:'', editable:'income' },
-    { icon:'ti-arrow-down-circle', color:'var(--red)', label:'Total Fixed Out', val:'AED '+totalOut.toLocaleString(), sub:cfState.outflows.length+' line items', editable:null },
-    { icon:'ti-trending-up', color: surplus>=0?'var(--green)':'var(--red)', label:'Net Monthly Surplus', val: (surplus>=0?'+':'')+'AED '+surplus.toLocaleString(), sub: surplus<0?'⚠ Deficit':'', editable:null },
-    { icon:'ti-building-bank', color:'var(--blue)', label:'NBF Balance', val:'AED '+cfState.nbfBalance.toLocaleString(), sub: cfState.nbfBalance>0 ? 'Runway: ~'+Math.floor(cfState.nbfBalance/Math.max(totalOut,1))+' mo' : 'Enter balance below', editable:'nbfBalance' }
-  ];
-  kpiEl.innerHTML = kpiData.map(function(k) {
-    var valHtml = k.editable
-      ? '<div style="font-size:20px;font-weight:700;font-family:var(--m);color:'+k.color+';margin-bottom:2px"><input type="number" value="'+cfState[k.editable]+'" onchange="cfState[\''+k.editable+'\']=+this.value;cfSave();renderCashFlow()" style="background:transparent;border:none;border-bottom:1px solid var(--b2);color:'+k.color+';font-size:20px;font-weight:700;font-family:var(--m);width:160px;outline:none;padding:0" ></div>'
-      : '<div style="font-size:20px;font-weight:700;font-family:var(--m);color:'+k.color+';margin-bottom:2px">'+k.val+'</div>';
-    return '<div style="background:var(--bg2);border:1px solid var(--b1);border-radius:14px;padding:1.1rem 1.25rem">'
-      + '<div style="font-size:11px;color:var(--t3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px"><i class="ti '+k.icon+'" style="margin-right:4px;color:'+k.color+'"></i>'+k.label+'</div>'
-      + valHtml
-      + '<div style="font-size:11px;color:var(--t2)">'+k.sub+'</div>'
-      + '</div>';
-  }).join('');
+  // Build 12 months from current month
+  var months=[];
+  for(var i=0;i<12;i++){ var d=new Date(TODAY.getFullYear(),TODAY.getMonth()+i,1); months.push({key:cfMoKey(d),yr:d.getFullYear(),mo:d.getMonth(),date:d}); }
+  var rng=document.getElementById('cf-range'); if(rng) rng.textContent=MN[months[0].mo]+' '+months[0].yr+' → '+MN[months[11].mo]+' '+months[11].yr;
 
-  // ── Monthly Outflows Table ──
-  var tbody = document.getElementById('cf-out-body');
-  var tfoot = document.getElementById('cf-out-foot');
-  if(tbody) tbody.innerHTML = cfState.outflows.map(function(o,i) {
-    return '<tr>'
-      + '<td style="font-size:12px">'
-          + '<div style="font-weight:500;color:var(--t1)">'+o.label+'</div>'
-          + (o.note ? '<div style="font-size:10px;color:var(--t3);margin-top:1px">'+o.note+'</div>' : '')
-        + '</td>'
-      + '<td style="text-align:right;font-family:var(--m);font-weight:600">'
-          + '<input type="number" value="'+o.amount+'" onchange="cfState.outflows['+i+'].amount=+this.value;cfSave();renderCashFlow()" style="background:transparent;border:none;border-bottom:1px solid var(--b2);color:var(--t1);font-size:12px;font-family:var(--m);font-weight:600;width:90px;text-align:right;outline:none;padding:0">'
-        + '</td>'
-      + '<td style="font-size:11px;color:var(--t2)">'
-          + (o.months ? o.months+' mo left' : '—')
-        + '</td>'
-      + '</tr>';
-  }).join('');
-  if(tfoot) tfoot.innerHTML = '<tr style="border-top:1px solid var(--b2)">'
-    + '<td style="font-size:12px;font-weight:600;color:var(--t1);padding-top:8px">Total</td>'
-    + '<td style="text-align:right;font-family:var(--m);font-weight:700;color:var(--red);padding-top:8px">'+totalOut.toLocaleString()+'</td>'
-    + '<td></td></tr>';
+  // Compute running balance + find lowest point + this-month figures
+  var run=cfConfig.startBalance;
+  var rows=[];
+  var lowest={bal:Infinity,label:''};
+  var thisMonthIn=0,thisMonthOut=0,endOfMonthBal=0;
+  months.forEach(function(m,idx){
+    var dated=datedByMonth[m.key]||[];
+    var datedSum=dated.reduce(function(s,x){return s+x.amount;},0);
+    // Month 0 = current month. If salary already landed, it's baked into the balance
+    // you typed, so don't add it again this month. Every future month gets full salary.
+    var salaryAlreadyIn=(idx===0 && cfConfig.salaryLanded);
+    var inflow=salaryAlreadyIn?0:cfConfig.income;
+    var outflow=fixedTotal+datedSum;
+    var open=run;
+    run+=(inflow-outflow);
+    if(run<lowest.bal){ lowest={bal:run,label:MN[m.mo]+' '+m.yr}; }
+    if(idx===0){ thisMonthIn=inflow; thisMonthOut=outflow; endOfMonthBal=run; }
+    rows.push({m:m,open:open,inflow:inflow,salaryIn:!salaryAlreadyIn,fixed:fixedTotal,dated:dated,datedSum:datedSum,outflow:outflow,close:run});
+  });
 
-  // ── Liabilities Cards ──
-  var liabEl = document.getElementById('cf-liab-cards');
-  var liabTot = document.getElementById('cf-liab-total');
-  var totalLiab = cfState.liabilities.reduce(function(s,l){ return s+l.amount; }, 0);
-  if(liabEl) liabEl.innerHTML = cfState.liabilities.map(function(l) {
-    var pct = Math.round(l.amount / totalLiab * 100);
-    return '<div>'
-      + '<div style="display:flex;justify-content:space-between;margin-bottom:4px">'
-          + '<span style="font-size:12px;font-weight:500;color:var(--t1)">'+l.label+'</span>'
-          + '<span style="font-size:12px;font-family:var(--m);font-weight:600;color:'+l.color+'">AED '+l.amount.toLocaleString()+'</span>'
-        + '</div>'
-      + '<div style="height:5px;background:var(--bg3);border-radius:99px;overflow:hidden">'
-          + '<div style="height:100%;width:'+pct+'%;background:'+l.color+';border-radius:99px"></div>'
-        + '</div>'
-      + '</div>';
-  }).join('');
-  if(liabTot) liabTot.innerHTML = '<div style="display:flex;justify-content:space-between">'
-    + '<span style="font-size:12px;font-weight:600;color:var(--t2)">Total outstanding</span>'
-    + '<span style="font-size:14px;font-family:var(--m);font-weight:700;color:var(--amber)">AED '+totalLiab.toLocaleString()+'</span>'
-    + '</div>';
-
-  // ── Property Schedule ──
-  var propBody = document.getElementById('cf-prop-body');
-  var today = new Date();
-  if(propBody) propBody.innerHTML = cfState.propPayments.map(function(p,i) {
-    var d   = new Date(p.date);
-    var isPast = d < today;
-    var isNear = !isPast && (d - today) < 90*86400000;
-    var badge = isPast
-      ? '<span style="background:rgba(62,207,142,.15);color:#3ecf8e;font-size:10px;font-weight:700;padding:2px 7px;border-radius:99px">Paid</span>'
-      : isNear
-        ? '<span style="background:rgba(242,107,107,.15);color:#f26b6b;font-size:10px;font-weight:700;padding:2px 7px;border-radius:99px">Due soon</span>'
-        : '<span style="background:rgba(255,255,255,.06);color:var(--t2);font-size:10px;font-weight:700;padding:2px 7px;border-radius:99px">Upcoming</span>';
-    var proj = p.project === 'Nawayef'
-      ? '<span style="background:rgba(167,139,250,.15);color:#a78bfa;font-size:10px;font-weight:700;padding:2px 7px;border-radius:99px">'+p.project+'</span>'
-      : '<span style="background:rgba(91,156,246,.15);color:#5b9cf6;font-size:10px;font-weight:700;padding:2px 7px;border-radius:99px">'+p.project+'</span>';
-    return '<tr style="'+(isPast?'opacity:.5':'')+'"><td>'+proj+'</td>'
-      + '<td style="font-size:11px;color:var(--t2);max-width:160px">'+p.milestone+'</td>'
-      + '<td style="font-size:11px;white-space:nowrap">'+d.toLocaleDateString('en-AE',{day:'numeric',month:'short',year:'numeric'})+'</td>'
-      + '<td style="text-align:right;font-family:var(--m);font-weight:600;color:var(--amber)">'
-          + '<input type="number" value="'+p.amount+'" onchange="cfState.propPayments['+i+'].amount=+this.value;cfSave();renderCashFlow()" style="background:transparent;border:none;border-bottom:1px solid var(--b2);color:var(--amber);font-size:12px;font-family:var(--m);font-weight:600;width:100px;text-align:right;outline:none;padding:0">'
-        + '</td>'
-      + '<td>'+badge+'</td></tr>';
-  }).join('');
-
-  // ── 12-Month Rolling Balance ──
-  var months12 = cfMonths12();
-  var MN = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  // property payments bucketed by month key
-  var propByMonth = {};
-  cfState.propPayments.forEach(function(p){ var k=cfMoKey(p.date); propByMonth[k]=(propByMonth[k]||0)+p.amount; });
-
-  var balBody = document.getElementById('cf-bal-body');
-  if(balBody) {
-    var runBal = cfState.nbfBalance;
-    balBody.innerHTML = months12.map(function(m) {
-      var prop = propByMonth[m.key] || 0;
-      var inflow  = cfState.income;
-      var outflow = totalOut + prop;
-      runBal += (inflow - outflow);
-      var hasProp = prop > 0;
-      var isNeg   = runBal < 0;
-      var rowBg   = isNeg ? 'background:rgba(242,107,107,.07);' : hasProp ? 'background:rgba(245,166,35,.07);' : '';
-      var balCol  = isNeg ? 'color:var(--red)' : hasProp ? 'color:var(--amber)' : 'color:var(--green)';
-      return '<tr style="'+rowBg+'">'
-        + '<td style="font-size:11px;font-weight:500">'+ MN[m.mo]+' '+m.yr+'</td>'
-        + '<td style="text-align:right;font-size:11px;font-family:var(--m);color:var(--green)">'+inflow.toLocaleString()+'</td>'
-        + '<td style="text-align:right;font-size:11px;font-family:var(--m);color:var(--red)">'
-            + outflow.toLocaleString()
-            + (prop>0?'<div style="font-size:9px;color:var(--amber)">incl. '+prop.toLocaleString()+' prop</div>':'')
-          + '</td>'
-        + '<td style="text-align:right;font-size:12px;font-family:var(--m);font-weight:700;'+balCol+'">'+Math.round(runBal).toLocaleString()+'</td>'
-        + '</tr>';
+  // ── KPI CARDS ──
+  var thisLeft=thisMonthIn-thisMonthOut;
+  var kpiEl=document.getElementById('cf-kpi');
+  if(kpiEl){
+    var lowColor=lowest.bal<0?'var(--red)':lowest.bal<cfConfig.income?'var(--amber)':'var(--green)';
+    kpiEl.innerHTML=[
+      {icon:'ti-wallet',color:'var(--blue)',lbl:'Balance Now → End of Month',
+       big:fmt(cfConfig.startBalance),sub:'Projected month-end: <b style="color:'+(endOfMonthBal<0?'var(--red)':'var(--green)')+'">'+fmt(endOfMonthBal)+'</b>'},
+      {icon:'ti-alert-triangle',color:lowColor,lbl:'Lowest Point (next 12 mo)',
+       big:fmt(lowest.bal),sub:(lowest.bal<0?'⚠ Goes negative in ':'Lowest in ')+'<b>'+lowest.label+'</b>'},
+      {icon:'ti-arrows-exchange',color:thisLeft>=0?'var(--green)':'var(--red)',lbl:'This Month',
+       big:(thisLeft>=0?'+':'')+fmt(thisLeft)+' left',
+       sub:'In <b style="color:var(--green)">'+fmt(thisMonthIn)+'</b> · Out <b style="color:var(--red)">'+fmt(thisMonthOut)+'</b>'}
+    ].map(function(k){
+      return '<div style="background:var(--bg2);border:1px solid var(--b1);border-radius:14px;padding:1.1rem 1.25rem">'
+        +'<div style="font-size:11px;color:var(--t3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px"><i class="ti '+k.icon+'" style="margin-right:4px;color:'+k.color+'"></i>'+k.lbl+'</div>'
+        +'<div style="font-size:22px;font-weight:700;font-family:var(--m);color:'+k.color+';margin-bottom:3px">'+k.big+'</div>'
+        +'<div style="font-size:11px;color:var(--t2)">'+k.sub+'</div></div>';
     }).join('');
   }
 
-  // ── Chart ──
-  var fixedData  = months12.map(function(){ return totalOut; });
-  var propData   = months12.map(function(m){ return propByMonth[m.key] || 0; });
-  var labels     = months12.map(function(m){ return MN[m.mo]+' '+String(m.yr).slice(2); });
-  var hasPropArr = months12.map(function(m){ return (propByMonth[m.key]||0) > 0; });
+  // ── OVERDUE BACKLOG BANNER ──
+  var backlog=cfOverdueBacklog();
+  var boEl=document.getElementById('cf-overdue');
+  if(boEl){
+    if(backlog.length){
+      var boTotal=backlog.reduce(function(s,x){return s+x.amount;},0);
+      var boExpanded=cfExpanded['__backlog__'];
+      var rowsHtml=backlog.map(function(x){
+        return '<div style="display:flex;justify-content:space-between;padding:6px 0;font-size:12px;border-bottom:1px solid var(--b1)"><span style="color:var(--t2)">'+x.acc+' — '+x.desc+' <span style="color:var(--t3);font-size:10px">('+fd(x.date)+')</span> '+sbdg(x.status)+'</span><span style="font-family:var(--m);color:var(--red)">'+fmt(x.amount)+'</span></div>';
+      }).join('');
+      boEl.innerHTML='<div style="border:1px solid rgba(242,107,107,.45);border-radius:12px;overflow:hidden;background:rgba(242,107,107,.06)">'
+        +'<div onclick="cfToggleMonth(\'__backlog__\')" style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;cursor:pointer">'
+          +'<div style="display:flex;align-items:center;gap:10px">'
+            +'<i class="ti ti-alert-triangle" style="color:var(--red);font-size:18px"></i>'
+            +'<div><div style="font-size:13px;font-weight:700;color:var(--red)">Overdue backlog — due now</div>'
+            +'<div style="font-size:11px;color:var(--t2);margin-top:1px">'+backlog.length+' payment'+(backlog.length>1?'s':'')+' past due, not in the projection below</div></div>'
+          +'</div>'
+          +'<div style="display:flex;align-items:center;gap:10px">'
+            +'<div style="font-size:18px;font-weight:700;font-family:var(--m);color:var(--red)">'+fmt(boTotal)+'</div>'
+            +'<i class="ti ti-chevron-'+(boExpanded?'up':'down')+'" style="color:var(--t3);font-size:16px"></i>'
+          +'</div>'
+        +'</div>'
+        +(boExpanded?'<div style="padding:2px 16px 12px 16px;background:var(--bg1)">'+rowsHtml+'</div>':'')
+      +'</div>';
+    } else { boEl.innerHTML=''; }
+  }
 
-  var ctx = document.getElementById('cf-chart');
-  if(!ctx) return;
-  if(cfChart) { cfChart.destroy(); cfChart = null; }
-  cfChart = new Chart(ctx, {
-    type: 'bar',
-    data: {
-      labels: labels,
-      datasets: [
-        {
-          label: 'Fixed costs',
-          data: fixedData,
-          backgroundColor: months12.map(function(m){ return (propByMonth[m.key]||0)>0 ? 'rgba(242,107,107,0.25)' : 'rgba(91,156,246,0.4)'; }),
-          borderRadius: 3,
-          borderSkipped: false,
-          stack: 'a'
-        },
-        {
-          label: 'Property payment',
-          data: propData,
-          backgroundColor: '#f26b6b',
-          borderRadius: 3,
-          borderSkipped: false,
-          stack: 'a'
-        }
-      ]
-    },
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      plugins: {
-        legend: { display: false },
-        tooltip: {
-          backgroundColor: '#22222e', titleColor: '#eeeef5', bodyColor: '#8888a0',
-          borderColor: 'rgba(255,255,255,.1)', borderWidth: 1,
-          callbacks: {
-            label: function(c){ return ' ' + c.dataset.label + ': AED ' + c.raw.toLocaleString(); }
-          }
-        }
-      },
-      scales: {
-        y: {
-          stacked: true,
-          ticks: { callback: function(v){ return 'AED '+(v>=1e6?(v/1e6).toFixed(1)+'M':(v/1000).toFixed(0)+'k'); }, color:'#44445a', font:{size:10} },
-          grid: { color:'rgba(255,255,255,.04)' }, border: { display: false }
-        },
-        x: {
-          stacked: true,
-          ticks: { autoSkip: false, maxRotation: 45, font: { size: 9 }, color: '#44445a' },
-          grid: { display: false }, border: { display: false }
-        }
+  // ── RUNNING BALANCE (hero, expandable) ──
+  var host=document.getElementById('cf-months');
+  if(host){
+    host.innerHTML=rows.map(function(r){
+      var hasProp=r.datedSum>0, neg=r.close<0;
+      var accent=neg?'var(--red)':hasProp?'var(--amber)':'var(--green)';
+      var open=cfExpanded[r.m.key];
+      // breakdown rows
+      var bd='';
+      if(r.salaryIn){
+        bd+='<div style="display:flex;justify-content:space-between;padding:5px 0;font-size:12px;border-bottom:1px solid var(--b1)"><span style="color:var(--green)"><i class="ti ti-arrow-down-left" style="margin-right:4px"></i>Salary in</span><span style="font-family:var(--m);color:var(--green)">+'+fmt(r.inflow)+'</span></div>';
+      } else {
+        bd+='<div style="display:flex;justify-content:space-between;padding:5px 0;font-size:12px;border-bottom:1px solid var(--b1)"><span style="color:var(--t3)"><i class="ti ti-check" style="margin-right:4px"></i>Salary already in balance</span><span style="font-family:var(--m);color:var(--t3)">—</span></div>';
       }
-    }
-  });
+      fixed.forEach(function(f){
+        var ic=f.kind==='invest'?'ti-chart-line':f.kind==='living'?'ti-shopping-cart':'ti-building-bank';
+        bd+='<div style="display:flex;justify-content:space-between;padding:5px 0;font-size:12px;border-bottom:1px solid var(--b1)"><span style="color:var(--t2)"><i class="ti '+ic+'" style="margin-right:4px"></i>'+f.name+'</span><span style="font-family:var(--m);color:var(--red)">-'+fmt(f.amount)+'</span></div>';
+      });
+      r.dated.forEach(function(x){
+        bd+='<div style="display:flex;justify-content:space-between;padding:5px 0;font-size:12px;border-bottom:1px solid var(--b1)"><span style="color:var(--t2)"><i class="ti ti-home-2" style="margin-right:4px;color:var(--amber)"></i>'+x.acc+' — '+x.desc+' '+sbdg(x.status)+'</span><span style="font-family:var(--m);color:var(--red)">-'+fmt(x.amount)+'</span></div>';
+      });
+      bd+='<div style="display:flex;justify-content:space-between;padding:8px 0 2px;font-size:12px;font-weight:700"><span>Net this month</span><span style="font-family:var(--m);color:'+(r.inflow-r.outflow>=0?'var(--green)':'var(--red)')+'">'+(r.inflow-r.outflow>=0?'+':'')+fmt(r.inflow-r.outflow)+'</span></div>';
+
+      return '<div style="border:1px solid '+(neg?'rgba(242,107,107,.4)':'var(--b1)')+';border-radius:10px;margin-bottom:8px;overflow:hidden;background:'+(neg?'rgba(242,107,107,.05)':hasProp?'rgba(245,166,35,.04)':'var(--bg2)')+'">'
+        +'<div onclick="cfToggleMonth(\''+r.m.key+'\')" style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;cursor:pointer">'
+          +'<div style="display:flex;align-items:center;gap:12px">'
+            +'<i class="ti ti-chevron-'+(open?'down':'right')+'" style="color:var(--t3);font-size:16px"></i>'
+            +'<div style="width:44px;text-align:center"><div style="font-size:12px;font-weight:700;color:'+accent+'">'+MN[r.m.mo]+'</div><div style="font-size:10px;color:var(--t3)">'+r.m.yr+'</div></div>'
+            +'<div>'+(hasProp?'<span style="font-size:11px;color:var(--amber)"><i class="ti ti-home-2" style="margin-right:3px"></i>'+r.dated.length+' property/lump payment'+(r.dated.length>1?'s':'')+'</span>':'<span style="font-size:11px;color:var(--t3)">Regular month</span>')+'</div>'
+          +'</div>'
+          +'<div style="text-align:right">'
+            +'<div style="font-size:17px;font-weight:700;font-family:var(--m);color:'+accent+'">'+fmt(r.close)+'</div>'
+            +'<div style="font-size:10px;color:var(--t3);margin-top:1px">net <span style="color:'+((r.inflow-r.outflow)>=0?'var(--green)':'var(--red)')+';font-weight:600">'+((r.inflow-r.outflow)>=0?'+':'')+fmt(r.inflow-r.outflow)+'</span></div>'
+          +'</div>'
+        +'</div>'
+        +(open?'<div style="padding:4px 16px 14px 16px;background:var(--bg1)">'+bd+'</div>':'')
+      +'</div>';
+    }).join('');
+  }
+
+  // ── Liabilities ──
+  var liabs=cfLiabilities();
+  var totLiab=liabs.reduce(function(s,l){return s+l.amount;},0);
+  var lc=document.getElementById('cf-liab-cards');
+  if(lc) lc.innerHTML=liabs.map(function(l){
+    var pct=totLiab?Math.round(l.amount/totLiab*100):0;
+    return '<div><div style="display:flex;justify-content:space-between;margin-bottom:4px">'
+      +'<span style="font-size:12px;font-weight:500;color:var(--t1)">'+l.label+'</span>'
+      +'<span style="font-size:12px;font-family:var(--m);font-weight:600;color:'+l.color+'">'+fmt(l.amount)+'</span></div>'
+      +'<div style="height:5px;background:var(--bg3);border-radius:99px;overflow:hidden"><div style="height:100%;width:'+pct+'%;background:'+l.color+'"></div></div></div>';
+  }).join('');
+  var lt=document.getElementById('cf-liab-total');
+  if(lt) lt.innerHTML='<div style="display:flex;justify-content:space-between"><span style="font-size:12px;font-weight:600;color:var(--t2)">Total outstanding</span><span style="font-size:14px;font-family:var(--m);font-weight:700;color:var(--amber)">'+fmt(totLiab)+'</span></div>';
 }
 
 
