@@ -473,13 +473,9 @@ var accs=[
 var stocks=[];
 function saveState(){
   try{
-    // Persist only REAL payments — forecast rows are regenerated from cfConfig.forecasts.
-    var clean=accs.map(function(a){
-      var c=Object.assign({},a);
-      if(c.pays) c.pays=c.pays.filter(function(p){return !p.forecast;});
-      return c;
-    });
-    localStorage.setItem('pt_accs',JSON.stringify(clean));
+    // Persist everything including forecast payments (user-created via Auto-forecast,
+    // tagged forecast:true). They must survive reloads.
+    localStorage.setItem('pt_accs',JSON.stringify(accs));
     localStorage.setItem('pt_stk',JSON.stringify(stocks));
   }catch(e){}
   // Sync to server so reminders always have latest data
@@ -629,8 +625,32 @@ async function syncAcc(a){
       if(/^(payment|description|status|amount|date|unit|percent)$/i.test(desc)) continue;
       parsed.push({desc:desc,status:st,amount:amt,dt:fd(d),nd:nd,chq:chq,pct:(r[3]||'').trim()});
     }
-    if(parsed.length>0){a.pays=parsed;a.synced=true;return true;}
+    if(parsed.length>0){
+      // Sheet governs REAL payments only; keep user-created forecast rows intact.
+      var forecasts=(a.pays||[]).filter(function(p){return p.forecast;});
+      a.pays=parsed.concat(forecasts);
+      a.synced=true;return true;
+    }
   }catch(e){}return false;
+}
+// Background auto-sync on open (Option B): UI already painted from cache; silently
+// re-pull all sheet-connected accounts, then re-render. Sheet wins on conflict.
+// Forecast rows are preserved (syncAcc concatenates them).
+var cfAutoSyncDone=false;
+async function autoSyncOnOpen(){
+  if(cfAutoSyncDone) return; cfAutoSyncDone=true;
+  var withUrl=accs.filter(function(a){return a.url;});
+  if(!withUrl.length) return;
+  // subtle indicator on the Sync button (avoids the clock timer overwriting it)
+  var b=document.getElementById('sync-btn');
+  var prev=b?b.innerHTML:'';
+  if(b){ b.innerHTML='↻ syncing…'; b.disabled=true; }
+  try{
+    var rs=await Promise.all(withUrl.map(function(a){return syncAcc(a).catch(function(){return false;});}));
+    var n=rs.filter(Boolean).length;
+    if(n>0){ autoFlagOverdue(); saveState(); rAll(); if(typeof renderCashFlow==='function') renderCashFlow(); }
+  }catch(e){}
+  if(b){ b.innerHTML=prev||'↻ Sync'; b.disabled=false; }
 }
 async function syncAll(){
   var b=document.getElementById('sync-btn');
@@ -1488,7 +1508,7 @@ async function loadFromServer(){
     autoFlagOverdue();
     try{ cfLoadConfig(); cfSyncForecastToAccounts(); }catch(ef){}
     try{
-      localStorage.setItem('pt_accs',JSON.stringify(accs.map(function(a){var c=Object.assign({},a);if(c.pays)c.pays=c.pays.filter(function(p){return !p.forecast;});return c;})));
+      localStorage.setItem('pt_accs',JSON.stringify(accs));
       localStorage.setItem('pt_stk',JSON.stringify(stocks));
       localStorage.setItem('pt_save_time',serverTime.toString());
     }catch(e2){}
@@ -1503,6 +1523,8 @@ window.addEventListener('load', function() {
   try { cfLoadConfig(); cfSyncForecastToAccounts(); } catch(e) { console.log('forecast sync error:', e); }
   try { renderDash(); } catch(e) { console.log('renderDash error:', e); }
   loadFromServer();
+  // Option B: background sheet sync shortly after load (non-blocking)
+  setTimeout(function(){ autoSyncOnOpen(); }, 800);
 });
 // Fallback in case load already fired
 if(document.readyState === 'complete') {
