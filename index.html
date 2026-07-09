@@ -1547,12 +1547,12 @@ if(document.readyState === 'complete') {
 
 // Cash Flow Tab (v2 running-balance)
 // ── Cash Flow — running-balance-first, derived from accs[] + saved manual inputs ──
-var cfConfig = { income:0, startBalance:0, living:0, invest:0, salaryLanded:true, forecastOn:false, forecasts:[] };
+var cfConfig = { income:0, startBalance:0, living:0, invest:0, salaryLanded:true, forecastOn:false, forecasts:[], livingOv:{}, investOv:{} };
 var CF_MONTHLY_TYPES = ['Car Loan','Cash Loan'];  // truly-monthly loans
 
 function cfLoadConfig(){
   try{ var d=JSON.parse(localStorage.getItem('pt_cf')||'{}');
-    ['income','startBalance','living','invest','salaryLanded','forecastOn','forecasts'].forEach(function(k){ if(d[k]!=null)cfConfig[k]=d[k]; });
+    ['income','startBalance','living','invest','salaryLanded','forecastOn','forecasts','livingOv','investOv'].forEach(function(k){ if(d[k]!=null)cfConfig[k]=d[k]; });
   }catch(e){}
 }
 function cfSaveConfig(){ try{ localStorage.setItem('pt_cf',JSON.stringify(cfConfig)); }catch(e){} }
@@ -1561,7 +1561,29 @@ function cfMoKey(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(
 
 // Fixed recurring monthly out = monthly-loan instalments (BMW, NBF) + living + investment.
 // School fees & property & rent are NOT here — they hit as dated payments from accounts.
-function cfFixedMonthly(){
+function cfDateInMonth(accId, yr, mo){
+  // find the (effective) date of this account's payment landing in yr/mo
+  var a=accs.find(function(x){return x.id===accId;}); if(!a) return null;
+  var found=null;
+  (a.pays||[]).forEach(function(p){
+    var d=pd(eff(p)); if(!d) return;
+    if(d.getFullYear()===yr && d.getMonth()===mo){ if(!found||d<found) found=d; }
+  });
+  return found;
+}
+function cfFmtDay(d){ return d?d.toLocaleDateString('en-GB',{day:'numeric',month:'short'}):''; }
+
+// Per-month living/investment: override for that month if set, else the global default.
+function cfLivingFor(key){ return (cfConfig.livingOv && cfConfig.livingOv[key]!=null) ? cfConfig.livingOv[key] : cfConfig.living; }
+function cfInvestFor(key){ return (cfConfig.investOv && cfConfig.investOv[key]!=null) ? cfConfig.investOv[key] : cfConfig.invest; }
+function cfSetMonthVal(kind,key,val){
+  var store=kind==='living'?'livingOv':'investOv';
+  cfConfig[store]=cfConfig[store]||{};
+  if(val===''||val==null){ delete cfConfig[store][key]; } // clear override -> back to default
+  else { cfConfig[store][key]=+val||0; }
+  cfSaveConfig(); renderCashFlow();
+}
+function cfLoansMonthly(){
   var items=[];
   accs.forEach(function(a){
     if(CF_MONTHLY_TYPES.indexOf(a.type)===-1) return;
@@ -1570,8 +1592,21 @@ function cfFixedMonthly(){
     var amt=amounts.length?amounts.sort(function(x,y){
       return amounts.filter(function(v){return v===y;}).length-amounts.filter(function(v){return v===x;}).length;
     })[0]:0;
-    if(amt>0) items.push({name:a.name,amount:amt,kind:'loan'});
+    if(amt>0) items.push({name:a.name,amount:amt,kind:'loan',accId:a.id});
   });
+  return items;
+}
+// Build the full fixed list for a SPECIFIC month (loans + that month's living/investment).
+function cfFixedForMonth(key){
+  var items=cfLoansMonthly().slice();
+  var lv=cfLivingFor(key), iv=cfInvestFor(key);
+  if(lv>0) items.push({name:'Living expenses',amount:lv,kind:'living',key:key});
+  if(iv>0) items.push({name:'Monthly investment',amount:iv,kind:'invest',key:key});
+  return items;
+}
+// Back-compat: default (unoverridden) fixed list, used where a flat number is needed.
+function cfFixedMonthly(){
+  var items=cfLoansMonthly().slice();
   if(cfConfig.living>0) items.push({name:'Living expenses',amount:cfConfig.living,kind:'living'});
   if(cfConfig.invest>0) items.push({name:'Monthly investment',amount:cfConfig.invest,kind:'invest'});
   return items;
@@ -1590,7 +1625,7 @@ function cfDatedPaymentsByMonth(){
       var d=pd(eff(p)); if(!d) return;
       var k=cfMoKey(d);
       var amt=cfApplyIncreases(a.name,k,p.amount);
-      (byMonth[k]=byMonth[k]||[]).push({acc:a.name,desc:p.desc,amount:amt,status:p.status,date:d});
+      (byMonth[k]=byMonth[k]||[]).push({acc:a.name,desc:p.desc,amount:amt,status:p.status,date:d,forecast:!!p.forecast});
     });
   });
   return byMonth;
@@ -1925,16 +1960,19 @@ function renderCashFlow(){
   months.forEach(function(m,idx){
     var dated=datedByMonth[m.key]||[];
     var datedSum=dated.reduce(function(s,x){return s+x.amount;},0);
+    // Per-month fixed list (loans + this month's living/investment override or default).
+    var mFixed=cfFixedForMonth(m.key);
+    var mFixedTotal=mFixed.reduce(function(s,o){return s+o.amount;},0);
     // Month 0 = current month. If salary already landed, it's baked into the balance
     // you typed, so don't add it again this month. Every future month gets full salary.
     var salaryAlreadyIn=(idx===0 && cfConfig.salaryLanded);
     var inflow=salaryAlreadyIn?0:cfConfig.income;
-    var outflow=fixedTotal+datedSum;
+    var outflow=mFixedTotal+datedSum;
     var open=run;
     run+=(inflow-outflow);
     if(run<lowest.bal){ lowest={bal:run,label:MN[m.mo]+' '+m.yr}; }
     if(idx===0){ thisMonthIn=inflow; thisMonthOut=outflow; endOfMonthBal=run; }
-    rows.push({m:m,open:open,inflow:inflow,salaryIn:!salaryAlreadyIn,fixed:fixedTotal,dated:dated,datedSum:datedSum,outflow:outflow,close:run});
+    rows.push({m:m,open:open,inflow:inflow,salaryIn:!salaryAlreadyIn,fixedItems:mFixed,fixed:mFixedTotal,dated:dated,datedSum:datedSum,outflow:outflow,close:run});
   });
 
   // ── KPI CARDS ──
@@ -1993,20 +2031,37 @@ function renderCashFlow(){
       var hasProp=r.datedSum>0, neg=r.close<0;
       var accent=neg?'var(--red)':hasProp?'var(--amber)':'var(--green)';
       var open=cfExpanded[r.m.key];
-      // breakdown rows
-      var bd='';
+      // breakdown rows — collected with a sort day, then ordered by date
+      var lines=[];
       if(r.salaryIn){
-        bd+='<div style="display:flex;justify-content:space-between;padding:5px 0;font-size:12px;border-bottom:1px solid var(--b1)"><span style="color:var(--green)"><i class="ti ti-arrow-down-left" style="margin-right:4px"></i>Salary in</span><span style="font-family:var(--m);color:var(--green)">+'+fmt(r.inflow)+'</span></div>';
+        lines.push({day:5,html:'<div style="display:flex;justify-content:space-between;padding:5px 0;font-size:12px;border-bottom:1px solid var(--b1)"><span style="color:var(--green)"><span style="color:var(--t3);font-family:var(--m);font-size:10px;margin-right:6px">'+cfFmtDay(new Date(r.m.yr,r.m.mo,5))+'</span><i class="ti ti-arrow-down-left" style="margin-right:4px"></i>Salary in</span><span style="font-family:var(--m);color:var(--green)">+'+fmt(r.inflow)+'</span></div>'});
       } else {
-        bd+='<div style="display:flex;justify-content:space-between;padding:5px 0;font-size:12px;border-bottom:1px solid var(--b1)"><span style="color:var(--t3)"><i class="ti ti-check" style="margin-right:4px"></i>Salary already in balance</span><span style="font-family:var(--m);color:var(--t3)">—</span></div>';
+        lines.push({day:5,html:'<div style="display:flex;justify-content:space-between;padding:5px 0;font-size:12px;border-bottom:1px solid var(--b1)"><span style="color:var(--t3)"><i class="ti ti-check" style="margin-right:4px"></i>Salary already in balance</span><span style="font-family:var(--m);color:var(--t3)">—</span></div>'});
       }
-      fixed.forEach(function(f){
+      r.fixedItems.forEach(function(f){
         var ic=f.kind==='invest'?'ti-chart-line':f.kind==='living'?'ti-shopping-cart':'ti-building-bank';
-        bd+='<div style="display:flex;justify-content:space-between;padding:5px 0;font-size:12px;border-bottom:1px solid var(--b1)"><span style="color:var(--t2)"><i class="ti '+ic+'" style="margin-right:4px"></i>'+f.name+'</span><span style="font-family:var(--m);color:var(--red)">-'+fmt(f.amount)+'</span></div>';
+        var fday=1,fdate='';
+        if(f.kind==='loan' && f.accId){ var dd=cfDateInMonth(f.accId,r.m.yr,r.m.mo); if(dd){fday=dd.getDate();fdate=cfFmtDay(dd);} }
+        else if(f.kind==='invest'){ fday=6; fdate=cfFmtDay(new Date(r.m.yr,r.m.mo,6)); }
+        else if(f.kind==='living'){ fday=1; fdate=cfFmtDay(new Date(r.m.yr,r.m.mo,1)); }
+        var dcol=fdate?'<span style="color:var(--t3);font-family:var(--m);font-size:10px;margin-right:6px">'+fdate+'</span>':'';
+        var html;
+        if(f.kind==='living'||f.kind==='invest'){
+          var ov=(f.kind==='living'?(cfConfig.livingOv||{}):(cfConfig.investOv||{}));
+          var isOv=ov[r.m.key]!=null;
+          html='<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;font-size:12px;border-bottom:1px solid var(--b1)"><span style="color:var(--t2)">'+dcol+'<i class="ti '+ic+'" style="margin-right:4px"></i>'+f.name+(isOv?' <span style="font-size:9px;color:var(--amber)">edited</span>':'')+'</span><span style="display:flex;align-items:center;gap:4px"><span style="color:var(--red);font-family:var(--m)">-</span><input type="number" value="'+f.amount+'" onchange="cfSetMonthVal(\''+f.kind+'\',\''+r.m.key+'\',this.value)" onclick="event.stopPropagation()" style="width:90px;font-size:11px;padding:2px 6px;text-align:right;font-family:var(--m)" title="Edit just this month (clear to reset to default)"></span></div>';
+        } else {
+          html='<div style="display:flex;justify-content:space-between;padding:5px 0;font-size:12px;border-bottom:1px solid var(--b1)"><span style="color:var(--t2)">'+dcol+'<i class="ti '+ic+'" style="margin-right:4px"></i>'+f.name+'</span><span style="font-family:var(--m);color:var(--red)">-'+fmt(f.amount)+'</span></div>';
+        }
+        lines.push({day:fday,html:html});
       });
       r.dated.forEach(function(x){
-        bd+='<div style="display:flex;justify-content:space-between;padding:5px 0;font-size:12px;border-bottom:1px solid var(--b1)"><span style="color:var(--t2)"><i class="ti ti-home-2" style="margin-right:4px;color:var(--amber)"></i>'+x.acc+' — '+x.desc+' '+sbdg(x.status)+'</span><span style="font-family:var(--m);color:var(--red)">-'+fmt(x.amount)+'</span></div>';
+        var xday=x.date?x.date.getDate():15;
+        var dstr=x.date?x.date.toLocaleDateString('en-GB',{day:'numeric',month:'short'}):'';
+        lines.push({day:xday,html:'<div style="display:flex;justify-content:space-between;padding:5px 0;font-size:12px;border-bottom:1px solid var(--b1)"><span style="color:var(--t2)"><i class="ti ti-home-2" style="margin-right:4px;color:var(--amber)"></i>'+(dstr?'<span style="color:var(--t3);font-family:var(--m);font-size:10px;margin-right:6px">'+dstr+'</span>':'')+x.acc+' — '+x.desc+' '+(x.forecast?fcTag():sbdg(x.status))+'</span><span style="font-family:var(--m);color:var(--red)">-'+fmt(x.amount)+'</span></div>'});
       });
+      lines.sort(function(p,q){return p.day-q.day;});
+      var bd=lines.map(function(l){return l.html;}).join('');
       bd+='<div style="display:flex;justify-content:space-between;padding:8px 0 2px;font-size:12px;font-weight:700"><span>Net this month</span><span style="font-family:var(--m);color:'+(r.inflow-r.outflow>=0?'var(--green)':'var(--red)')+'">'+(r.inflow-r.outflow>=0?'+':'')+fmt(r.inflow-r.outflow)+'</span></div>';
 
       return '<div style="border:1px solid '+(neg?'rgba(242,107,107,.4)':'var(--b1)')+';border-radius:10px;margin-bottom:8px;overflow:hidden;background:'+(neg?'rgba(242,107,107,.05)':hasProp?'rgba(245,166,35,.04)':'var(--bg2)')+'">'
