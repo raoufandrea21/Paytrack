@@ -13,6 +13,7 @@ import {
   normaliseRules,
 } from '../lib/reminderrules.js';
 import { dueReminders } from '../lib/reminders.js';
+import { buildCalendar, calendarFilename } from '../lib/calendar.js';
 import Screen from '../components/Screen.jsx';
 import { Banner, Button, Card, Spinner } from '../components/ui.jsx';
 
@@ -29,6 +30,7 @@ export default function Reminders() {
   const [showAll, setShowAll] = useState(false);
 
   const documents = useLiveQuery(() => db.documents.toArray(), [], null);
+  const members = useLiveQuery(() => db.members.toArray(), [], null);
 
   useEffect(() => {
     getSetting(RULES_SETTING, null).then((raw) => setRules(normaliseRules(raw)));
@@ -148,6 +150,8 @@ export default function Reminders() {
           ) : null}
         </div>
 
+        <CalendarExport documents={documents} members={members} rules={rules} />
+
         <p className="px-1 text-[13px] text-slate-500 dark:text-slate-400">
           Birth, marriage and education certificates never expire, so they are never
           reminded about. Reminders arrive on whichever devices you have allowed
@@ -202,6 +206,57 @@ function NextUp({ rules }) {
           ) : null}
         </ul>
       )}
+    </Card>
+  );
+}
+
+/**
+ * The rules, written out as calendar alarms.
+ *
+ * A web app can only remind you when it is opened, or in the background where
+ * the browser allows it — which on an iPhone is nowhere. A calendar has no such
+ * problem: it is the one thing on a phone certain to go off on a date eight
+ * months from now. So the same rules go out as a file the phone's own calendar
+ * takes over, and after that nothing depends on anybody opening DocTrack.
+ */
+function CalendarExport({ documents, members, rules }) {
+  const [done, setDone] = useState(null);
+
+  return (
+    <Card className="p-4">
+      <h2 className="text-[15px] font-bold">Put these in your phone's calendar</h2>
+      <p className="mt-1 text-[13px] text-slate-600 dark:text-slate-400">
+        Saves every expiry date as a calendar entry with these same reminders on it. The
+        calendar will then warn you whether or not you open DocTrack — worth doing on a
+        phone, where a web app is not allowed to wake itself up. Do it again after adding
+        documents; the entries update rather than doubling.
+      </p>
+
+      {done ? (
+        <Banner tone="ok" className="mt-3">
+          {done} {done === 1 ? 'date' : 'dates'} saved. Open the downloaded file and your
+          phone will offer to add them.
+        </Banner>
+      ) : null}
+
+      <Button
+        variant="secondary"
+        className="mt-3 w-full"
+        disabled={!documents || !members}
+        onClick={() => {
+          const { ics, events } = buildCalendar(documents ?? [], members ?? [], rules);
+          const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' });
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = calendarFilename();
+          link.click();
+          URL.revokeObjectURL(url);
+          setDone(events);
+        }}
+      >
+        Download calendar file
+      </Button>
     </Card>
   );
 }
