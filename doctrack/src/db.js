@@ -119,6 +119,63 @@ export function forgetImports() {
   return db.imports.clear();
 }
 
+/**
+ * Start again: every person, every document, everything read out of OneDrive.
+ *
+ * A tombstone is written for each record first, so the deletion is a decision
+ * the other devices honour rather than a gap they helpfully fill back in on the
+ * next sync. Settings are kept — the Microsoft app ID, the chosen folder, the
+ * reminder rules — because starting the documents again is not the same as
+ * setting the app up from scratch.
+ */
+export async function clearEverything() {
+  const counts = { members: 0, documents: 0 };
+  await db.transaction(
+    'rw',
+    db.members, db.documents, db.reminders, db.tombstones, db.imports,
+    async () => {
+      const [members, documents] = await Promise.all([
+        db.members.toArray(),
+        db.documents.toArray(),
+      ]);
+      counts.members = members.length;
+      counts.documents = documents.length;
+
+      const at = new Date().toISOString();
+      const graves = [
+        ...members.map((m) => ({ uid: m.uid, kind: 'member', deleted_at: at })),
+        ...documents.map((d) => ({ uid: d.uid, kind: 'document', deleted_at: at })),
+      ].filter((g) => g.uid);
+      await db.tombstones.bulkPut(graves);
+
+      await db.documents.clear();
+      await db.members.clear();
+      await db.reminders.clear();
+      // Forgotten too, so the next read of the OneDrive folder starts fresh
+      // rather than skipping everything as "already read".
+      await db.imports.clear();
+    },
+  );
+  return counts;
+}
+
+/** Deletes a set of documents in one go, tombstones and reminders included. */
+export async function deleteDocuments(ids) {
+  const wanted = [...new Set(ids)].filter((id) => Number.isFinite(id));
+  if (wanted.length === 0) return 0;
+
+  await db.transaction('rw', db.documents, db.reminders, db.tombstones, async () => {
+    const docs = await db.documents.bulkGet(wanted);
+    const at = new Date().toISOString();
+    await db.tombstones.bulkPut(
+      docs.filter((d) => d?.uid).map((d) => ({ uid: d.uid, kind: 'document', deleted_at: at })),
+    );
+    for (const id of wanted) await clearRemindersFor(id);
+    await db.documents.bulkDelete(wanted);
+  });
+  return wanted.length;
+}
+
 /** Records a deletion so the other device does not resurrect it. */
 export function recordTombstone(uid, kind) {
   if (!uid) return Promise.resolve();

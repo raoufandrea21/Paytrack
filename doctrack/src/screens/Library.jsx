@@ -1,11 +1,11 @@
 import { useMemo, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { db } from '../db.js';
+import { db, deleteDocuments } from '../db.js';
 import { DOCUMENT_TYPES, documentLabel, documentType } from '../lib/constants.js';
 import { byUrgency } from '../lib/dates.js';
 import Screen from '../components/Screen.jsx';
 import DocumentRow from '../components/DocumentRow.jsx';
-import { Card, EmptyState, Input, Spinner } from '../components/ui.jsx';
+import { Banner, Button, Card, EmptyState, Input, Spinner } from '../components/ui.jsx';
 
 /**
  * Every document in one place — the filing cabinet. The dashboard answers "what
@@ -16,6 +16,12 @@ export default function Library() {
   const [type, setType] = useState('all');
   const [person, setPerson] = useState('all');
   const [includeArchived, setIncludeArchived] = useState(false);
+  // Selecting is a mode rather than a permanent row of checkboxes: the common
+  // case is looking something up, and a tick box beside every document makes
+  // that job noisier for the sake of one that is done rarely.
+  const [picking, setPicking] = useState(false);
+  const [chosen, setChosen] = useState(() => new Set());
+  const [confirming, setConfirming] = useState(false);
 
   const documents = useLiveQuery(() => db.documents.toArray(), [], null);
   const members = useLiveQuery(() => db.members.orderBy('created_at').toArray(), [], null);
@@ -53,8 +59,66 @@ export default function Library() {
   return (
     <Screen
       title="All documents"
-      subtitle={rows === null ? 'Loading…' : `${rows.length} shown`}
+      subtitle={
+        rows === null
+          ? 'Loading…'
+          : picking
+            ? `${chosen.size} selected`
+            : `${rows.length} shown`
+      }
       back="/"
+      actions={
+        rows?.length ? (
+          <button
+            type="button"
+            onClick={() => {
+              setPicking((on) => !on);
+              setChosen(new Set());
+              setConfirming(false);
+            }}
+            className="min-h-11 rounded-lg px-2 text-[14px] font-semibold text-indigo-600 dark:text-indigo-400"
+          >
+            {picking ? 'Done' : 'Select'}
+          </button>
+        ) : null
+      }
+      footer={
+        picking && chosen.size > 0 ? (
+          <div className="flex flex-col gap-2">
+            {confirming ? (
+              <Banner tone="warn">
+                Deleting {chosen.size} document{chosen.size === 1 ? '' : 's'} for good, on this
+                device and — at the next sync — on your others.
+              </Banner>
+            ) : null}
+            <div className="flex gap-2">
+              <Button
+                variant="secondary"
+                className="flex-1"
+                onClick={() => { setChosen(new Set()); setConfirming(false); }}
+              >
+                Clear
+              </Button>
+              <Button
+                variant="danger"
+                className="flex-1"
+                onClick={async () => {
+                  if (!confirming) {
+                    setConfirming(true);
+                    return;
+                  }
+                  await deleteDocuments([...chosen]);
+                  setChosen(new Set());
+                  setConfirming(false);
+                  setPicking(false);
+                }}
+              >
+                {confirming ? 'Yes, delete them' : `Delete ${chosen.size}`}
+              </Button>
+            </div>
+          </div>
+        ) : null
+      }
     >
       <div className="space-y-3 pb-4">
         <Input
@@ -98,6 +162,20 @@ export default function Library() {
           Include archived and renewed
         </label>
 
+        {picking && rows?.length ? (
+          <button
+            type="button"
+            onClick={() => setChosen(
+              chosen.size === rows.length ? new Set() : new Set(rows.map((r) => r.doc.id)),
+            )}
+            className="min-h-11 w-full rounded-xl bg-white px-3 text-left text-[14px] font-semibold text-indigo-600 ring-1 ring-slate-300 dark:bg-slate-800 dark:text-indigo-400 dark:ring-slate-700"
+          >
+            {chosen.size === rows.length
+              ? 'Select none'
+              : `Select all ${rows.length} shown`}
+          </button>
+        ) : null}
+
         {rows === null ? (
           <div className="flex justify-center py-16 text-slate-400"><Spinner className="size-7" /></div>
         ) : rows.length === 0 ? (
@@ -111,7 +189,29 @@ export default function Library() {
         ) : (
           <Card className="divide-y divide-slate-100 overflow-hidden dark:divide-slate-800">
             {rows.map(({ doc, holder }) => (
-              <DocumentRow key={doc.id} document={doc} showHolder={holder} />
+              picking ? (
+                <label
+                  key={doc.id}
+                  className="flex cursor-pointer items-center gap-2 pl-3.5 hover:bg-slate-50 dark:hover:bg-slate-800/60"
+                >
+                  <input
+                    type="checkbox"
+                    checked={chosen.has(doc.id)}
+                    onChange={() => setChosen((prev) => {
+                      const next = new Set(prev);
+                      if (next.has(doc.id)) next.delete(doc.id);
+                      else next.add(doc.id);
+                      return next;
+                    })}
+                    className="size-5 shrink-0 rounded"
+                  />
+                  <span className="pointer-events-none min-w-0 flex-1">
+                    <DocumentRow document={doc} showHolder={holder} />
+                  </span>
+                </label>
+              ) : (
+                <DocumentRow key={doc.id} document={doc} showHolder={holder} />
+              )
             ))}
           </Card>
         )}

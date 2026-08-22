@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { getSettings, setSetting } from '../db.js';
+import { clearEverything, getSettings, setSetting } from '../db.js';
 import { backupFilename, buildBackup, restoreBackup } from '../lib/backup.js';
 import {
   DEFAULT_EXTRACTION_MODE,
@@ -52,6 +52,8 @@ export default function Settings() {
   const [problem, setProblem] = useState(null);
   const importRef = useRef(null);
   const [pending, setPending] = useState(null);
+  const [wiping, setWiping] = useState(false);
+  const [wiped, setWiped] = useState(null);
 
   useEffect(() => {
     getSettings().then((loaded) => {
@@ -520,6 +522,51 @@ export default function Settings() {
             Importing adds to what is already here rather than replacing it, and skips anything it
             recognises — so running it twice is harmless.
           </p>
+        </Section>
+
+        <Section title="Start again">
+          <p className="text-[14px] text-slate-600 dark:text-slate-400">
+            Removes every person and every document, and forgets which OneDrive files have been
+            read — so the next read of your folder starts from nothing. Your settings stay:
+            the Microsoft app ID, the folder, the reminder rules.
+          </p>
+          <Banner tone="warn" className="mt-3">
+            This is not only this device. The deletion travels with the next sync, so your other
+            devices clear too. <span className="font-semibold">Export a backup first</span> if
+            there is any chance you will want it back.
+          </Banner>
+
+          {wiped ? (
+            <Banner tone="info" className="mt-3">
+              Cleared {wiped.documents} document{wiped.documents === 1 ? '' : 's'} and{' '}
+              {wiped.members} {wiped.members === 1 ? 'person' : 'people'}. Read your OneDrive
+              folder again whenever you are ready.
+            </Banner>
+          ) : null}
+
+          <Button
+            variant={wiping ? 'danger' : 'ghost'}
+            className="mt-3 w-full"
+            onClick={async () => {
+              if (!wiping) {
+                setWiping(true);
+                return;
+              }
+              setWiped(await clearEverything());
+              setWiping(false);
+            }}
+          >
+            {wiping ? 'Tap again to clear everything' : 'Clear everything and start again'}
+          </Button>
+          {wiping ? (
+            <button
+              type="button"
+              className="mt-2 min-h-11 w-full text-[13px] font-semibold text-slate-500 dark:text-slate-400"
+              onClick={() => setWiping(false)}
+            >
+              Cancel
+            </button>
+          ) : null}
         </Section>
 
         <Section title="This app">
