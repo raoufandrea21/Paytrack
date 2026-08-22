@@ -437,8 +437,17 @@ across Front and Back files are all read from the filing that already exists.
 Every file read is recorded by its drive item id and its `cTag`, which Microsoft
 changes when a file's contents change. A second run therefore reads nothing
 again, picks up anything new on its own, and re-reads a document that has been
-re-scanned. That is what makes "check my folder for new documents" a one-tap
-thing rather than a repeat of the first import.
+re-scanned.
+
+That is what makes the folder worth watching rather than importing. Once a
+folder has been read, DocTrack looks at it again every time the app opens, and
+anything added since is read and filed without anybody pressing anything —
+which is the difference between this app being useful and being another chore.
+It is throttled to once every half hour, so opening the app four times in an
+hour does not mean four walks of the drive; it is skipped entirely when nothing
+is set up; it never reports a failure, because a folder that could not be
+reached is no reason to interrupt somebody looking up a passport; and there is
+a checkbox to turn it off.
 
 ### When OneDrive refuses
 

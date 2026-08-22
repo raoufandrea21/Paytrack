@@ -15,6 +15,7 @@ import { DATABASE_STATE, getSettings, openDatabase } from './db.js';
 import DatabaseError from './components/DatabaseError.jsx';
 import { currentAccount } from './lib/onedrive.js';
 import { runSync } from './lib/cloudsync.js';
+import { readWatchedFolder } from './lib/driveimport.js';
 import { onUpdateReady } from './lib/version.js';
 
 /** Don't hammer OneDrive when the app is being opened and closed repeatedly. */
@@ -38,6 +39,10 @@ async function syncQuietly() {
     syncInFlight = true;
     lastSyncAt = Date.now();
     await runSync(settings);
+    // Then the folder the user actually keeps their documents in. Separate from
+    // the sync above because it is a different permission and a different kind
+    // of failure — one being unavailable must not stop the other.
+    await readWatchedFolder(settings);
   } catch (error) {
     console.warn('[doctrack] background sync skipped', error);
   } finally {

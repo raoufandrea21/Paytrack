@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { getSettings, getSetting, setSetting } from '../db.js';
 import { extractionAvailable } from '../lib/extract.js';
 import { allowDriveReading, driveReadingAllowed, signIn } from '../lib/onedrive.js';
-import { drive, importFolder } from '../lib/driveimport.js';
+import { WATCH_SETTING, drive, importFolder } from '../lib/driveimport.js';
 import Screen from '../components/Screen.jsx';
 import { Banner, Button, Card, EmptyState, Spinner } from '../components/ui.jsx';
 import { ImportQueue, ImportSummary } from '../components/ImportQueue.jsx';
@@ -28,6 +28,7 @@ export default function DriveImport() {
   const [folders, setFolders] = useState(null);
   const [error, setError] = useState(null);
   const [needsConsent, setNeedsConsent] = useState(false);
+  const [watching, setWatching] = useState(true);
   const [items, setItems] = useState([]);
   const [running, setRunning] = useState(false);
   const [progress, setProgress] = useState(null);
@@ -42,6 +43,7 @@ export default function DriveImport() {
     getSettings().then(async (loaded) => {
       setSettings(loaded);
       setLast(await getSetting('onedrive_import_folder'));
+      setWatching(loaded[WATCH_SETTING] !== 0);
       setAccount(loaded.onedrive_client_id ? await drive.account(loaded.onedrive_client_id) : null);
     });
     return () => { stop.current = true; };
@@ -227,6 +229,27 @@ export default function DriveImport() {
                 {summary.counts.skipped} had been read before and were left alone.
               </p>
             ) : null}
+            <label className="flex items-start gap-2.5 rounded-xl bg-white px-3 py-3 ring-1 ring-slate-300 dark:bg-slate-800 dark:ring-slate-700">
+              <input
+                type="checkbox"
+                checked={watching}
+                onChange={async (e) => {
+                  setWatching(e.target.checked);
+                  await setSetting(WATCH_SETTING, e.target.checked ? 1 : 0);
+                }}
+                className="mt-0.5 size-4 shrink-0 rounded"
+              />
+              <span className="min-w-0">
+                <span className="block text-[14px] font-semibold">
+                  Keep checking this folder for me
+                </span>
+                <span className="block text-[13px] text-slate-500 dark:text-slate-400">
+                  Every time you open DocTrack it looks again, and anything you have added since is
+                  read and filed on its own. Nothing already read is read twice.
+                </span>
+              </span>
+            </label>
+
             {summary.truncated ? (
               <Banner tone="warn">
                 That folder holds more documents than one run reads. Run it again to carry on —

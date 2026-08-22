@@ -12,7 +12,7 @@
  * mode — the state a full or frozen account ends up in.
  */
 import * as graph from './onedrive.js';
-import { alreadyImported, recordImport } from '../db.js';
+import { alreadyImported, getSetting, recordImport } from '../db.js';
 import { pairSides, readPath } from './filename.js';
 import { prepareFile } from './files.js';
 import { extractDocument, extractionAvailable, ExtractionError } from './extract.js';
@@ -226,4 +226,57 @@ function guessType(name) {
   if (extension === 'png') return 'image/png';
   if (extension === 'webp') return 'image/webp';
   return 'image/jpeg';
+}
+
+/**
+ * Checking the chosen folder on its own, without anybody asking.
+ *
+ * "Do I have to press something every time I add a document?" is the question
+ * that decides whether this app is useful or another chore, and the answer has
+ * to be no. So the folder someone picked is looked at again whenever the app
+ * opens, and anything new in it is read and filed the same way the first run
+ * did it.
+ *
+ * Everything about it is deliberately quiet. It is throttled, so opening the
+ * app four times in an hour does not mean four walks of the drive; it is
+ * skipped entirely when there is nothing set up or the user has turned it off;
+ * and it never reports a failure, because a folder that could not be reached is
+ * not a reason to interrupt somebody looking up a passport.
+ */
+const WATCH_INTERVAL = 30 * 60 * 1000;
+export const WATCH_SETTING = 'onedrive_watch_folder';
+let lastWatchAt = 0;
+let watchInFlight = false;
+
+/** The folder being watched, or null when there is nothing to watch. */
+export async function watchedFolder(settings) {
+  if (!settings?.onedrive_client_id) return null;
+  if (settings[WATCH_SETTING] === 0) return null;
+  if (!graph.driveReadingAllowed()) return null;
+  if (!extractionAvailable(settings)) return null;
+  const folder = await getSetting('onedrive_import_folder');
+  return folder?.id ? folder : null;
+}
+
+export async function readWatchedFolder(settings, { api = drive, force = false } = {}) {
+  if (watchInFlight) return null;
+  if (!force && Date.now() - lastWatchAt < WATCH_INTERVAL) return null;
+
+  const folder = await watchedFolder(settings);
+  if (!folder) return null;
+
+  try {
+    watchInFlight = true;
+    lastWatchAt = Date.now();
+    const result = await importFolder(settings.onedrive_client_id, folder, settings, { api });
+    if (result.counts.filed > 0) {
+      console.info(`[doctrack] filed ${result.counts.filed} new document(s) from ${folder.name}`);
+    }
+    return result;
+  } catch (error) {
+    console.warn('[doctrack] could not check the OneDrive folder', error);
+    return null;
+  } finally {
+    watchInFlight = false;
+  }
 }
