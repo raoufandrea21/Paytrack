@@ -33,7 +33,11 @@ let workerPromise = null;
 async function getWorker(onProgress) {
   if (!workerPromise) {
     workerPromise = (async () => {
-      const { createWorker } = await import('tesseract.js');
+      const { createWorker } = await import('tesseract.js').catch((error) => {
+        throw new Error('The app updated in the background. Reload the page and try again.', {
+          cause: error,
+        });
+      });
       // Served from our own origin — see scripts/vendor-ocr.mjs. Without these
       // three paths tesseract.js reaches for a CDN, which would put a third
       // party in front of every document and break offline reading.

@@ -16,7 +16,11 @@ let pdfjsPromise = null;
 async function getPdfjs() {
   if (!pdfjsPromise) {
     pdfjsPromise = (async () => {
-      const pdfjs = await import('pdfjs-dist');
+      const pdfjs = await import('pdfjs-dist').catch((error) => {
+        throw new Error('The app updated in the background. Reload the page and try again.', {
+          cause: error,
+        });
+      });
       // Vendored alongside the OCR engine rather than pulled from a CDN — same
       // reasoning: no third party in the path of a private document.
       pdfjs.GlobalWorkerOptions.workerSrc = `${import.meta.env?.BASE_URL ?? '/'}pdf.worker.min.mjs`;

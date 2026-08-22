@@ -55,7 +55,15 @@ async function getClient(clientId, authority = 'consumers') {
   const key = `${clientId}:${authority}`;
   if (clients.has(key)) return clients.get(key);
 
-  if (!msalPromise) msalPromise = import('@azure/msal-browser');
+  if (!msalPromise) {
+    msalPromise = import('@azure/msal-browser').catch((error) => {
+      msalPromise = null;
+      throw new OneDriveError(
+        'The app updated in the background. Reload the page and try again.',
+        { cause: error },
+      );
+    });
+  }
   const { PublicClientApplication } = await msalPromise;
 
   const app = new PublicClientApplication({
