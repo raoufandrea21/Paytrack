@@ -404,6 +404,25 @@ becomes "this app is registered for one kind of account only"; AADSTS50011 names
 the exact address to add in Azure. The raw code is kept underneath, because it
 is what a search engine wants.
 
+### When OneDrive refuses
+
+Graph refusals arrive as JSON with the real reason buried in an `innerError`,
+and the one that actually happens is misleading at the top level: a drive
+Microsoft has switched to read-only answers `accessDenied` /
+`serviceReadOnly` / "Database Is Read Only". Reads keep working, so it only ever
+surfaces at the moment of the first write.
+
+`describeGraphFailure` turns the handful that a person can act on into a
+sentence — read-only, out of space, expired session, throttling, an outage at
+Microsoft's end — and keeps the raw body underneath for searching. When the
+refusal mentions storage, Settings also asks Graph how full the drive is, so
+"read-only" becomes a number. That call is allowed to come back empty: the
+app-folder scope may not stretch to reading the drive itself.
+
+A failed sync never loses anything. Every document is in IndexedDB either way,
+and **Backup and transfer** still moves them between devices while OneDrive is
+unavailable — which the failure message says.
+
 ### Disconnecting
 
 **Disconnect** clears this device only — MSAL's cache, the tokens, the app's own

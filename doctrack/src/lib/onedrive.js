@@ -21,11 +21,82 @@ export const INBOX_FOLDER = 'Inbox';
 export const FILED_FOLDER = 'Filed';
 
 export class OneDriveError extends Error {
-  constructor(message, { status, cause } = {}) {
+  constructor(message, { status, cause, detail } = {}) {
     super(message);
     this.name = 'OneDriveError';
     this.status = status;
+    this.detail = detail;
     this.cause = cause;
+  }
+}
+
+/**
+ * What a Graph refusal means, in words.
+ *
+ * Left raw, these arrive as a wall of JSON with the actual reason buried in an
+ * innerError three levels down — which tells someone their sync is broken and
+ * nothing about what to do. The codes worth naming are the ones a person can
+ * act on; everything else keeps the status and the raw body underneath.
+ */
+export function describeGraphFailure(status, body) {
+  const text = String(body ?? '');
+  let code = '';
+  let inner = '';
+  let message = '';
+  try {
+    const parsed = JSON.parse(text);
+    code = parsed?.error?.code ?? '';
+    inner = parsed?.error?.innerError?.code ?? '';
+    message = parsed?.error?.message ?? '';
+  } catch {
+    /* not JSON; the patterns below still read the raw text */
+  }
+  const all = `${code} ${inner} ${message} ${text}`;
+
+  // The one that actually happens: Microsoft puts a personal OneDrive into
+  // read-only when it is full or the account is frozen. Reads keep working,
+  // which is why this only ever surfaces at the moment of writing.
+  if (/serviceReadOnly|read.?only/i.test(all)) {
+    return 'Your OneDrive is not accepting changes right now — Microsoft has it in read-only mode. '
+      + 'That usually means the storage is full or the account is frozen, so open onedrive.com and '
+      + 'check; if it looks fine, this can be temporary at Microsoft\'s end. Nothing is lost — every '
+      + 'document is still on this device.';
+  }
+  if (status === 507 || /quotaLimitReached|insufficientStorage|storage.?limit/i.test(all)) {
+    return 'Your OneDrive is out of space. Free some up at onedrive.com and sync again — '
+      + 'DocTrack itself needs only a few megabytes.';
+  }
+  if (status === 401 || /InvalidAuthenticationToken|unauthenticated/i.test(all)) {
+    return 'Microsoft needs you to sign in again. Use Disconnect, then Connect OneDrive.';
+  }
+  if (status === 403) {
+    return 'Microsoft refused the change. If you have just connected, the permission may not have '
+      + 'been granted — try Disconnect and connect again.';
+  }
+  if (status === 429 || /activityLimitReached|throttl/i.test(all)) {
+    return 'Microsoft is asking for a slower pace. Wait a minute and sync again.';
+  }
+  if (status >= 500) {
+    return 'OneDrive is having trouble at Microsoft\'s end. Nothing is wrong here — try again shortly.';
+  }
+  return `OneDrive refused the request (${status}).`;
+}
+
+/**
+ * How full the drive is, when Microsoft will say.
+ *
+ * Only asked for after a write has already failed, to turn "read-only" into a
+ * number the user can act on. The app-folder scope may not stretch to reading
+ * the drive itself, so this is allowed to come back empty.
+ */
+export async function driveQuota(clientId) {
+  try {
+    const drive = await graph(clientId, '/me/drive');
+    const quota = drive?.quota;
+    if (!quota || typeof quota.total !== 'number') return null;
+    return { state: quota.state ?? '', used: quota.used ?? 0, total: quota.total };
+  } catch {
+    return null;
   }
 }
 
@@ -384,11 +455,11 @@ async function graph(clientId, path, { method = 'GET', body, headers = {}, raw =
 
   if (response.status === 404) return null;
   if (!response.ok) {
-    const detail = await response.text().catch(() => '');
-    throw new OneDriveError(
-      `OneDrive returned ${response.status}${detail ? `: ${detail.slice(0, 200)}` : ''}`,
-      { status: response.status },
-    );
+    const body = await response.text().catch(() => '');
+    throw new OneDriveError(describeGraphFailure(response.status, body), {
+      status: response.status,
+      detail: body.slice(0, 300),
+    });
   }
   if (raw) return response;
   if (response.status === 204) return null;

@@ -19,6 +19,7 @@ import {
   accountKind,
   clearSignInProblem,
   currentAccount,
+  driveQuota,
   resetConnection,
   setAccountKind,
   signIn,
@@ -42,6 +43,7 @@ export default function Settings() {
   const [clientId, setClientId] = useState('');
   const [account, setAccount] = useState(null);
   const [sync, setSync] = useState(null);
+  const [syncFailure, setSyncFailure] = useState(null);
   const [syncing, setSyncing] = useState(false);
   const [busy, setBusy] = useState(false);
   const [appUpdate, setAppUpdate] = useState(null);
@@ -312,6 +314,7 @@ export default function Settings() {
                   disabled={syncing}
                   onClick={async () => {
                     setSyncing(true);
+                    setSyncFailure(null);
                     setSync('Starting…');
                     try {
                       const result = await runSync(
@@ -320,7 +323,17 @@ export default function Settings() {
                       );
                       setSync(describeSync(result));
                     } catch (error) {
-                      setSync(`Sync failed: ${error?.message ?? 'unknown error'}`);
+                      setSync(null);
+                      // A refusal that names storage is worth a number: "read
+                      // only" means nothing until you see the drive is full.
+                      const quota = /read-only|out of space/i.test(error?.message ?? '')
+                        ? await driveQuota(clientId.trim())
+                        : null;
+                      setSyncFailure({
+                        message: error?.message ?? 'The sync did not finish.',
+                        detail: error?.detail ?? null,
+                        quota,
+                      });
                     } finally {
                       setSyncing(false);
                     }
@@ -361,6 +374,27 @@ export default function Settings() {
             )}
             {sync ? (
               <p className="text-[13px] text-slate-600 dark:text-slate-300">{sync}</p>
+            ) : null}
+
+            {syncFailure ? (
+              <Banner tone="warn" title="Sync could not finish">
+                <p>{syncFailure.message}</p>
+                {syncFailure.quota ? (
+                  <p className="mt-1 font-semibold">
+                    OneDrive is using {formatBytes(syncFailure.quota.used)} of{' '}
+                    {formatBytes(syncFailure.quota.total)}
+                    {syncFailure.quota.state === 'exceeded' ? ' — over the limit.' : '.'}
+                  </p>
+                ) : null}
+                <p className="mt-1">
+                  Meanwhile, Backup and transfer below still moves everything between your devices.
+                </p>
+                {syncFailure.detail ? (
+                  <p className="mt-1 font-mono text-[12px] break-all opacity-70">
+                    {syncFailure.detail}
+                  </p>
+                ) : null}
+              </Banner>
             ) : null}
 
             {/* Sign-in can wedge on a stuck "interaction in progress" flag left
@@ -510,6 +544,13 @@ export default function Settings() {
       </div>
     </Screen>
   );
+}
+
+/** Storage sizes as a person reads them, not as a computer stores them. */
+function formatBytes(bytes) {
+  const gb = bytes / 1e9;
+  if (gb >= 1) return `${gb.toFixed(gb < 10 ? 1 : 0)} GB`;
+  return `${Math.max(1, Math.round(bytes / 1e6))} MB`;
 }
 
 const UPDATE_WORDING = {
