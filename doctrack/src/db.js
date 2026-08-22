@@ -345,9 +345,17 @@ const BLANK_DOCUMENT = {
   review_needed: 0,
 };
 
+/**
+ * A document with no expiry date that is not marked as never expiring cannot
+ * remind anyone of anything, which is the one thing this app is for. However it
+ * got that way — an unreadable scan, or a date left blank by hand — it is
+ * unfinished, and belongs in "Needs checking" until someone says otherwise.
+ */
+const cannotRemind = (row) => Boolean(!row.no_expiry && !row.expiry_date && row.status !== 'archived');
+
 export async function addDocument(doc) {
   const now = new Date().toISOString();
-  return db.documents.add({
+  const row = {
     ...BLANK_DOCUMENT,
     uid: newUid(),
     ...doc,
@@ -357,12 +365,20 @@ export async function addDocument(doc) {
     status: doc.status ?? 'active',
     created_at: now,
     updated_at: now,
+  };
+  return db.documents.add({
+    ...row,
+    review_needed: cannotRemind(row) ? 1 : (row.review_needed ?? 0),
   });
 }
 
 export async function updateDocument(id, changes) {
   const before = await db.documents.get(id);
-  await db.documents.update(id, { ...changes, updated_at: new Date().toISOString() });
+  const after = { ...before, ...changes };
+  // Only ever raised here, never lowered: clearing the flag stays the caller's
+  // decision, but saving a document that still cannot remind anyone re-raises it.
+  const patch = cannotRemind(after) ? { ...changes, review_needed: 1 } : changes;
+  await db.documents.update(id, { ...patch, updated_at: new Date().toISOString() });
   // A moved expiry date invalidates every reminder already sent for this
   // document. Editing anything else must not re-fire notifications the user
   // has already seen, so compare rather than assuming.
@@ -406,7 +422,7 @@ export function renewDocument(oldId, replacement) {
     const previous = await db.documents.get(oldId);
     if (!previous) throw new Error(`Document ${oldId} no longer exists.`);
     const now = new Date().toISOString();
-    const newId = await db.documents.add({
+    const row = {
       ...BLANK_DOCUMENT,
       uid: newUid(),
       member_id: previous.member_id,
@@ -416,6 +432,10 @@ export function renewDocument(oldId, replacement) {
       status: 'active',
       created_at: now,
       updated_at: now,
+    };
+    const newId = await db.documents.add({
+      ...row,
+      review_needed: cannotRemind(row) ? 1 : (row.review_needed ?? 0),
     });
     await db.documents.update(oldId, { status: 'archived', updated_at: now });
     await clearRemindersFor(oldId);

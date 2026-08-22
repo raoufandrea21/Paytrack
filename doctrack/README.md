@@ -412,7 +412,27 @@ alternative is per-field merging and a conflict UI, for a case that arises when
 two people edit one passport record in the same afternoon.
 
 Photos travel separately, one file per document, and are fetched only for
-records that lack them locally.
+records that lack them. The filename carries the byte count, which is what
+makes re-photographing a document work: a clearer scan is a different file, and
+the record says which one is current — so there is never a question of whose
+copy is newer, and no device can put its old picture back on top.
+
+Whether a photo exists is a fact about the shared folder, not about the device
+that happened to win the merge. A device that has pulled a record but not yet
+its photo would otherwise report that there is no photo, and the file would sit
+in OneDrive with nothing left to ask for it.
+
+One photo that will not transfer costs that photo and nothing else. Each side is
+attempted on its own and counted if it fails, so a patchy connection cannot stop
+the photos behind it or the Inbox behind those; the records are already safe, and
+the next run picks up what was dropped.
+
+Signing in needs a Microsoft account, but everything after it — the merge, the
+ordering, moving files out of the Inbox — is ordinary logic, and that is the part
+likely to be wrong. `runSync` takes an injectable `api`, so the whole run is
+exercised against a stand-in for OneDrive: two devices taking turns, photos both
+ways, an edit and a deletion crossing, a dropped connection, and a file dropped
+in the Inbox being read, filed and moved to `Filed`.
 
 ## Backup and moving between devices
 
@@ -432,11 +452,17 @@ data wipes everything, and on some platforms uninstalling the app does too.
 
 ## Where documents live
 
-- **Dashboard** — what needs doing. Grouped by person, sorted by urgency.
+- **Dashboard** — what needs doing. The next sixty days across the whole
+  household come first, hardest first and named by person; below that, a card
+  per person sorted by urgency. Long lists fold to their most urgent few, so
+  eight people with sixty documents between them still fit on a phone.
 - **All documents** — the filing cabinet. Every record, searchable by name,
   number or type, filterable by person and type, with archived ones toggleable.
-- **Needs checking** — only what filed itself with a doubt. Empty when scans
-  are clean.
+- **Needs checking** — anything unfinished: a reading the app was unsure of, or
+  a document with no expiry date that has not been marked as never expiring.
+  That second case cannot remind anyone of anything, which is the one thing the
+  app is for, so it belongs here however it got that way — an unreadable scan or
+  a date left blank by hand. Empty when everything is in order.
 - **Archive** — renewed and archived records, kept as history.
 
 ## How the extraction works
