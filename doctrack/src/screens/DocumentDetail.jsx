@@ -8,9 +8,9 @@ import {
   renewalHistory,
   unarchiveDocument,
 } from '../db.js';
-import { documentType } from '../lib/constants.js';
+import { documentLabel, documentType } from '../lib/constants.js';
 import { expiryPhrase, formatDate, urgencyFor } from '../lib/dates.js';
-import { previewUrl } from '../lib/image.js';
+import { previewUrl } from '../lib/files.js';
 import Screen from '../components/Screen.jsx';
 import { Banner, Button, Card, Spinner, UrgencyChip } from '../components/ui.jsx';
 
@@ -58,10 +58,11 @@ export default function DocumentDetail() {
   const type = documentType(doc.type);
   const urgency = urgencyFor(doc.expiry_date);
   const archived = doc.status === 'archived';
+  const isPdf = doc.file_kind === 'pdf' || doc.photo_type === 'application/pdf';
 
   return (
     <Screen
-      title={type.label}
+      title={documentLabel(doc)}
       subtitle={member?.name}
       back="/"
       actions={
@@ -110,6 +111,17 @@ export default function DocumentDetail() {
       }
     >
       <div className="space-y-3 pb-4">
+        {doc.review_needed ? (
+          <Banner tone="warn" title="Filed automatically — worth checking">
+            <p className="mb-3">
+              {doc.expiry_date
+                ? 'Some of this was hard to read.'
+                : 'No expiry date was read, so no reminders will fire for it.'}
+            </p>
+            <Button as="link" to={`/documents/${doc.id}/edit`}>Check the details</Button>
+          </Banner>
+        ) : null}
+
         {archived ? (
           <Banner tone="info" title="Archived">
             Kept for history. It no longer appears on the dashboard and no reminders fire for it.
@@ -147,13 +159,30 @@ export default function DocumentDetail() {
           </p>
         ) : null}
 
-        {photoUrl ? (
+        {photoUrl && isPdf ? (
           <Card className="overflow-hidden">
-            <img src={photoUrl} alt={`${type.label} scan`} className="w-full bg-slate-100 object-contain dark:bg-slate-800" />
+            {/* Phones mostly refuse to render a PDF inline, so offer the file
+                rather than a blank grey box pretending to be a viewer. */}
+            <object data={photoUrl} type="application/pdf" className="hidden h-96 w-full sm:block">
+              <p className="p-4 text-[14px]">Your browser cannot display PDFs inline.</p>
+            </object>
+            <a
+              href={photoUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="flex min-h-14 items-center gap-3 px-3.5 py-3 text-[15px] font-semibold text-indigo-600 dark:text-indigo-400"
+            >
+              <span className="text-xl" aria-hidden="true">📕</span>
+              Open the PDF
+            </a>
+          </Card>
+        ) : photoUrl ? (
+          <Card className="overflow-hidden">
+            <img src={photoUrl} alt={`${documentLabel(doc)} scan`} className="w-full bg-slate-100 object-contain dark:bg-slate-800" />
           </Card>
         ) : (
           <Card className="p-4 text-center text-[14px] text-slate-500 dark:text-slate-400">
-            No photo saved for this document.
+            No file saved for this document.
           </Card>
         )}
 

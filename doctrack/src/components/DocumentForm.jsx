@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { DOCUMENT_TYPES } from '../lib/constants.js';
+import { DOCUMENT_TYPES, previousLabels } from '../lib/constants.js';
 import { expiryPhrase, isValidISODate, urgencyFor } from '../lib/dates.js';
 import { Banner, Field, Input, Select, Textarea, UrgencyChip } from './ui.jsx';
 
@@ -18,6 +18,7 @@ export default function DocumentForm({
   extraction,
   errors = {},
   lockMember = false,
+  knownDocuments = [],
 }) {
   const [touched, setTouched] = useState(() => new Set());
 
@@ -39,6 +40,10 @@ export default function DocumentForm({
   const reviewHint = 'Check this reading';
 
   const expiryUrgency = isValidISODate(value.expiry_date) ? urgencyFor(value.expiry_date) : null;
+  // Labels used before come back as suggestions, so the second tenancy contract
+  // is one tap rather than typed out again.
+  const labelSuggestions = previousLabels(knownDocuments);
+  const isOther = value.type === 'other';
 
   return (
     <div className="space-y-4">
@@ -95,9 +100,39 @@ export default function DocumentForm({
           {DOCUMENT_TYPES.map((t) => (
             <option key={t.id} value={t.id}>
               {t.icon}  {t.label}
+              {t.id === 'other' ? ' — type your own' : ''}
             </option>
           ))}
         </Select>
+      </Field>
+
+      <Field
+        label={isOther ? 'What kind of document?' : 'Label (optional)'}
+        htmlFor="label"
+        error={errors.label}
+        hint={
+          isOther
+            ? 'Anything not in the list — a tenancy contract, a trade licence, a warranty.'
+            : 'Tells two of the same apart: a second passport, a second car. E.g. "Cypriot".'
+        }
+      >
+        <Input
+          id="label"
+          list="doctrack-labels"
+          value={value.label ?? ''}
+          onChange={(e) => set('label', e.target.value)}
+          placeholder={isOther ? 'Tenancy contract' : 'Cypriot'}
+          autoComplete="off"
+          dir="auto"
+          tone={errors.label ? 'error' : undefined}
+        />
+        {labelSuggestions.length > 0 ? (
+          <datalist id="doctrack-labels">
+            {labelSuggestions.map((label) => (
+              <option key={label} value={label} />
+            ))}
+          </datalist>
+        ) : null}
       </Field>
 
       <Field
@@ -181,6 +216,9 @@ export function validateDocument(value, { requireMember = true } = {}) {
   const errors = {};
   if (requireMember && !value.member_id) errors.member_id = 'Pick who this belongs to.';
   if (!value.type) errors.type = 'Pick a document type.';
+  if (value.type === 'other' && !String(value.label ?? '').trim()) {
+    errors.label = 'Say what kind of document this is.';
+  }
   if (value.expiry_date && !isValidISODate(value.expiry_date)) {
     errors.expiry_date = 'That is not a valid date.';
   }

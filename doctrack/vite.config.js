@@ -65,6 +65,11 @@ export default defineConfig(({ mode }) => {
         injectRegister: null, // registered by hand in src/main.jsx
         injectManifest: {
           globPatterns: ['**/*.{js,css,html,svg,png,ico,webmanifest}'],
+          // The OCR engine is ~15 MB and only some users ever trigger it, so it
+          // is fetched on first read and cached by the browser rather than
+          // forced onto every install as part of the app shell.
+          globIgnores: ['**/tesseract/**'],
+          maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
           // Classic, not ES module: module service workers still are not
           // universal (Firefox in particular), and nothing here needs to be a
           // module once bundled.

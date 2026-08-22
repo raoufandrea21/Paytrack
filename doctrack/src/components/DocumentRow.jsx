@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { documentType } from '../lib/constants.js';
+import { documentLabel, documentType } from '../lib/constants.js';
 import { expiryPhrase, formatDate, shortRemaining, urgencyFor } from '../lib/dates.js';
 import { UrgencyChip } from './ui.jsx';
 
@@ -16,7 +16,7 @@ export default function DocumentRow({ document: doc, showHolder }) {
       <span className={`h-9 w-1 shrink-0 rounded-full ${urgency.bar}`} aria-hidden="true" />
       <span className="text-xl" aria-hidden="true">{type.icon}</span>
       <span className="min-w-0 flex-1">
-        <span className="block truncate text-[15px] font-semibold">{type.label}</span>
+        <span className="block truncate text-[15px] font-semibold">{documentLabel(doc)}</span>
         <span className="block truncate text-[13px] text-slate-500 dark:text-slate-400">
           {showHolder ? `${showHolder} · ` : ''}
           {doc.expiry_date ? formatDate(doc.expiry_date) : 'No expiry date'}

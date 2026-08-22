@@ -1,6 +1,10 @@
 import { useEffect, useState } from 'react';
 import { getSettings, setSetting } from '../db.js';
-import { EXTRACTION_MODES, REMINDER_THRESHOLDS } from '../lib/constants.js';
+import {
+  DEFAULT_EXTRACTION_MODE,
+  EXTRACTION_MODES,
+  REMINDER_THRESHOLDS,
+} from '../lib/constants.js';
 import { EXTRACTION_MODEL } from '../../shared/extraction-spec.js';
 import {
   checkRemindersNow,
@@ -31,7 +35,7 @@ export default function Settings() {
     dueReminders().then((due) => setPending(due.length));
   }, []);
 
-  const mode = settings?.extraction_mode ?? EXTRACTION_MODES.PROXY;
+  const mode = settings?.extraction_mode ?? DEFAULT_EXTRACTION_MODE;
 
   async function update(key, value) {
     await setSetting(key, value);
@@ -122,23 +126,46 @@ export default function Settings() {
           ) : null}
         </Section>
 
-        <Section title="Auto-fill from photos">
-          <p className="mb-3 text-[14px] text-slate-600 dark:text-slate-400">
-            Photos are sent to Anthropic's API ({EXTRACTION_MODEL}) to read the fields. Everything
-            else — the photos themselves, the records, the history — never leaves this device.
-          </p>
-
-          <Field label="How to reach the API" htmlFor="mode">
+        <Section title="Reading documents">
+          <Field label="How documents are read" htmlFor="mode">
             <Select
               id="mode"
               value={mode}
               onChange={(e) => update('extraction_mode', e.target.value)}
             >
-              <option value={EXTRACTION_MODES.PROXY}>Through a server endpoint (recommended)</option>
-              <option value={EXTRACTION_MODES.DIRECT}>Straight from this device</option>
+              <option value={EXTRACTION_MODES.LOCAL}>On this device — free</option>
+              <option value={EXTRACTION_MODES.PROXY}>Claude, through a server endpoint</option>
+              <option value={EXTRACTION_MODES.DIRECT}>Claude, straight from this device</option>
               <option value={EXTRACTION_MODES.OFF}>Off — type everything myself</option>
             </Select>
           </Field>
+
+          {mode === EXTRACTION_MODES.LOCAL ? (
+            <div className="mt-3 space-y-3">
+              <p className="text-[14px] text-slate-600 dark:text-slate-400">
+                Text recognition runs inside this browser. No account, no API key, nothing to pay,
+                and the photo never leaves the device — not even to be read.
+              </p>
+              <Banner tone="info">
+                The first document takes about a minute while the reader downloads itself (~5 MB).
+                After that it is quick, and it works offline.
+              </Banner>
+              <p className="text-[13px] text-slate-500 dark:text-slate-400">
+                It reads printed English, which is all the UAE and Cypriot documents need — the
+                English side of a bilingual card carries every field. It is less accurate than
+                Claude, so expect more documents in "Needs checking". PDFs are not supported here;
+                photograph the page instead.
+              </p>
+            </div>
+          ) : null}
+
+          {mode !== EXTRACTION_MODES.LOCAL && mode !== EXTRACTION_MODES.OFF ? (
+            <p className="mt-3 text-[14px] text-slate-600 dark:text-slate-400">
+              Documents are sent to Anthropic's API ({EXTRACTION_MODEL}) to be read — more accurate
+              than the on-device reader, handles PDFs and Arabic, and costs roughly a penny per
+              document. Everything else still stays on this device.
+            </p>
+          ) : null}
 
           {mode === EXTRACTION_MODES.PROXY ? (
             <div className="mt-3">

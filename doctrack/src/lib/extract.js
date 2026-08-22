@@ -3,20 +3,31 @@ import {
   parseExtractionResponse,
   EXTRACTION_MODEL,
 } from '../../shared/extraction-spec.js';
-import { DOCUMENT_TYPE_IDS, EXTRACTION_MODES, LOW_CONFIDENCE } from './constants.js';
-import { blobToBase64 } from './image.js';
+import {
+  DEFAULT_EXTRACTION_MODE,
+  DOCUMENT_TYPE_IDS,
+  EXTRACTION_MODES,
+  LOW_CONFIDENCE,
+} from './constants.js';
+import { LocalReadError, readLocally } from './localread.js';
+import { blobToBase64, mediaTypeSupported } from './files.js';
 import { isValidISODate, normaliseDigits, parseLooseDate } from './dates.js';
 
 /**
- * Two ways to reach Claude, both optional — the app is fully usable with
- * extraction turned off and every field typed by hand.
+ * Four ways to read a document, and the app is fully usable with all of them
+ * switched off and every field typed by hand.
  *
- *   proxy  (default)  POST to a same-origin endpoint that holds the API key
+ *   local  (default)  OCR in the browser via WebAssembly. Free, no account, no
+ *                     key, works offline, and nothing ever leaves the device.
+ *                     Less accurate than Claude, so more documents land in the
+ *                     review queue — which is exactly what that queue is for.
+ *   proxy             POST to a same-origin endpoint that holds the API key
  *                     server-side. `npm run dev` provides this from .env.local;
- *                     api/extract.js provides it in a Vercel deployment.
+ *                     api/extract.js provides it in a deployment.
  *   direct            Call api.anthropic.com straight from the browser with a
  *                     key stored in IndexedDB. No server at all, but the key
  *                     lives on the device and is visible to page scripts.
+ *   off               Type everything yourself.
  */
 
 export class ExtractionError extends Error {
@@ -28,8 +39,12 @@ export class ExtractionError extends Error {
   }
 }
 
+export function extractionMode(settings) {
+  return settings?.extraction_mode ?? DEFAULT_EXTRACTION_MODE;
+}
+
 export function extractionAvailable(settings) {
-  const mode = settings?.extraction_mode ?? EXTRACTION_MODES.PROXY;
+  const mode = extractionMode(settings);
   if (mode === EXTRACTION_MODES.OFF) return false;
   if (mode === EXTRACTION_MODES.DIRECT) return Boolean(settings?.anthropic_api_key);
   return true;
@@ -39,14 +54,26 @@ export function extractionAvailable(settings) {
  * Reads a document photo and returns normalised, UI-ready fields.
  * Throws ExtractionError — the caller always has the manual form to fall back on.
  */
-export async function extractDocument(blob, settings = {}) {
-  const mode = settings.extraction_mode ?? EXTRACTION_MODES.PROXY;
+export async function extractDocument(blob, settings = {}, { onProgress } = {}) {
+  const mode = extractionMode(settings);
   if (mode === EXTRACTION_MODES.OFF) {
     throw new ExtractionError('Auto-fill is switched off in Settings.');
   }
 
-  const imageBase64 = await blobToBase64(blob);
+  if (mode === EXTRACTION_MODES.LOCAL) {
+    try {
+      return normaliseExtraction(await readLocally(blob, { onProgress }));
+    } catch (error) {
+      if (error instanceof LocalReadError) throw new ExtractionError(error.message);
+      throw error;
+    }
+  }
+
   const mediaType = blob.type || 'image/jpeg';
+  if (!mediaTypeSupported(mediaType)) {
+    throw new ExtractionError(`${mediaType} files cannot be read automatically.`);
+  }
+  const imageBase64 = await blobToBase64(blob);
 
   const raw =
     mode === EXTRACTION_MODES.DIRECT
@@ -152,6 +179,9 @@ export function normaliseExtraction(raw) {
       value: blankToNull(normaliseDigits(raw.id_number_guess ?? '')),
       confidence: clamp01(confidences.id_number_guess),
     },
+    // A hint, never a gate: a missing label costs nothing, so it is not in
+    // needsReview and never sends a document to the review queue.
+    label: { value: blankToNull(raw.label_guess ?? ''), confidence: 1 },
     issue_date: {
       value: issue.iso,
       confidence: issue.ambiguous ? Math.min(clamp01(confidences.issue_date), 0.5)
@@ -167,6 +197,7 @@ export function normaliseExtraction(raw) {
   // A field needs review if the model was unsure OR it came back empty. Both
   // mean the same thing to the person at the form: look at this one.
   const needsReview = Object.entries(fields)
+    .filter(([key]) => key !== 'label')
     .filter(([, f]) => f.value === null || f.confidence < LOW_CONFIDENCE)
     .map(([key]) => key);
 
