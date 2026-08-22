@@ -578,8 +578,11 @@ data wipes everything, and on some platforms uninstalling the app does too.
 
 - **Dashboard** — what needs doing. The next sixty days across the whole
   household come first, hardest first and named by person; below that, a card
-  per person sorted by urgency. Long lists fold to their most urgent few, so
-  eight people with sixty documents between them still fit on a phone.
+  per person sorted by urgency. Long lists fold to their most urgent few, and
+  tapping a person's name folds them away entirely — folded, their row still
+  says how many need renewing and how soon the worst one is, so the list stays
+  worth reading. "Collapse everyone" turns eight people into an index, and what
+  is folded is remembered per device.
 - **All documents** — the filing cabinet. Every record, searchable by name,
   number or type, filterable by person and type, with archived ones toggleable.
 - **Needs checking** — anything unfinished: a reading the app was unsure of, or

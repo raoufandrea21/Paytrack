@@ -2,10 +2,10 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db, documentsNeedingReview, duplicateMembers, mergeMembers } from '../db.js';
-import { byUrgency, urgencyForDocument } from '../lib/dates.js';
+import { byUrgency, shortRemainingFor, urgencyForDocument } from '../lib/dates.js';
 import Screen from '../components/Screen.jsx';
 import DocumentRow from '../components/DocumentRow.jsx';
-import { Button, Card, EmptyState, Spinner } from '../components/ui.jsx';
+import { Button, Card, EmptyState, Spinner, UrgencyChip } from '../components/ui.jsx';
 
 // How much of a long list is shown before it asks to be opened. Enough to see
 // what is urgent, few enough that eight people still fit on a phone screen.
@@ -26,6 +26,24 @@ export default function Dashboard() {
   );
   const reviewCount = useLiveQuery(async () => (await documentsNeedingReview()).length, [], 0);
   const duplicates = useLiveQuery(() => duplicateMembers(), [], []);
+
+  // Which people are folded away. A per-device preference about a screen, not
+  // anything about the documents, so it lives in the browser rather than the
+  // database — and it is remembered, because collapsing the same six people on
+  // every visit would be worse than not offering it.
+  const [folded, setFolded] = useState(readFolded);
+  const toggle = (id) => setFolded((prev) => {
+    const next = new Set(prev);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    writeFolded(next);
+    return next;
+  });
+  const setAllFolded = (ids) => {
+    const next = new Set(ids);
+    writeFolded(next);
+    setFolded(next);
+  };
 
   // Nothing should take this long. If it does, say so rather than spinning.
   const [stalled, setStalled] = useState(false);
@@ -196,8 +214,28 @@ export default function Dashboard() {
             </div>
           ))}
 
+          {grouped.length > 1 ? (
+            <div className="flex justify-end px-1">
+              <button
+                type="button"
+                onClick={() => setAllFolded(
+                  folded.size >= grouped.length ? [] : grouped.map((g) => g.member.id),
+                )}
+                className="min-h-11 text-[13px] font-semibold text-slate-500 underline-offset-4 hover:underline dark:text-slate-400"
+              >
+                {folded.size >= grouped.length ? 'Expand everyone' : 'Collapse everyone'}
+              </button>
+            </div>
+          ) : null}
+
           {grouped.map(({ member, docs }) => (
-            <MemberCard key={member.id} member={member} docs={docs} />
+            <MemberCard
+              key={member.id}
+              member={member}
+              docs={docs}
+              open={!folded.has(member.id)}
+              onToggle={() => toggle(member.id)}
+            />
           ))}
 
           <Link
@@ -259,69 +297,108 @@ function ComingUp({ entries }) {
   );
 }
 
-function MemberCard({ member, docs }) {
+function MemberCard({ member, docs, open, onToggle }) {
   // Someone with a dozen documents should not push everybody else off the
   // screen. The urgent few are always visible; the rest are one tap away.
-  const [expanded, setExpanded] = useState(false);
-  const shown = expanded || docs.length <= VISIBLE_PER_MEMBER + 1
+  const [showAll, setShowAll] = useState(false);
+  const shown = showAll || docs.length <= VISIBLE_PER_MEMBER + 1
     ? docs
     : docs.slice(0, VISIBLE_PER_MEMBER);
   const hidden = docs.length - shown.length;
 
+  // Folded away, the card still has to be worth reading: how many documents,
+  // and whether any of them need doing something about.
+  const worst = docs.length ? urgencyForDocument(docs[0]) : null;
+  const pressing = docs.filter((d) => urgencyForDocument(d).rank <= 1).length;
+
   return (
     <Card className="overflow-hidden">
-      <div className="flex items-center gap-3 px-3.5 pt-3 pb-2">
-        <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-[14px] font-bold text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300">
-          {initials(member.name)}
-        </span>
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-[15px] font-bold">{member.name}</p>
-          <p className="truncate text-[13px] text-slate-500 dark:text-slate-400">
-            {/* Auto-created people have no real relation yet, so "Other ·" is
-                noise until the user sets one. */}
-            {member.auto_created && member.relation === 'Other' ? '' : `${member.relation} · `}
-            {docs.length} document{docs.length === 1 ? '' : 's'}
-          </p>
-        </div>
-        <Link
-          to={`/members/${member.id}/edit`}
-          className="rounded-lg px-2 py-1.5 text-[13px] font-semibold text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
+      <div className="flex items-center gap-1 px-1.5 pt-1.5 pb-1">
+        <button
+          type="button"
+          onClick={onToggle}
+          aria-expanded={open}
+          aria-controls={`member-${member.id}-documents`}
+          className="flex min-w-0 flex-1 items-center gap-3 rounded-xl px-2 py-1.5 text-left hover:bg-slate-50 dark:hover:bg-slate-800/60"
         >
-          Edit
-        </Link>
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-[14px] font-bold text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300">
+            {initials(member.name)}
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block truncate text-[15px] font-bold">{member.name}</span>
+            <span className="block truncate text-[13px] text-slate-500 dark:text-slate-400">
+              {/* Auto-created people have no real relation yet, so "Other ·" is
+                  noise until the user sets one. */}
+              {member.auto_created && member.relation === 'Other' ? '' : `${member.relation} · `}
+              {/* Folded, the useful number is how many need doing something
+                  about, not how many exist — and it has to be short, because a
+                  name, a relation, a chip and a chevron already share this row.
+                  The chip beside it says how soon; this says how many. */}
+              {!open && pressing > 0
+                ? `${pressing} to renew`
+                : `${docs.length} document${docs.length === 1 ? '' : 's'}`}
+            </span>
+          </span>
+          {!open && worst && worst.rank <= 2 ? (
+            <UrgencyChip urgency={worst} className="shrink-0">
+              {shortRemainingFor(docs[0])}
+            </UrgencyChip>
+          ) : null}
+          <svg
+            viewBox="0 0 24 24"
+            className={`size-5 shrink-0 text-slate-400 transition-transform ${open ? 'rotate-180' : ''}`}
+            fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M6 9l6 6 6-6" />
+          </svg>
+        </button>
+        {open ? (
+          <Link
+            to={`/members/${member.id}/edit`}
+            className="shrink-0 rounded-lg px-2 py-1.5 text-[13px] font-semibold text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
+          >
+            Edit
+          </Link>
+        ) : null}
       </div>
 
-      <div className="divide-y divide-slate-100 border-t border-slate-100 dark:divide-slate-800 dark:border-slate-800">
-        {docs.length === 0 ? (
-          <Link
-            to={`/documents/new?member=${member.id}`}
-            className="block px-3.5 py-4 text-[14px] font-medium text-indigo-600 dark:text-indigo-400"
-          >
-            + Add a document for {member.name.split(' ')[0]}
-          </Link>
-        ) : (
-          <>
-            {shown.map((doc) => (
-              <DocumentRow key={doc.id} document={doc} />
-            ))}
-            {hidden > 0 ? (
-              <button
-                type="button"
-                onClick={() => setExpanded(true)}
-                className="block w-full px-3.5 py-3 text-left text-[14px] font-medium text-slate-500 dark:text-slate-400"
-              >
-                Show {hidden} more document{hidden === 1 ? '' : 's'}
-              </button>
-            ) : null}
+      {open ? (
+        <div
+          id={`member-${member.id}-documents`}
+          className="divide-y divide-slate-100 border-t border-slate-100 dark:divide-slate-800 dark:border-slate-800"
+        >
+          {docs.length === 0 ? (
             <Link
               to={`/documents/new?member=${member.id}`}
-              className="block px-3.5 py-3 text-[14px] font-medium text-indigo-600 dark:text-indigo-400"
+              className="block px-3.5 py-4 text-[14px] font-medium text-indigo-600 dark:text-indigo-400"
             >
-              + Add document
+              + Add a document for {member.name.split(' ')[0]}
             </Link>
-          </>
-        )}
-      </div>
+          ) : (
+            <>
+              {shown.map((doc) => (
+                <DocumentRow key={doc.id} document={doc} />
+              ))}
+              {hidden > 0 ? (
+                <button
+                  type="button"
+                  onClick={() => setShowAll(true)}
+                  className="block w-full px-3.5 py-3 text-left text-[14px] font-medium text-slate-500 dark:text-slate-400"
+                >
+                  Show {hidden} more document{hidden === 1 ? '' : 's'}
+                </button>
+              ) : null}
+              <Link
+                to={`/documents/new?member=${member.id}`}
+                className="block px-3.5 py-3 text-[14px] font-medium text-indigo-600 dark:text-indigo-400"
+              >
+                + Add document
+              </Link>
+            </>
+          )}
+        </div>
+      ) : null}
     </Card>
   );
 }
@@ -336,6 +413,25 @@ function shortNameFor(member, members) {
   const mine = first(member);
   const shared = members.filter((m) => first(m).toLowerCase() === mine.toLowerCase()).length > 1;
   return shared ? member.name : mine;
+}
+
+const FOLDED_KEY = 'doctrack.foldedMembers';
+
+function readFolded() {
+  try {
+    const saved = JSON.parse(window.localStorage.getItem(FOLDED_KEY) ?? '[]');
+    return new Set(Array.isArray(saved) ? saved : []);
+  } catch {
+    return new Set();
+  }
+}
+
+function writeFolded(ids) {
+  try {
+    window.localStorage.setItem(FOLDED_KEY, JSON.stringify([...ids]));
+  } catch {
+    /* private browsing; everyone just starts open next time */
+  }
 }
 
 function initials(name) {
