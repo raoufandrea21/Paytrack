@@ -186,13 +186,14 @@ function remember(planned, outcome, documentId) {
  * hotel wifi gets throttled halfway through, and the on-device reader can only
  * do one at a time anyway.
  */
-export async function importFolder(clientId, root, settings, { api = drive, onItem, onProgress, shouldStop } = {}) {
+export async function importFolder(clientId, root, settings, { api = drive, onItem, onProgress, shouldStop, filter } = {}) {
   if (!extractionAvailable(settings)) {
     throw new Error('Reading documents is switched off — turn it on in Settings first.');
   }
 
   const { found, skipped, truncated } = await scanFolder(clientId, root, { api, onProgress });
-  const planned = planImport(found);
+  const { taken, left } = selectForImport(found, { rootName: root.name, ...(filter ?? {}) });
+  const planned = planImport(taken);
   onProgress?.({ planned: planned.length, found: found.length });
 
   const counts = { filed: 0, duplicate: 0, skipped: 0, failed: 0, portrait: 0 };
@@ -209,7 +210,7 @@ export async function importFolder(clientId, root, settings, { api = drive, onIt
     }
   }
 
-  return { counts, planned: planned.length, skippedFiles: skipped.files, truncated };
+  return { counts, planned: planned.length, skippedFiles: skipped.files, left, truncated };
 }
 
 const bucket = (outcome) => {
@@ -268,7 +269,8 @@ export async function readWatchedFolder(settings, { api = drive, force = false }
   try {
     watchInFlight = true;
     lastWatchAt = Date.now();
-    const result = await importFolder(settings.onedrive_client_id, folder, settings, { api });
+    const filter = await getSetting(FILTER_SETTING);
+    const result = await importFolder(settings.onedrive_client_id, folder, settings, { api, filter });
     if (result.counts.filed > 0) {
       console.info(`[doctrack] filed ${result.counts.filed} new document(s) from ${folder.name}`);
     }
@@ -279,4 +281,72 @@ export async function readWatchedFolder(settings, { api = drive, force = false }
   } finally {
     watchInFlight = false;
   }
+}
+
+/**
+ * What to pick up out of a folder, and what to walk past.
+ *
+ * A drive folder built up over years holds more than the documents that expire:
+ * old scans of things nobody tracks, other people's paperwork, photographs. The
+ * first read of one turned every last file into something to verify, which is
+ * how a tool meant to save work becomes work.
+ *
+ * So two questions get asked before anything is read, and both are answered
+ * from the path alone — no downloading, no recognition, nothing to undo:
+ * whose folder is it in, and does the filename say it is a kind being tracked.
+ */
+export const FILTER_SETTING = 'onedrive_import_filter';
+
+/** The kinds worth tracking in a household. Everything else has to be asked for. */
+export const DEFAULT_WANTED_TYPES = [
+  'emirates_id', 'passport', 'residency_visa', 'cyprus_id', 'driving_license',
+  'vehicle_registration', 'car_insurance', 'health_insurance', 'vaccination',
+  'birth_certificate', 'marriage_certificate',
+];
+
+/**
+ * The folder directly under the one being read — the person, or the group a
+ * person sits in. Files loose in the root belong to nobody in particular.
+ */
+export function branchOf(path, rootName) {
+  const segments = String(path ?? '').split('/');
+  const start = segments[0] === rootName ? 1 : 0;
+  return segments.length > start + 1 ? segments[start] : '';
+}
+
+/**
+ * Splits what the scan found into what to read and what to leave, with a reason
+ * for everything left — a number with no explanation is just a worry.
+ */
+export function selectForImport(found, { rootName = '', branches = null, types = null, unnamed = false } = {}) {
+  const wantedBranch = branches ? new Set(branches) : null;
+  const wantedType = types ? new Set(types) : null;
+
+  const taken = [];
+  const left = { person: 0, kind: 0, unnamed: 0 };
+
+  for (const entry of found) {
+    const branch = branchOf(entry.path, rootName);
+    if (wantedBranch && !wantedBranch.has(branch)) {
+      left.person += 1;
+      continue;
+    }
+
+    const named = readPath(entry.path);
+    // A front and a back are one document, and the back rarely names its kind
+    // — judging it on its own would drop half of every card.
+    const kind = named.type ?? (named.side === 'back' ? 'pair' : null);
+    if (!kind) {
+      if (!unnamed) {
+        left.unnamed += 1;
+        continue;
+      }
+    } else if (wantedType && kind !== 'pair' && !wantedType.has(kind)) {
+      left.kind += 1;
+      continue;
+    }
+    taken.push(entry);
+  }
+
+  return { taken, left };
 }

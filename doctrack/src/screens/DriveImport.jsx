@@ -3,7 +3,14 @@ import { Link } from 'react-router-dom';
 import { getSettings, getSetting, setSetting } from '../db.js';
 import { extractionAvailable } from '../lib/extract.js';
 import { allowDriveReading, driveReadingAllowed, signIn } from '../lib/onedrive.js';
-import { WATCH_SETTING, drive, importFolder } from '../lib/driveimport.js';
+import {
+  DEFAULT_WANTED_TYPES,
+  FILTER_SETTING,
+  WATCH_SETTING,
+  drive,
+  importFolder,
+} from '../lib/driveimport.js';
+import { DOCUMENT_TYPES } from '../lib/constants.js';
 import Screen from '../components/Screen.jsx';
 import { Banner, Button, Card, EmptyState, Spinner } from '../components/ui.jsx';
 import { ImportQueue, ImportSummary } from '../components/ImportQueue.jsx';
@@ -29,6 +36,10 @@ export default function DriveImport() {
   const [error, setError] = useState(null);
   const [needsConsent, setNeedsConsent] = useState(false);
   const [watching, setWatching] = useState(true);
+  const [branches, setBranches] = useState(null); // null = everyone
+  const [types, setTypes] = useState(DEFAULT_WANTED_TYPES);
+  const [unnamed, setUnnamed] = useState(false);
+  const [tuning, setTuning] = useState(false);
   const [items, setItems] = useState([]);
   const [running, setRunning] = useState(false);
   const [progress, setProgress] = useState(null);
@@ -44,6 +55,12 @@ export default function DriveImport() {
       setSettings(loaded);
       setLast(await getSetting('onedrive_import_folder'));
       setWatching(loaded[WATCH_SETTING] !== 0);
+      const saved = await getSetting(FILTER_SETTING);
+      if (saved) {
+        setBranches(saved.branches ?? null);
+        setTypes(saved.types ?? DEFAULT_WANTED_TYPES);
+        setUnnamed(Boolean(saved.unnamed));
+      }
       setAccount(loaded.onedrive_client_id ? await drive.account(loaded.onedrive_client_id) : null);
     });
     return () => { stop.current = true; };
@@ -67,6 +84,8 @@ export default function DriveImport() {
     if (account && allowed) open(here);
   }, [account, allowed, here, open]);
 
+  const filter = () => ({ branches, types, unnamed });
+
   async function run(folder) {
     stop.current = false;
     setRunning(true);
@@ -77,7 +96,9 @@ export default function DriveImport() {
     setLast({ id: folder.id, name: folder.name });
 
     try {
+      await setSetting(FILTER_SETTING, filter());
       const result = await importFolder(clientId, folder, settings, {
+        filter: filter(),
         onProgress: setProgress,
         shouldStop: () => stop.current,
         onItem: (entry) => setItems((prev) => {
@@ -224,9 +245,12 @@ export default function DriveImport() {
               skipped={summary.counts.portrait}
               failed={summary.counts.failed}
             />
-            {summary.counts.skipped > 0 ? (
+            {summary.counts.skipped > 0 || leftBehind(summary) > 0 ? (
               <p className="px-2 text-[13px] text-slate-500 dark:text-slate-400">
-                {summary.counts.skipped} had been read before and were left alone.
+                {summary.counts.skipped > 0
+                  ? `${summary.counts.skipped} had been read before and were left alone. `
+                  : ''}
+                {leftBehind(summary) > 0 ? describeLeft(summary.left) : ''}
               </p>
             ) : null}
             <label className="flex items-start gap-2.5 rounded-xl bg-white px-3 py-3 ring-1 ring-slate-300 dark:bg-slate-800 dark:ring-slate-700">
@@ -287,6 +311,72 @@ export default function DriveImport() {
               </Card>
             )}
 
+            {here ? (
+              <Card className="overflow-hidden">
+                <button
+                  type="button"
+                  onClick={() => setTuning((t) => !t)}
+                  aria-expanded={tuning}
+                  className="flex w-full items-center gap-3 px-3.5 py-3 text-left hover:bg-slate-50 dark:hover:bg-slate-800/60"
+                >
+                  <span className="text-xl" aria-hidden="true">🎯</span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-[15px] font-bold">What to pick up</span>
+                    <span className="block truncate text-[13px] text-slate-500 dark:text-slate-400">
+                      {describeFilter({ branches, types, folders })}
+                    </span>
+                  </span>
+                  <svg
+                    viewBox="0 0 24 24"
+                    className={`size-5 shrink-0 text-slate-400 transition-transform ${tuning ? 'rotate-180' : ''}`}
+                    fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="M6 9l6 6 6-6" />
+                  </svg>
+                </button>
+
+                {tuning ? (
+                  <div className="space-y-4 border-t border-slate-100 px-3.5 py-3 dark:border-slate-800">
+                    {(folders ?? []).length > 0 ? (
+                      <Choices
+                        title="Whose documents?"
+                        hint="The folders inside this one. Anything not ticked is walked past."
+                        options={folders.map((f) => ({ id: f.name, label: f.name }))}
+                        chosen={branches ?? folders.map((f) => f.name)}
+                        onChange={setBranches}
+                      />
+                    ) : null}
+
+                    <Choices
+                      title="Which kinds?"
+                      hint="Worked out from the filename, before anything is downloaded."
+                      options={DOCUMENT_TYPES.filter((t) => t.id !== 'other').map((t) => ({
+                        id: t.id,
+                        label: `${t.icon}  ${t.label}`,
+                      }))}
+                      chosen={types}
+                      onChange={setTypes}
+                    />
+
+                    <label className="flex items-start gap-2.5 text-[13px]">
+                      <input
+                        type="checkbox"
+                        checked={unnamed}
+                        onChange={(e) => setUnnamed(e.target.checked)}
+                        className="mt-0.5 size-4 shrink-0 rounded"
+                      />
+                      <span className="text-slate-600 dark:text-slate-300">
+                        Also read files whose name does not say what they are — camera filenames
+                        like <span className="font-mono text-[12px]">IMG_2207.jpg</span>. Slower,
+                        and more of them end up in “Needs checking”.
+                      </span>
+                    </label>
+                  </div>
+                ) : null}
+              </Card>
+            ) : null}
+
             <p className="px-2 text-[13px] text-slate-500 dark:text-slate-400">
               Pick the folder that holds everybody's documents — the one with a folder per person
               inside it. DocTrack reads the folder names to work out who each document belongs to,
@@ -323,6 +413,76 @@ export default function DriveImport() {
 function looksLikePermission(failure) {
   const text = `${failure?.status ?? ''} ${failure?.message ?? ''}`;
   return /sign in again|not signed in|403|401|permission|consent|scope/i.test(text);
+}
+
+/** A tick list that is readable before it is opened. */
+function Choices({ title, hint, options, chosen, onChange }) {
+  const picked = new Set(chosen);
+  const all = options.map((o) => o.id);
+  const everything = picked.size >= options.length;
+
+  return (
+    <div>
+      <div className="flex items-baseline justify-between gap-2">
+        <p className="text-[14px] font-bold">{title}</p>
+        <button
+          type="button"
+          onClick={() => onChange(everything ? [] : all)}
+          className="text-[13px] font-semibold text-indigo-600 underline-offset-4 hover:underline dark:text-indigo-400"
+        >
+          {everything ? 'None' : 'All'}
+        </button>
+      </div>
+      <p className="mt-0.5 text-[13px] text-slate-500 dark:text-slate-400">{hint}</p>
+      <div className="mt-2 flex flex-wrap gap-1.5">
+        {options.map((option) => {
+          const on = picked.has(option.id);
+          return (
+            <button
+              key={option.id}
+              type="button"
+              aria-pressed={on}
+              onClick={() => onChange(
+                on ? chosen.filter((id) => id !== option.id) : [...picked, option.id],
+              )}
+              className={`min-h-9 rounded-full px-3 py-1.5 text-[13px] font-semibold ring-1 transition-colors ${
+                on
+                  ? 'bg-indigo-600 text-white ring-indigo-600'
+                  : 'bg-white text-slate-600 ring-slate-300 dark:bg-slate-800 dark:text-slate-300 dark:ring-slate-700'
+              }`}
+            >
+              {option.label}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+const leftBehind = (summary) =>
+  (summary.left?.person ?? 0) + (summary.left?.kind ?? 0) + (summary.left?.unnamed ?? 0);
+
+function describeLeft(left = {}) {
+  const parts = [];
+  if (left.person) parts.push(`${left.person} for people you did not tick`);
+  if (left.kind) parts.push(`${left.kind} of kinds you did not tick`);
+  if (left.unnamed) parts.push(`${left.unnamed} whose name does not say what they are`);
+  return parts.length ? `Walked past ${parts.join(', ')}.` : '';
+}
+
+function describeFilter({ branches, types, folders }) {
+  const people = branches === null || branches.length === (folders ?? []).length
+    ? 'Everyone'
+    : branches.length === 0
+      ? 'Nobody yet'
+      : `${branches.length} of ${(folders ?? []).length} folders`;
+  const kinds = types.length === 0
+    ? 'no kinds yet'
+    : types.length >= DOCUMENT_TYPES.length - 1
+      ? 'every kind'
+      : `${types.length} kinds`;
+  return `${people} · ${kinds}`;
 }
 
 function Breadcrumb({ trail, onGo }) {
