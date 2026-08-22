@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.120.0",
+    "@azure/msal-browser": "^5.19.0",
     "@tesseract.js-data/eng": "^1.0.0",
     "dexie": "^4.4.5",
     "dexie-react-hooks": "^4.4.0",

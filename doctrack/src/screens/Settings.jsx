@@ -14,6 +14,8 @@ import {
   requestNotificationPermission,
 } from '../lib/notifications.js';
 import { dueReminders } from '../lib/reminders.js';
+import { currentAccount, signIn, signOut } from '../lib/onedrive.js';
+import { runSync } from '../lib/cloudsync.js';
 import Screen from '../components/Screen.jsx';
 import { Banner, Button, Card, Field, Input, Select, Spinner } from '../components/ui.jsx';
 
@@ -26,6 +28,10 @@ export default function Settings() {
   const [checkResult, setCheckResult] = useState(null);
   const [savedAt, setSavedAt] = useState(null);
   const [transfer, setTransfer] = useState(null);
+  const [clientId, setClientId] = useState('');
+  const [account, setAccount] = useState(null);
+  const [sync, setSync] = useState(null);
+  const [syncing, setSyncing] = useState(false);
   const [busy, setBusy] = useState(false);
   const importRef = useRef(null);
   const [pending, setPending] = useState(null);
@@ -35,6 +41,8 @@ export default function Settings() {
       setSettings(loaded);
       setApiKey(loaded.anthropic_api_key ?? '');
       setEndpoint(loaded.proxy_endpoint ?? '');
+      setClientId(loaded.onedrive_client_id ?? '');
+      if (loaded.onedrive_client_id) currentAccount(loaded.onedrive_client_id).then(setAccount);
     });
     dueReminders().then((due) => setPending(due.length));
   }, []);
@@ -216,6 +224,98 @@ export default function Settings() {
               </Banner>
             </div>
           ) : null}
+        </Section>
+
+        <Section title="Sync with OneDrive">
+          <p className="mb-3 text-[14px] text-slate-600 dark:text-slate-400">
+            Keeps this device and your others in step through a folder in your own OneDrive —
+            <span className="font-mono text-[13px]"> Apps/DocTrack</span>. Anything you drop into
+            its <span className="font-mono text-[13px]">Inbox</span> folder gets read and filed by
+            itself, from any device.
+          </p>
+
+          <Field
+            label="Microsoft app ID"
+            htmlFor="client-id"
+            hint="From the one-time Azure registration — see the README. Setup only, not a password."
+          >
+            <Input
+              id="client-id"
+              value={clientId}
+              onChange={(e) => setClientId(e.target.value)}
+              onBlur={() => update('onedrive_client_id', clientId.trim())}
+              placeholder="00000000-0000-0000-0000-000000000000"
+              autoComplete="off"
+              spellCheck={false}
+            />
+          </Field>
+
+          <div className="mt-3 flex flex-col gap-2">
+            {account ? (
+              <>
+                <Banner tone="info">Connected as {account.username}.</Banner>
+                <Button
+                  disabled={syncing}
+                  onClick={async () => {
+                    setSyncing(true);
+                    setSync('Starting…');
+                    try {
+                      const result = await runSync(
+                        { ...settings, onedrive_client_id: clientId.trim() },
+                        { onStatus: (text) => setSync(text ?? 'Finishing…') },
+                      );
+                      setSync(
+                        `Up to date. ${result.pulled} record${result.pulled === 1 ? '' : 's'} came down, `
+                        + `${result.photos.downloaded} photo${result.photos.downloaded === 1 ? '' : 's'} fetched, `
+                        + `${result.inbox.filed} filed from the Inbox.`,
+                      );
+                    } catch (error) {
+                      setSync(`Sync failed: ${error?.message ?? 'unknown error'}`);
+                    } finally {
+                      setSyncing(false);
+                    }
+                  }}
+                >
+                  {syncing ? <Spinner /> : null}
+                  Sync now
+                </Button>
+                <Button
+                  variant="ghost"
+                  disabled={syncing}
+                  onClick={async () => {
+                    await signOut(clientId.trim()).catch(() => {});
+                    setAccount(null);
+                    setSync(null);
+                  }}
+                >
+                  Disconnect
+                </Button>
+              </>
+            ) : (
+              <Button
+                disabled={!clientId.trim() || syncing}
+                onClick={async () => {
+                  setSync(null);
+                  try {
+                    setAccount(await signIn(clientId.trim()));
+                  } catch (error) {
+                    setSync(error?.message ?? 'Could not sign in.');
+                  }
+                }}
+              >
+                Connect OneDrive
+              </Button>
+            )}
+            {sync ? (
+              <p className="text-[13px] text-slate-600 dark:text-slate-300">{sync}</p>
+            ) : null}
+          </div>
+
+          <p className="mt-3 text-[13px] text-slate-500 dark:text-slate-400">
+            DocTrack can only see its own folder — the permission it asks for does not reach the
+            rest of your OneDrive. Your files stay in your Microsoft account; there is no server in
+            between.
+          </p>
         </Section>
 
         <Section title="Backup and transfer">

@@ -19,6 +19,11 @@ db.version(1).stores({
   settings: '&key',
 });
 
+/** Stable across devices, unlike the auto-increment ids, which collide. */
+export const newUid = () =>
+  (globalThis.crypto?.randomUUID?.() ??
+    `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`);
+
 // v2 adds automatic filing: documents save themselves, and anything the reader
 // was unsure about is indexed so the dashboard can surface it in one query.
 db.version(2)
@@ -40,6 +45,37 @@ db.version(2)
       }),
   );
 
+// v3 adds what syncing needs: an identity that means the same thing on two
+// devices, and a record of deletions — without tombstones a delete on the phone
+// looks identical to a record the phone has not seen yet, and comes straight
+// back on the next merge.
+db.version(3)
+  .stores({
+    members: '++id, &uid, name, relation, created_at, auto_created',
+    documents:
+      '++id, &uid, member_id, type, expiry_date, status, created_at, renewed_from, review_needed',
+    reminders: '&key, document_id, threshold, notified_at',
+    tombstones: '&uid, kind, deleted_at',
+    settings: '&key',
+  })
+  .upgrade(async (tx) => {
+    const stamp = new Date().toISOString();
+    await tx.table('members').toCollection().modify((m) => {
+      m.uid ??= newUid();
+      m.updated_at ??= m.created_at ?? stamp;
+    });
+    await tx.table('documents').toCollection().modify((d) => {
+      d.uid ??= newUid();
+      d.updated_at ??= d.created_at ?? stamp;
+    });
+  });
+
+/** Records a deletion so the other device does not resurrect it. */
+export function recordTombstone(uid, kind) {
+  if (!uid) return Promise.resolve();
+  return db.tombstones.put({ uid, kind, deleted_at: new Date().toISOString() });
+}
+
 // ---------------------------------------------------------------- members
 
 export function listMembers() {
@@ -47,15 +83,18 @@ export function listMembers() {
 }
 
 export async function addMember({ name, relation }) {
+  const now = new Date().toISOString();
   return db.members.add({
+    uid: newUid(),
     name: name.trim(),
     relation,
-    created_at: new Date().toISOString(),
+    created_at: now,
+    updated_at: now,
   });
 }
 
 export function updateMember(id, changes) {
-  return db.members.update(id, changes);
+  return db.members.update(id, { ...changes, updated_at: new Date().toISOString() });
 }
 
 /**
@@ -71,11 +110,14 @@ export async function findOrCreateMember(name, { relation = 'Other' } = {}) {
   const existing = matchMemberByName(name, members);
   if (existing) return { member: existing, created: false };
 
+  const now = new Date().toISOString();
   const id = await db.members.add({
+    uid: newUid(),
     name: name.trim(),
     relation,
     auto_created: 1,
-    created_at: new Date().toISOString(),
+    created_at: now,
+    updated_at: now,
   });
   return { member: await db.members.get(id), created: true };
 }
@@ -152,14 +194,17 @@ export function mergeMembers(keepId, mergeIds) {
   const others = mergeIds.filter((id) => id !== keepId);
   if (others.length === 0) return Promise.resolve(0);
 
-  return db.transaction('rw', db.members, db.documents, async () => {
+  return db.transaction('rw', db.members, db.documents, db.tombstones, async () => {
     let moved = 0;
+    const now = new Date().toISOString();
     for (const id of others) {
       const documents = await db.documents.where('member_id').equals(id).toArray();
       for (const doc of documents) {
-        await db.documents.update(doc.id, { member_id: keepId });
+        await db.documents.update(doc.id, { member_id: keepId, updated_at: now });
         moved += 1;
       }
+      const member = await db.members.get(id);
+      await recordTombstone(member?.uid, 'member');
       await db.members.delete(id);
     }
     return moved;
@@ -168,10 +213,15 @@ export function mergeMembers(keepId, mergeIds) {
 
 /** Removing a member takes their documents with them — nothing is left orphaned. */
 export function deleteMember(id) {
-  return db.transaction('rw', db.members, db.documents, db.reminders, async () => {
+  return db.transaction('rw', db.members, db.documents, db.reminders, db.tombstones, async () => {
+    const member = await db.members.get(id);
     const docs = await db.documents.where('member_id').equals(id).toArray();
-    await Promise.all(docs.map((d) => clearRemindersFor(d.id)));
+    for (const doc of docs) {
+      await clearRemindersFor(doc.id);
+      await recordTombstone(doc.uid, 'document');
+    }
     await db.documents.where('member_id').equals(id).delete();
+    await recordTombstone(member?.uid, 'member');
     await db.members.delete(id);
   });
 }
@@ -231,6 +281,7 @@ export async function addDocument(doc) {
   const now = new Date().toISOString();
   return db.documents.add({
     ...BLANK_DOCUMENT,
+    uid: newUid(),
     ...doc,
     member_id: Number(doc.member_id),
     status: 'active',
@@ -268,8 +319,10 @@ export function unarchiveDocument(id) {
 }
 
 export function deleteDocument(id) {
-  return db.transaction('rw', db.documents, db.reminders, async () => {
+  return db.transaction('rw', db.documents, db.reminders, db.tombstones, async () => {
+    const doc = await db.documents.get(id);
     await clearRemindersFor(id);
+    await recordTombstone(doc?.uid, 'document');
     await db.documents.delete(id);
   });
 }
@@ -285,6 +338,7 @@ export function renewDocument(oldId, replacement) {
     const now = new Date().toISOString();
     const newId = await db.documents.add({
       ...BLANK_DOCUMENT,
+      uid: newUid(),
       member_id: previous.member_id,
       type: previous.type,
       ...replacement,

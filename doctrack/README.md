@@ -259,6 +259,74 @@ Files are processed one at a time, not in parallel — eight photos uploading at
 once over bad wifi is how you get rate-limited halfway through and lose track of
 what saved.
 
+## Syncing with OneDrive
+
+Two devices each keep their own copy, so DocTrack can sync them through a folder
+in **your** OneDrive — `Apps/DocTrack`. There is no server in between: the
+documents sit in your Microsoft account, and the app reaches them from the
+browser.
+
+Anything dropped into that folder's `Inbox` — from Windows Explorer, the
+OneDrive app, your phone — is read, filed and moved to `Filed` on the next sync.
+That is the shortest path from "the insurer emailed a PDF" to "it is tracked".
+
+Sync runs quietly when the app opens and when it comes back to the foreground,
+and on demand from Settings. A failure is logged and dropped: the app works
+entirely offline, so an unreachable OneDrive should never interrupt somebody
+looking up a passport.
+
+### The one-time setup
+
+Microsoft requires an app registration before any app may sign a user in. It is
+free and takes about ten minutes, once, for all your devices.
+
+1. Go to **https://portal.azure.com** and sign in with the Microsoft account
+   whose OneDrive you want to use
+2. Search for **App registrations** at the top, and open it
+3. Click **New registration**
+4. **Name:** `DocTrack`
+5. **Supported account types:** choose the option that mentions
+   *"any organizational directory and personal Microsoft accounts"* — the
+   longest one in the list. Anything narrower will reject a personal account.
+6. Under **Redirect URI**, change the dropdown from *Web* to
+   **Single-page application (SPA)**, and enter the address you open DocTrack
+   at, with no trailing slash — e.g. `https://your-app.vercel.app`
+7. Click **Register**
+8. On the page that appears, copy **Application (client) ID** — a long string of
+   letters, numbers and dashes
+9. In DocTrack: **Settings → Sync with OneDrive**, paste it into *Microsoft app
+   ID*, then **Connect OneDrive** and approve the prompt
+
+Repeat only step 9 on your other devices — the registration is shared.
+
+To also use it on `http://localhost:5173` while developing, add that as a second
+SPA redirect URI on the same registration.
+
+### What it can and cannot see
+
+The permission requested is `Files.ReadWrite.AppFolder`, which grants access to
+`Apps/DocTrack` **and nothing else**. It is not a scope that can reach the rest
+of a OneDrive, whatever this code does — so signing in is not a decision about
+trusting the app with your whole drive.
+
+### How the merge works
+
+There is no server arbitrating, so the merge has to be something both devices
+can compute independently and agree on. Every record carries a `uid` that means
+the same thing everywhere, and merging is last-write-wins per record, with
+deletions carried as tombstones — without those, a document deleted on the phone
+is indistinguishable from one the phone has not seen yet, and comes straight
+back on the next sync. An edit dated *after* a deletion resurrects the record,
+because that is what the person meant.
+
+Last-write-wins loses a field when the same record is edited on both devices
+between syncs. For a household filing cabinet that is the right trade: the
+alternative is per-field merging and a conflict UI, for a case that arises when
+two people edit one passport record in the same afternoon.
+
+Photos travel separately, one file per document, and are fetched only for
+records that lack them locally.
+
 ## Backup and moving between devices
 
 Everything lives on the device, so a phone and a laptop each keep their own
@@ -396,6 +464,11 @@ doctrack/
 │   │   ├── extract.js          picks a reader; normalises whatever it returns
 │   │   ├── localread.js        free on-device OCR + a UAE/Cyprus-aware parser
 │   │   ├── mrz.js              machine-readable zone: TD1/TD2/TD3 + check digits
+│   │   ├── pdf.js              PDF text layer, and page rendering for scans
+│   │   ├── sync.js             the two-device merge — pure, no I/O
+│   │   ├── onedrive.js         Microsoft sign-in and Graph file operations
+│   │   ├── cloudsync.js        a sync run, and the Inbox folder
+│   │   ├── backup.js           export/import a single transfer file
 │   │   ├── autofile.js         holder resolution, de-duplication, review rules
 │   │   ├── dates.js            Arabic digits, loose date parsing, urgency
 │   │   ├── files.js            photo downscale, PDF passthrough, base64
@@ -410,7 +483,9 @@ doctrack/
 └── test/
     ├── extraction.test.mjs
     ├── autofile.test.mjs
-    └── mrz.test.mjs
+    ├── mrz.test.mjs
+    ├── sync.test.mjs
+    └── cloudsync.test.mjs
 ```
 
 ---
@@ -421,7 +496,8 @@ By design, and unlikely to change:
 
 - **No TAMM, UAE Pass or ICP integration.** There is no public API for reading a
   private individual's document expiries from any of them.
-- **No backend and no cloud sync.** The data is on the device on purpose.
+- **No backend of ours.** Sync goes through the user's own OneDrive; there is
+  still no server holding anyone's documents.
 - **No multi-device sync.** One device, one copy.
 
 One consequence worth knowing: clearing this site's browser data — or, on some
