@@ -10,6 +10,21 @@ import './index.css';
  * all. Hash routes never depend on a server rewrite rule.
  */
 /**
+ * Microsoft returns a sign-in result in the URL fragment, and the popup it uses
+ * is this same app at this same origin. HashRouter, seeing a fragment that is
+ * not one of its routes, rewrites it to "#/" — destroying the response before
+ * MSAL can read it. The popup then sits waiting for a reply that no longer
+ * exists until it times out and closes itself, which is what a user sees as
+ * "it opened a window and then closed after a few minutes".
+ *
+ * So when this page IS the auth popup, it must do nothing at all: no router, no
+ * service worker, no reminder check. MSAL reads the fragment from the opener
+ * and closes the window itself.
+ */
+const isAuthPopup =
+  Boolean(window.opener) && /[#?&](code|error|state)=/.test(window.location.href);
+
+/**
  * A deploy renames every hashed chunk. A tab still running the previous build
  * then asks for a filename that no longer exists, and the lazy import dies with
  * "Failed to fetch dynamically imported module" — which the user meets as a
@@ -36,6 +51,7 @@ function reloadOntoNewBuild(detail) {
 }
 
 window.addEventListener('vite:preloadError', (event) => {
+  if (isAuthPopup) return;
   if (reloadOntoNewBuild(event?.payload)) event.preventDefault();
 });
 
@@ -49,17 +65,19 @@ window.setTimeout(() => {
   }
 }, 10_000);
 
-createRoot(document.getElementById('root')).render(
-  <StrictMode>
-    <HashRouter>
-      <App />
-    </HashRouter>
-  </StrictMode>,
-);
+if (!isAuthPopup) {
+  createRoot(document.getElementById('root')).render(
+    <StrictMode>
+      <HashRouter>
+        <App />
+      </HashRouter>
+    </StrictMode>,
+  );
+}
 
 // Registered here rather than by the plugin so the app controls the timing and
 // can surface failures instead of swallowing them.
-if ('serviceWorker' in navigator) {
+if ('serviceWorker' in navigator && !isAuthPopup) {
   window.addEventListener('load', () => {
     const url = import.meta.env.DEV ? '/dev-sw.js?dev-sw' : '/sw.js';
     navigator.serviceWorker

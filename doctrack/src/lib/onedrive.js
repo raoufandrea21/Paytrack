@@ -96,6 +96,52 @@ function rememberAuthority(clientId, authority) {
   }
 }
 
+/**
+ * MSAL records "an interaction is in progress" in browser storage and refuses
+ * to start another until it clears. A popup that times out — or a page reloaded
+ * while one was open — leaves that flag set, and every later attempt fails with
+ * interaction_in_progress until storage is cleaned.
+ *
+ * The endpoint search makes it worse: each authority gets its own MSAL instance
+ * but they all share one set of storage keys, so the second attempt trips over
+ * the first. Clearing before each attempt is what makes the search usable at
+ * all.
+ */
+function clearStaleInteraction() {
+  for (const store of [window.localStorage, window.sessionStorage]) {
+    try {
+      for (const key of Object.keys(store)) {
+        if (key.includes('interaction.status')) store.removeItem(key);
+      }
+    } catch {
+      /* storage unavailable; nothing to clear */
+    }
+  }
+}
+
+const isInteractionLocked = (error) =>
+  /interaction_in_progress/i.test(`${error?.errorCode ?? ''} ${error?.message ?? ''}`);
+
+/**
+ * Wipes every trace of a previous connection: MSAL's caches, the remembered
+ * endpoint, and any stuck interaction flag. The way out when sign-in wedges.
+ */
+export function resetConnection(clientId) {
+  clearStaleInteraction();
+  clients.clear();
+  for (const store of [window.localStorage, window.sessionStorage]) {
+    try {
+      for (const key of Object.keys(store)) {
+        if (key.startsWith('msal.') || key.includes(clientId) || key.startsWith('doctrack.authority.')) {
+          store.removeItem(key);
+        }
+      }
+    } catch {
+      /* storage unavailable */
+    }
+  }
+}
+
 /** Authorities to try, best guess first. */
 function candidateAuthorities(clientId) {
   const known = rememberedAuthority(clientId);
@@ -127,19 +173,32 @@ export async function signIn(clientId) {
   let lastError = null;
 
   for (const authority of candidateAuthorities(clientId)) {
-    try {
-      const client = await getClient(clientId, authority);
-      const result = await client.loginPopup({ scopes: SCOPES, prompt: 'select_account' });
-      rememberAuthority(clientId, authority);
-      return result.account;
-    } catch (error) {
-      // A cancelled popup is the user's answer, not a wrong guess — stop.
-      if (error?.errorCode === 'user_cancelled') {
-        throw new OneDriveError('Sign-in was cancelled.');
+    for (const attempt of [1, 2]) {
+      try {
+        clearStaleInteraction();
+        const client = await getClient(clientId, authority);
+        const result = await client.loginPopup({ scopes: SCOPES, prompt: 'select_account' });
+        rememberAuthority(clientId, authority);
+        return result.account;
+      } catch (error) {
+        // A cancelled popup is the user's answer, not a wrong guess — stop.
+        if (error?.errorCode === 'user_cancelled') {
+          throw new OneDriveError('Sign-in was cancelled.');
+        }
+        lastError = error;
+        // A lock left by an earlier attempt clears and this one retries once.
+        if (isInteractionLocked(error) && attempt === 1) continue;
+        break;
       }
-      lastError = error;
-      if (!isWrongAuthority(error)) break;
     }
+    if (!isWrongAuthority(lastError)) break;
+  }
+
+  if (isInteractionLocked(lastError)) {
+    throw new OneDriveError(
+      'A previous sign-in is still marked as in progress. Tap "Reset connection" below, then try again.',
+      { cause: lastError },
+    );
   }
 
   throw new OneDriveError(
@@ -166,7 +225,7 @@ export async function signOut(clientId) {
     const account = client.getAllAccounts()[0];
     if (account) await client.logoutPopup({ account });
   } finally {
-    clients.clear();
+    resetConnection(clientId);
   }
 }
 

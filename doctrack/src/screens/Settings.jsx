@@ -14,7 +14,7 @@ import {
   requestNotificationPermission,
 } from '../lib/notifications.js';
 import { dueReminders } from '../lib/reminders.js';
-import { currentAccount, signIn, signOut } from '../lib/onedrive.js';
+import { currentAccount, resetConnection, signIn, signOut } from '../lib/onedrive.js';
 import { runSync } from '../lib/cloudsync.js';
 import Screen from '../components/Screen.jsx';
 import { Banner, Button, Card, Field, Input, Select, Spinner } from '../components/ui.jsx';
@@ -163,10 +163,11 @@ export default function Settings() {
                 After that it is quick, and it works offline.
               </Banner>
               <p className="text-[13px] text-slate-500 dark:text-slate-400">
-                It reads printed English, which is all the UAE and Cypriot documents need — the
-                English side of a bilingual card carries every field. It is less accurate than
-                Claude, so expect more documents in "Needs checking". PDFs are not supported here;
-                photograph the page instead.
+                PDFs with a text layer — most of what arrives by email — are read exactly, with
+                no recognition involved. Photos and scanned PDFs go through text recognition, which
+                reads printed English: enough for UAE and Cypriot documents, since the English side
+                of a bilingual card carries every field. Less accurate than Claude, so expect more
+                documents in "Needs checking".
               </p>
             </div>
           ) : null}
@@ -309,6 +310,20 @@ export default function Settings() {
             {sync ? (
               <p className="text-[13px] text-slate-600 dark:text-slate-300">{sync}</p>
             ) : null}
+
+            {/* Sign-in can wedge on a stuck "interaction in progress" flag left
+                by a popup that timed out. This is the way out. */}
+            <button
+              type="button"
+              className="min-h-11 text-[13px] text-slate-500 underline underline-offset-4 dark:text-slate-400"
+              onClick={() => {
+                resetConnection(clientId.trim());
+                setAccount(null);
+                setSync('Connection reset. Try Connect OneDrive again.');
+              }}
+            >
+              Reset connection
+            </button>
           </div>
 
           <p className="mt-3 text-[13px] text-slate-500 dark:text-slate-400">
