@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { getSettings, setSetting } from '../db.js';
 import { backupFilename, buildBackup, restoreBackup } from '../lib/backup.js';
 import {
@@ -386,8 +387,20 @@ export default function Settings() {
                     {syncFailure.quota.state === 'exceeded' ? ' — over the limit.' : '.'}
                   </p>
                 ) : null}
+                {/* Reading is unaffected by a read-only drive, so when that is
+                    what went wrong, say the thing that still works. */}
+                {/read-only|out of space/i.test(syncFailure.message) ? (
+                  <p className="mt-1">
+                    Reading the documents already in your OneDrive still works — that only ever
+                    reads.{' '}
+                    <Link to="/onedrive" className="font-semibold underline underline-offset-2">
+                      Read my OneDrive
+                    </Link>
+                    .
+                  </p>
+                ) : null}
                 <p className="mt-1">
-                  Meanwhile, Backup and transfer below still moves everything between your devices.
+                  Backup and transfer below still moves everything between your devices.
                 </p>
                 {syncFailure.detail ? (
                   <p className="mt-1 font-mono text-[12px] break-all opacity-70">

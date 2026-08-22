@@ -421,6 +421,12 @@ Because it only ever reads, this keeps working when a drive is in the read-only
 state a full or frozen OneDrive ends up in — the sync cannot write its state
 file, but the documents can still be read and filed.
 
+The two permissions are also kept apart at the point of use: a token is asked
+for with exactly the scopes the call needs. Otherwise turning folder reading on
+and having Microsoft decline the extra permission would break sync too, which
+never wanted it. If the consent prompt is refused, add **Files.Read** under API
+permissions in the Azure registration and try again.
+
 The walk is breadth-first and bounded (400 files, six levels deep), so pointing
 it at too much stops honestly rather than running for ever; run it again and it
 carries on. Each file goes through the same pipeline as an upload —

@@ -129,7 +129,9 @@ export function describeGraphFailure(status, body) {
  */
 export async function driveQuota(clientId) {
   try {
-    const drive = await graph(clientId, '/me/drive');
+    const drive = await graph(clientId, '/me/drive', {
+      scopes: driveReadingAllowed() ? READ_SCOPES : APP_FOLDER_SCOPES,
+    });
     const quota = drive?.quota;
     if (!quota || typeof quota.total !== 'number') return null;
     return { state: quota.state ?? '', used: quota.used ?? 0, total: quota.total };
@@ -461,12 +463,20 @@ export async function signOut(clientId) {
   }
 }
 
-async function getToken(clientId) {
+/**
+ * A token for exactly what this call needs, and no more.
+ *
+ * Asking for the union would tie the two features together: turn on folder
+ * reading, have Microsoft decline the extra permission, and sync — which needs
+ * nothing but the app folder — would start failing too, for a scope it never
+ * wanted.
+ */
+async function getToken(clientId, scopes = APP_FOLDER_SCOPES) {
   const client = await activeClient(clientId);
   const account = client.getAllAccounts()[0];
 
   try {
-    const result = await client.acquireTokenSilent({ scopes: requestedScopes(), account });
+    const result = await client.acquireTokenSilent({ scopes, account });
     return result.accessToken;
   } catch (error) {
     // Consent changed or the refresh token expired. Redirecting from inside a
@@ -483,8 +493,8 @@ async function getToken(clientId) {
  * One Graph call. `fetchImpl` exists so the plumbing can be exercised against a
  * stub without a Microsoft account.
  */
-async function graph(clientId, path, { method = 'GET', body, headers = {}, raw = false, fetchImpl = fetch } = {}) {
-  const token = await getToken(clientId);
+async function graph(clientId, path, { method = 'GET', body, headers = {}, raw = false, fetchImpl = fetch, scopes } = {}) {
+  const token = await getToken(clientId, scopes);
   const response = await fetchImpl(path.startsWith('http') ? path : `${GRAPH}${path}`, {
     method,
     headers: { Authorization: `Bearer ${token}`, ...headers },
@@ -605,15 +615,17 @@ export async function ensureFolder(clientId, name, options = {}) {
  * kept together and named for what they are.
  */
 const DRIVE_FIELDS = 'id,name,size,folder,file,cTag,lastModifiedDateTime';
+const READ_SCOPES = [READ_SCOPE, 'User.Read', 'offline_access'];
 
 /** One page at a time until Graph stops offering more. */
 async function pagedChildren(clientId, first, options) {
   const items = [];
   let next = first;
+  const withScope = { ...options, scopes: READ_SCOPES };
   // A documents folder with hundreds of files arrives in pages; without this
   // the import would quietly stop at the first two hundred.
   while (next && items.length < 5000) {
-    const page = await graph(clientId, next, options);
+    const page = await graph(clientId, next, withScope);
     items.push(...(page?.value ?? []));
     next = page?.['@odata.nextLink'] ?? null;
   }
@@ -631,6 +643,7 @@ export async function downloadDriveItem(clientId, itemId, options = {}) {
   const response = await graph(clientId, `/me/drive/items/${itemId}/content`, {
     raw: true,
     ...options,
+    scopes: READ_SCOPES,
   });
   return response ? response.blob() : null;
 }
