@@ -268,7 +268,10 @@ function TypeRule({ type, count, leads, muted, onToggleLead, onToggleMute }) {
         <span className="text-[22px] leading-none">{type.icon}</span>
         <div className="min-w-0 flex-1">
           <h3 className="text-[15px] font-bold">{type.label}</h3>
-          <p className="mt-0.5 truncate text-[13px] text-slate-500 dark:text-slate-400">
+          {/* The rule read out in words is the point of the card, so it wraps
+              rather than truncating — "6 months, 3 months, 1 month …" tells you
+              nothing the chips below have not already said. */}
+          <p className="mt-0.5 text-[13px] text-slate-500 dark:text-slate-400">
             {muted ? 'Never reminded' : describeLeads(leads)}
             {count ? ` · ${count} on file` : ''}
           </p>
