@@ -318,11 +318,18 @@ const read = (key) => {
  * looking exactly as they left it.
  */
 export function signInProblem({ signedIn = false } = {}) {
+  // Connected now, so whatever went wrong on an earlier attempt is history —
+  // and a warning above the words "Connected as…" is just confusing.
+  if (signedIn) {
+    clearSignInProblem();
+    return null;
+  }
+
   const problem = read(PROBLEM_KEY);
   if (problem) return problem;
 
   const started = read(STARTED_KEY);
-  if (!started || signedIn) return null;
+  if (!started) return null;
   if (Date.now() - started.at > ATTEMPT_WINDOW) {
     write(STARTED_KEY, null);
     return null;

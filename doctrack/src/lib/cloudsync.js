@@ -233,8 +233,16 @@ async function syncPhotos(clientId, merged, { say, api = graph }) {
 export async function processInbox(clientId, settings, { say, api = graph } = {}) {
   if (!extractionAvailable(settings)) return { filed: 0, skipped: 0 };
 
-  await api.ensureFolder(clientId, INBOX_FOLDER);
-  const children = await api.listChildren(clientId, INBOX_FOLDER);
+  // The Inbox is an offer, not a requirement. Creating it needs a write, which
+  // a read-only drive refuses, and looking inside one that does not exist is
+  // not a failure of anything — reporting either as "sync could not finish"
+  // turns a working sync into a warning about a folder nobody asked for.
+  const children = await api
+    .ensureFolder(clientId, INBOX_FOLDER)
+    .then(() => api.listChildren(clientId, INBOX_FOLDER))
+    .catch(() => null);
+  if (!children) return { filed: 0, skipped: 0 };
+
   const files = children.filter((item) => item.file && !item.folder);
 
   let filed = 0;

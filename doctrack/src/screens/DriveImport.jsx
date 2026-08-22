@@ -27,6 +27,7 @@ export default function DriveImport() {
   const [trail, setTrail] = useState([]); // [{id, name}], root is implicit
   const [folders, setFolders] = useState(null);
   const [error, setError] = useState(null);
+  const [needsConsent, setNeedsConsent] = useState(false);
   const [items, setItems] = useState([]);
   const [running, setRunning] = useState(false);
   const [progress, setProgress] = useState(null);
@@ -56,6 +57,7 @@ export default function DriveImport() {
     } catch (failure) {
       setFolders([]);
       setError(failure?.message ?? 'Could not read that folder.');
+      setNeedsConsent(looksLikePermission(failure));
     }
   }, [clientId]);
 
@@ -84,6 +86,7 @@ export default function DriveImport() {
       setSummary(result);
     } catch (failure) {
       setError(failure?.message ?? 'The folder could not be read.');
+      setNeedsConsent(looksLikePermission(failure));
     } finally {
       setProgress(null);
       setRunning(false);
@@ -123,6 +126,15 @@ export default function DriveImport() {
     );
   }
 
+  const askForAccess = async () => {
+    allowDriveReading(true);
+    setAllowed(true);
+    setNeedsConsent(false);
+    // Microsoft only grants a new permission through a fresh sign-in, so this
+    // leaves the page and comes straight back.
+    await signIn(clientId).catch((failure) => setError(failure?.message ?? null));
+  };
+
   if (!allowed) {
     return (
       <Screen title="Read my OneDrive" back="/">
@@ -137,16 +149,7 @@ export default function DriveImport() {
             and open your files; it cannot change, move or delete anything, and it never uploads
             them anywhere — the reading happens on this device.
           </Banner>
-          <Button
-            className="mt-3 w-full"
-            onClick={async () => {
-              allowDriveReading(true);
-              setAllowed(true);
-              // Microsoft only grants a new permission through a fresh sign-in,
-              // so this leaves the page and comes straight back.
-              await signIn(clientId).catch((failure) => setError(failure?.message ?? null));
-            }}
-          >
+          <Button className="mt-3 w-full" onClick={askForAccess}>
             Ask Microsoft for read access
           </Button>
           <p className="mt-2 text-[13px] text-slate-500 dark:text-slate-400">
@@ -183,7 +186,21 @@ export default function DriveImport() {
       }
     >
       <div className="space-y-3 pb-4">
-        {error ? <Banner tone="warn">{error}</Banner> : null}
+        {error ? (
+          <Banner tone="warn" title={needsConsent ? 'Read access has not been granted yet' : undefined}>
+            <p>
+              {needsConsent
+                ? 'Being connected is not the same as being allowed to read your files — that is a '
+                  + 'second permission, and Microsoft has not been asked for it yet.'
+                : error}
+            </p>
+            {needsConsent ? (
+              <Button className="mt-2 w-full" onClick={askForAccess}>
+                Ask Microsoft for read access
+              </Button>
+            ) : null}
+          </Banner>
+        ) : null}
 
         {running ? (
           <Banner tone="info">
@@ -273,6 +290,16 @@ export default function DriveImport() {
       </div>
     </Screen>
   );
+}
+
+/**
+ * A refusal that means "you have not been given this permission", rather than
+ * something being wrong with the folder. Both arrive as a failed request; only
+ * one of them has a button that fixes it.
+ */
+function looksLikePermission(failure) {
+  const text = `${failure?.status ?? ''} ${failure?.message ?? ''}`;
+  return /sign in again|not signed in|403|401|permission|consent|scope/i.test(text);
 }
 
 function Breadcrumb({ trail, onGo }) {
