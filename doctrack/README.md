@@ -147,11 +147,50 @@ the English side of a bilingual card carries every field — but it means:
   pessimistically: a field found next to its printed label clears the bar, a
   field inferred from position does not.
 
-The parser knows what these documents look like. It reads `DD/MM/YYYY` as the
-UAE prints it, ignores dates on a *date of birth* line, understands an insurance
-certificate's "Period of Insurance: from X to Y", and separates a Cypriot
-passport from a Cypriot identity card — both say REPUBLIC OF CYPRUS, so the word
-"passport" has to outrank the country.
+### The machine-readable zone does the heavy lifting
+
+Passports and most ID cards carry an MRZ: two or three lines of fixed-width
+OCR-B at the foot of the page, printed flat with no hologram or security pattern
+over them, precisely so a machine can read them. It encodes the document number,
+nationality, date of birth and the expiry date, and **every field carries a
+check digit**.
+
+Reading the decorated side of a passport while ignoring that is doing the hard
+version of the job badly. So `src/lib/mrz.js` parses it, and where it is legible
+it overrides everything the laid-out text said — a checksummed value beats the
+best guess off the same page.
+
+It is written against how OCR actually fails on a photographed passport, not
+against the spec:
+
+- The filler `<` is the glyph Tesseract mangles most. Lines are found by
+  *structure* — the fixed run of number, check, nationality, dates — never by
+  length, because a 44-character line whose tail is filler can arrive twenty
+  characters short.
+- `O` read for `0` runs right through the number field, but a passport number
+  can legitimately contain the letter O. Corrections are offered to the check
+  digit least-presumptuous-first and the first accepted reading wins. A single
+  decimal check digit agrees with a wrong correction one time in ten, so trying
+  the boldest rewrite first would let a coin flip decide a passport number.
+- Filler misread as letters (`CHARALAMBOUSKKGGGGGGRAOUF`) is dropped rather than
+  filed as somebody's middle name. Nameless beats wrong.
+
+### And for everything without an MRZ
+
+The parser knows the shape of these documents. It reads `DD/MM/YYYY` as the UAE
+prints it, ignores dates on a *date of birth* line, understands an insurance
+certificate's "Period of Insurance: from X to Y", and pairs a label with its
+value **on the next line** — passports and ID cards print labels in one column
+and values in another, so OCR emits "Expires on (8)" and "13/01/2036"
+separately.
+
+It also separates a Cypriot passport from a Cypriot identity card: both say
+REPUBLIC OF CYPRUS, so the word "passport" has to outrank the country.
+
+Names and numbers scraped from laid-out text are validated before use. A
+trilingual label stack reduces to plausible OCR mush, and without a shape check
+the reader cheerfully files a passport under
+"Taadigivennameszhuepcevvdateofbirth7".
 
 Direct mode calls `api.anthropic.com` from the page itself, using the SDK's
 `dangerouslyAllowBrowser` flag. That is a real trade-off, stated plainly: any
@@ -318,6 +357,7 @@ doctrack/
 │   ├── lib/
 │   │   ├── extract.js          picks a reader; normalises whatever it returns
 │   │   ├── localread.js        free on-device OCR + a UAE/Cyprus-aware parser
+│   │   ├── mrz.js              machine-readable zone: TD1/TD2/TD3 + check digits
 │   │   ├── autofile.js         holder resolution, de-duplication, review rules
 │   │   ├── dates.js            Arabic digits, loose date parsing, urgency
 │   │   ├── files.js            photo downscale, PDF passthrough, base64
@@ -331,7 +371,8 @@ doctrack/
 ├── scripts/vendor-ocr.mjs      copies the OCR engine into public/ at build time
 └── test/
     ├── extraction.test.mjs
-    └── autofile.test.mjs
+    ├── autofile.test.mjs
+    └── mrz.test.mjs
 ```
 
 ---

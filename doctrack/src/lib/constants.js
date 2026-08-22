@@ -4,7 +4,7 @@ export { DOCUMENT_TYPE_IDS };
 
 export const DOCUMENT_TYPES = [
   { id: 'emirates_id', label: 'Emirates ID', icon: '🪪' },
-  { id: 'cyprus_id', label: 'Cyprus ID', icon: '🇨🇾' },
+  { id: 'cyprus_id', label: 'Cyprus ID', icon: '🆔' },
   { id: 'driving_license', label: 'Driving Licence', icon: '🚗' },
   { id: 'passport', label: 'Passport', icon: '🛂' },
   { id: 'residency_visa', label: 'Residency Visa', icon: '📄' },

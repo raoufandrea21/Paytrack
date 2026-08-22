@@ -16,6 +16,7 @@
  * blank and flag it — is the better answer.
  */
 import { normaliseDigits, isValidISODate } from './dates.js';
+import { readMrz } from './mrz.js';
 
 // import.meta.env only exists under Vite; this module is also loaded by the
 // Node test runner, where reading .BASE_URL off undefined would throw at import.
@@ -68,6 +69,57 @@ export class LocalReadError extends Error {
   }
 }
 
+/**
+ * Renders an image for OCR.
+ *
+ * Bigger than the copy we store, and greyscale with the contrast pushed: an MRZ
+ * line is 44 characters across the page, so at the 1600px we keep for display
+ * each glyph is only a dozen pixels wide and Tesseract starts inventing
+ * characters. `cropTop` isolates the MRZ strip at the foot of the document.
+ */
+async function renderForOcr(blob, { maxEdge = 2400, cropTop = 0 } = {}) {
+  const bitmap = await createImageBitmap(blob, { imageOrientation: 'from-image' });
+  try {
+    const sourceY = Math.floor(bitmap.height * cropTop);
+    const sourceHeight = bitmap.height - sourceY;
+    const scale = Math.min(2, maxEdge / Math.max(bitmap.width, sourceHeight));
+
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+    canvas.height = Math.max(1, Math.round(sourceHeight * scale));
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    ctx.drawImage(
+      bitmap, 0, sourceY, bitmap.width, sourceHeight,
+      0, 0, canvas.width, canvas.height,
+    );
+
+    // Greyscale, then a contrast stretch around mid-grey. Passport pages are
+    // pale security patterns behind dark text; flattening the colour and
+    // pushing them apart is most of what a scanner app does.
+    const image = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const px = image.data;
+    for (let i = 0; i < px.length; i += 4) {
+      const grey = px[i] * 0.299 + px[i + 1] * 0.587 + px[i + 2] * 0.114;
+      const boosted = Math.max(0, Math.min(255, (grey - 128) * 1.6 + 128));
+      px[i] = boosted;
+      px[i + 1] = boosted;
+      px[i + 2] = boosted;
+    }
+    ctx.putImageData(image, 0, 0);
+
+    return new Promise((resolve, reject) => {
+      canvas.toBlob(
+        (out) => (out ? resolve(out) : reject(new Error('Could not prepare the image.'))),
+        'image/png',
+      );
+    });
+  } finally {
+    bitmap.close?.();
+  }
+}
+
+const MRZ_WHITELIST = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789<';
+
 /** Reads one image and returns the raw extraction shape. */
 export async function readLocally(blob, { onProgress } = {}) {
   if (blob.type === 'application/pdf') {
@@ -76,17 +128,45 @@ export async function readLocally(blob, { onProgress } = {}) {
     );
   }
 
-  let result;
+  let worker;
   try {
-    const worker = await getWorker(onProgress);
-    result = await worker.recognize(blob);
+    worker = await getWorker(onProgress);
   } catch (error) {
     throw new LocalReadError(
-      `Could not run the on-device reader: ${error?.message ?? 'unknown error'}`,
+      `Could not start the on-device reader: ${error?.message ?? 'unknown error'}`,
     );
   }
 
-  return parseDocumentText(result.data.text ?? '', result.data.confidence ?? 0);
+  let text = '';
+  let confidence = 0;
+  try {
+    const page = await renderForOcr(blob);
+    const result = await worker.recognize(page);
+    text = result.data.text ?? '';
+    confidence = result.data.confidence ?? 0;
+  } catch (error) {
+    throw new LocalReadError(`Could not read the photo: ${error?.message ?? 'unknown error'}`);
+  }
+
+  let mrz = readMrz(text);
+
+  // The MRZ is the most valuable thing on a passport and the hardest to catch
+  // in a whole-page pass, so if the first read missed it, try again on just the
+  // bottom third with the character set locked to what an MRZ can contain.
+  if (!mrz) {
+    try {
+      const strip = await renderForOcr(blob, { maxEdge: 2600, cropTop: 0.66 });
+      await worker.setParameters({ tessedit_char_whitelist: MRZ_WHITELIST });
+      const result = await worker.recognize(strip);
+      mrz = readMrz(result.data.text ?? '');
+    } catch {
+      /* the whole-page read still stands on its own */
+    } finally {
+      await worker.setParameters({ tessedit_char_whitelist: '' }).catch(() => {});
+    }
+  }
+
+  return parseDocumentText(text, confidence, mrz);
 }
 
 // ---------------------------------------------------------------- parsing
@@ -185,7 +265,24 @@ const has = (line, labels) => labels.some((label) => line.includes(label));
 
 const EMIRATES_ID = /\b784[-\s]?\d{4}[-\s]?\d{7}[-\s]?\d\b/;
 const LABELLED_NUMBER = /(?:no|number|nbr|#)\s*[:.\-]?\s*([A-Z0-9][A-Z0-9\-/]{4,})/i;
-const NAME_LABEL = /\bname\s*[:.\-]?\s*([A-Za-z][A-Za-z'\- ]{2,})/i;
+const NAME_LABEL = /\b(?:sur)?names?\s*(?:\(\d\))?\s*[:.\-]?\s*(.*)$/i;
+
+/**
+ * Whether a scrap of OCR output could plausibly be somebody's name. Bilingual
+ * documents stack three languages of label above each value, and without this
+ * the reader happily files a passport under
+ * "Taadigivennameszhuepcevvdateofbirth7".
+ */
+function looksLikeName(candidate) {
+  const value = String(candidate ?? '').trim().replace(/\s{2,}/g, ' ');
+  if (value.length < 3 || value.length > 40) return false;
+  if (/[0-9]/.test(value)) return false;
+  const words = value.split(' ');
+  if (words.length > 4) return false;
+  if (!words.every((w) => /^[A-Za-z][A-Za-z'-]{1,19}$/.test(w))) return false;
+  // Label words that survive into the captured value.
+  return !/\b(?:surname|given|adi|soyadi|type|code|nationality|sex|birth|issue|expiry|authority|holder|signature)\b/i.test(value);
+}
 const NATIONALITY_LABEL = /\b(?:nationality|issuing country|country code)\s*[:.\-]?\s*([A-Za-z][A-Za-z ]{2,})/i;
 
 /**
@@ -196,7 +293,7 @@ const NATIONALITY_LABEL = /\b(?:nationality|issuing country|country code)\s*[:.\
  * from "the latest date on the card" scores below it, so the review queue picks
  * it up. Over-flagging costs the user a tap; under-flagging costs a renewal.
  */
-export function parseDocumentText(rawText, ocrConfidence = 0) {
+export function parseDocumentText(rawText, ocrConfidence = 0, mrz = null) {
   const text = normaliseDigits(rawText);
   const lines = text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
   const lower = text.toLowerCase();
@@ -231,10 +328,27 @@ export function parseDocumentText(rawText, ocrConfidence = 0) {
   const labelledIssue = [];
   const loose = [];
 
-  for (const line of lines) {
+  for (const [index, line] of lines.entries()) {
     const lineLower = line.toLowerCase();
-    const dates = datesIn(line);
-    if (dates.length === 0) continue;
+    let dates = datesIn(line);
+
+    // Passports and ID cards print labels in one column and values in another,
+    // so OCR emits "Expires on (8)" and "13/01/2036" as separate lines. When a
+    // label line carries no date of its own, take the next line's.
+    let borrowed = false;
+    if (dates.length === 0) {
+      const labelled =
+        has(lineLower, EXPIRY_LABELS) || has(lineLower, ISSUE_LABELS) || has(lineLower, BIRTH_LABELS);
+      if (!labelled) continue;
+      const next = lines[index + 1];
+      if (!next || has(next.toLowerCase(), [...EXPIRY_LABELS, ...ISSUE_LABELS, ...BIRTH_LABELS])) {
+        continue;
+      }
+      dates = datesIn(next);
+      if (dates.length === 0) continue;
+      borrowed = true;
+    }
+
     if (has(lineLower, BIRTH_LABELS)) continue; // a date of birth is neither
     if (has(lineLower, PERIOD_LABELS) && dates.length >= 2) {
       const sorted = [...dates].sort();
@@ -242,7 +356,7 @@ export function parseDocumentText(rawText, ocrConfidence = 0) {
       labelledExpiry.push(sorted.at(-1));
     } else if (has(lineLower, EXPIRY_LABELS)) labelledExpiry.push(...dates);
     else if (has(lineLower, ISSUE_LABELS)) labelledIssue.push(...dates);
-    else loose.push(...dates);
+    else if (!borrowed) loose.push(...dates);
   }
 
   const today = new Date().toISOString().slice(0, 10);
@@ -285,12 +399,24 @@ export function parseDocumentText(rawText, ocrConfidence = 0) {
     number = emiratesId[0].replace(/\s/g, '-');
     numberConfidence = scale(0.9);
   } else {
-    for (const line of lines) {
+    // A document number is mostly digits. Without this, OCR noise off a
+    // decorative line ("18AYVEIAT") gets filed as a passport number.
+    const plausible = (value) => /^[A-Z0-9][A-Z0-9\-/]{4,19}$/.test(value) && (value.match(/\d/g) ?? []).length >= 3;
+    for (const [index, line] of lines.entries()) {
       const match = line.match(LABELLED_NUMBER);
-      if (match) {
+      if (match && plausible(match[1].trim().toUpperCase())) {
         number = match[1].trim();
         numberConfidence = scale(0.55);
         break;
+      }
+      // Label on one line, value on the next — the same column layout again.
+      if (/\b(?:passport|licence|license|policy|document|id)\s*(?:no|number)\b/i.test(line)) {
+        const next = (lines[index + 1] ?? '').trim().toUpperCase();
+        if (plausible(next)) {
+          number = next;
+          numberConfidence = scale(0.5);
+          break;
+        }
       }
     }
   }
@@ -329,13 +455,49 @@ export function parseDocumentText(rawText, ocrConfidence = 0) {
 
   // --- warnings -----------------------------------------------------------
   const warnings = [];
+
+  // Anything the MRZ provides wins. It is printed flat in OCR-B to be machine
+  // read and every field carries a check digit, so a verified value is worth
+  // more than the best guess off the decorated side of the same document.
+  if (mrz) {
+    if (mrz.isPassport) {
+      type = 'passport';
+      typeConfidence = 0.97;
+    } else if (!type) {
+      type = 'other';
+      typeConfidence = 0.5;
+    }
+    if (mrz.nationality) label = mrz.nationality;
+    if (mrz.name) {
+      name = mrz.name;
+      nameConfidence = 0.9;
+    }
+    if (mrz.number) {
+      number = mrz.number;
+      numberConfidence = mrz.checks.number ? 0.97 : 0.6;
+    }
+    if (mrz.expiryDate) {
+      expiry = mrz.expiryDate;
+      expiryConfidence = mrz.checks.expiryDate ? 0.97 : 0.55;
+    }
+    // An issue date is not in the MRZ, so a same-day-looking "issue" that
+    // actually matches the date of birth has to be dropped.
+    if (issue && issue === mrz.dateOfBirth) {
+      issue = '';
+      issueConfidence = 0;
+    }
+    if (!mrz.checks.expiryDate && mrz.expiryDate) {
+      warnings.push('The expiry date came from a smudged machine-readable line — please confirm it.');
+    }
+  }
+
   if (!expiry) warnings.push('No expiry date could be found on this photo.');
   else if (expiryConfidence < 0.7) {
     warnings.push('The expiry date was guessed from the dates on the card — please confirm it.');
   }
   if (!type) warnings.push('Could not tell what kind of document this is.');
   if (!name) warnings.push('No name was readable — pick the right person yourself.');
-  if (quality < 0.6) {
+  if (quality < 0.5 && !mrz) {
     warnings.push('The photo was hard to read. A flatter, brighter shot would help.');
   }
 

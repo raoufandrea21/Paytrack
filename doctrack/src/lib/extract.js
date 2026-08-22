@@ -62,7 +62,9 @@ export async function extractDocument(blob, settings = {}, { onProgress } = {}) 
 
   if (mode === EXTRACTION_MODES.LOCAL) {
     try {
-      return normaliseExtraction(await readLocally(blob, { onProgress }));
+      return normaliseExtraction(await readLocally(blob, { onProgress }), {
+        reader: 'the on-device reader',
+      });
     } catch (error) {
       if (error instanceof LocalReadError) throw new ExtractionError(error.message);
       throw error;
@@ -80,7 +82,7 @@ export async function extractDocument(blob, settings = {}, { onProgress } = {}) 
       ? await callDirect({ imageBase64, mediaType }, settings)
       : await callProxy({ imageBase64, mediaType }, settings);
 
-  return normaliseExtraction(raw);
+  return normaliseExtraction(raw, { reader: EXTRACTION_MODEL });
 }
 
 async function callProxy({ imageBase64, mediaType }, settings) {
@@ -153,7 +155,7 @@ const blankToNull = (v) => {
  * Turns the model's response into what the confirm form needs, and — importantly
  * — decides which fields the user must look at before saving.
  */
-export function normaliseExtraction(raw) {
+export function normaliseExtraction(raw, { reader = EXTRACTION_MODEL } = {}) {
   if (!raw || typeof raw !== 'object') {
     throw new ExtractionError('Extraction returned an unreadable response.');
   }
@@ -206,7 +208,9 @@ export function normaliseExtraction(raw) {
     warnings,
     needsReview,
     confidence: clamp01(raw.confidence),
-    model: EXTRACTION_MODEL,
+    // Which reader produced this, so the record does not claim Claude read a
+    // document that never left the device.
+    model: reader,
     extracted_at: new Date().toISOString(),
   };
 }

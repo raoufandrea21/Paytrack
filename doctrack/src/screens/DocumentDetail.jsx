@@ -153,7 +153,7 @@ export default function DocumentDetail() {
 
         {doc.extraction ? (
           <p className="px-1 text-[12px] text-slate-400 dark:text-slate-500">
-            Auto-filled by {doc.extraction.model} on{' '}
+            Read by {doc.extraction.model} on{' '}
             {formatDate(doc.extraction.extracted_at?.slice(0, 10))} ·{' '}
             {Math.round((doc.extraction.confidence ?? 0) * 100)}% confidence
           </p>

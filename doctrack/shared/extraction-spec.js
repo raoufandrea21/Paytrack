@@ -112,7 +112,9 @@ Rules:
 
 1. Never guess. If a field is illegible, cropped, glared out, or genuinely absent, return an empty string "" for it and give it a low confidence score. A blank the user fills in by hand is correct behaviour; a plausible-looking wrong value is a missed renewal.
 
-2. Dates. Return YYYY-MM-DD only.
+2. The machine-readable zone. Passports and many ID cards carry two or three lines of fixed-width characters at the foot of the page (e.g. "L003931968CYP8903107M3601132<<<<<<<<<<<<<<02"). It is printed flat, in OCR-B, with no security pattern over it, and every field carries a check digit. Where it is legible, prefer it over the laid-out side of the same document for the document number, the date of birth and the expiry date. In the second line of a passport MRZ the expiry is the six digits at positions 22-27 in YYMMDD form, following the sex character.
+
+3. Dates. Return YYYY-MM-DD only.
    - Normalise Arabic-Indic (٠١٢٣٤٥٦٧٨٩) and Eastern Arabic-Indic (۰۱۲۳۴۵۶۷۸۹) digits to Western numerals.
    - Greek month names on Cypriot documents are Gregorian; read them normally.
    - UAE documents almost always print dates as DD/MM/YYYY. Use that reading.
@@ -120,17 +122,17 @@ Rules:
    - If a date is Hijri only, return "" for that field and add a warning with the Hijri date as printed. Do not convert it.
    - Two-digit years: expand using the surrounding context (an expiry is in the future, an issue date is in the past).
 
-3. Names. Prefer the Latin-script name printed on the document, exactly as printed. If the document shows the name only in Arabic script, return null and add a warning saying the name is Arabic-only — do not transliterate.
+4. Names. Prefer the Latin-script name printed on the document, exactly as printed. If the document shows the name only in Arabic script, return null and add a warning saying the name is Arabic-only — do not transliterate.
 
-4. Numbers. For an Emirates ID use the 784-XXXX-XXXXXXX-X number. For a Cypriot identity card use the ID/ταυτότητα number printed on the front. For a passport use the passport number. For a driving licence use the licence number. For a vehicle registration use the traffic plate number. For an insurance card use the policy or member number. Keep the punctuation the document prints. Normalise any Arabic-Indic digits.
+5. Numbers. For an Emirates ID use the 784-XXXX-XXXXXXX-X number. For a Cypriot identity card use the ID/ταυτότητα number printed on the front. For a passport use the passport number. For a driving licence use the licence number. For a vehicle registration use the traffic plate number. For an insurance card use the policy or member number. Keep the punctuation the document prints. Normalise any Arabic-Indic digits.
 
-5. document_type must be one of the allowed enum values, or "" if you cannot tell which it is.
+6. document_type must be one of the allowed enum values, or "" if you cannot tell which it is.
 
-5a. label_guess distinguishes two documents of the same kind belonging to the same person. One household commonly holds two passports per adult, or two cars. For a passport give the issuing country ("Cypriot", "Lebanese"). For a vehicle registration or motor policy give the plate number or model. For anything with nothing to distinguish it, return "".
+6a. label_guess distinguishes two documents of the same kind belonging to the same person. One household commonly holds two passports per adult, or two cars. For a passport give the issuing country ("Cypriot", "Lebanese"). For a vehicle registration or motor policy give the plate number or model. For anything with nothing to distinguish it, return "".
 
-6. Multi-page PDFs. Read every page. A policy document often prints the expiry as "Period of Insurance: from X to Y" — the later date is the expiry. If several documents appear in one file, describe the primary one and add a warning that the file holds more than one.
+7. Multi-page PDFs. Read every page. A policy document often prints the expiry as "Period of Insurance: from X to Y" — the later date is the expiry. If several documents appear in one file, describe the primary one and add a warning that the file holds more than one.
 
-7. warnings should be short and actionable, aimed at someone about to file this automatically without looking at it. Return an empty array if the read was clean.
+8. warnings should be short and actionable, aimed at someone about to file this automatically without looking at it. Return an empty array if the read was clean.
 
 Return only the structured object.`;
 
