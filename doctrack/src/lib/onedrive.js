@@ -330,9 +330,12 @@ export function signInProblem({ signedIn = false } = {}) {
   return {
     kind: 'never-came-back',
     message:
-      'Microsoft did not send you back. If you saw an error page with a code on it, '
-      + 'the account type below probably does not match how the app is registered — or the '
-      + 'address of this app is not the one registered in Azure.',
+      'Microsoft did not send you back. If it sat on "Signing in with your passkey", the passkey '
+      + 'is probably kept on another device — go back on Microsoft\'s page and choose another way '
+      + 'to sign in. If you saw an error page with a code on it instead, the account type below '
+      + 'does not match how the app is registered, or this app\'s address is not the one '
+      + 'registered in Azure. Nothing here is stuck: everything works without OneDrive, and '
+      + 'Backup and transfer moves documents between your devices.',
   };
 }
 
