@@ -71,6 +71,9 @@ async function getClient(clientId, authority = 'consumers') {
       clientId,
       authority: authorityUrl(authority),
       redirectUri: window.location.origin,
+      // MSAL otherwise restores whatever URL sign-in started from, which fights
+      // this app for control of the fragment — and the fragment is the route.
+      navigateToLoginRequestUrl: false,
     },
     cache: { cacheLocation: 'localStorage' },
   });
@@ -169,7 +172,67 @@ function isWrongAuthority(error) {
   );
 }
 
+/**
+ * An installed PWA runs in its own window, and a popup opened from one does not
+ * complete the handshake: the sign-in window lands on the redirect URI holding
+ * the code — visibly, in its address bar — and simply waits, because the opener
+ * never reads it back.
+ *
+ * The redirect flow has no second window to coordinate with. The app navigates
+ * to Microsoft and comes back to itself with the code in the fragment, which
+ * completeRedirectSignIn() consumes on the next load.
+ */
+export function prefersRedirect() {
+  try {
+    return (
+      window.matchMedia?.('(display-mode: standalone)').matches ||
+      window.matchMedia?.('(display-mode: window-controls-overlay)').matches ||
+      window.navigator.standalone === true
+    );
+  } catch {
+    return false;
+  }
+}
+
+/** True when this load is Microsoft handing back a sign-in result. */
+export function hasRedirectResult() {
+  return /[#?&](code|error)=/.test(window.location.href) && !window.opener;
+}
+
+/**
+ * Consumes a sign-in result sitting in the URL. Must run before anything else
+ * touches the fragment — HashRouter would rewrite it away.
+ */
+export async function completeRedirectSignIn(clientId, authFragment = null) {
+  // The caller takes the fragment out of the address bar before loading MSAL,
+  // so it has to be handed over rather than read from the URL.
+  const fragment = authFragment ?? window.location.hash;
+  if (!clientId || !/[#?&](code|error)=/.test(fragment)) return null;
+
+  for (const authority of candidateAuthorities(clientId)) {
+    try {
+      const client = await getClient(clientId, authority);
+      const result = await client.handleRedirectPromise(fragment);
+      if (result?.account) {
+        rememberAuthority(clientId, authority);
+        return result.account;
+      }
+    } catch (error) {
+      if (!isWrongAuthority(error)) break;
+    }
+  }
+  return null;
+}
+
 export async function signIn(clientId) {
+  // In an installed app window there is no usable popup, so leave and come back.
+  if (prefersRedirect()) {
+    clearStaleInteraction();
+    const client = await getClient(clientId, candidateAuthorities(clientId)[0]);
+    await client.loginRedirect({ scopes: SCOPES, prompt: 'select_account' });
+    return null; // the page is navigating away; nothing follows
+  }
+
   let lastError = null;
 
   for (const authority of candidateAuthorities(clientId)) {

@@ -234,12 +234,23 @@ async function readImage(blob, { onProgress }) {
  * insurer, so the narrower document wins first.
  */
 const DECISIVE_TYPES = [
+  // Certificates come first, and for a reason: a birth certificate lists the
+  // parents' passport numbers, so "passport" appears on it and would otherwise
+  // win. The specific document beats the field it happens to quote.
+  ['birth_certificate', ['birth certificate', 'certificate of birth', 'live birth']],
+  ['marriage_certificate', ['marriage certificate', 'certificate of marriage', 'contract of marriage']],
+  ['education_certificate', ['bachelor', 'master of', 'diploma', 'has been awarded', 'transcript of records', 'certificate of graduation']],
+  ['power_of_attorney', ['power of attorney', 'attorney-in-fact', 'hereby appoint']],
+  ['vaccination', ['vaccination', 'vaccine', 'immunisation', 'immunization', 'rabies']],
   ['vehicle_registration', ['traffic plate', 'mulkiya', 'chassis no', 'vehicle registration']],
   ['car_insurance', ['motor insurance', 'insurance policy', 'period of insurance', 'policy no', 'policy number']],
   ['health_insurance', ['health insurance', 'medical insurance', 'member id', 'payer name']],
   ['driving_license', ['driving licence', 'driving license', 'driver licence', 'driver license', 'traffic code']],
   ['residency_visa', ['entry permit', 'residence visa', 'residency permit', 'u.i.d', 'uid no']],
-  ['passport', ['passport']],
+  // The bare word appears on visas, residence permits and birth certificates,
+  // almost always as "Passport No" quoting someone else's. A passport says so
+  // as a heading, not as a field label.
+  ['passport', [/\bpassport\b(?!\s*(?:no\b|number\b|#|nº))/i, 'travel document']],
   ['emirates_id', ['resident identity card', 'emirates id', 'united arab emirates identity']],
   ['cyprus_id', ['republic of cyprus', 'kypriaki', 'cypriot identity']],
 ];
@@ -336,7 +347,11 @@ function looksLikeName(candidate) {
   // Label words that survive into the captured value.
   return !/\b(?:surname|given|adi|soyadi|type|code|nationality|sex|birth|issue|expiry|authority|holder|signature)\b/i.test(value);
 }
-const NATIONALITY_LABEL = /\b(?:nationality|issuing country|country code)\s*[:.\-]?\s*([A-Za-z][A-Za-z ]{2,})/i;
+// One or two words only. Documents print fields side by side, so a greedy
+// capture runs straight into the next label — "CYPRUS Religion".
+const NATIONALITY_LABEL =
+  /\b(?:nationality|issuing country|country code)\s*[:.\-]?\s*([A-Za-z]{3,})(?:\s+([A-Za-z]{3,}))?/i;
+const FIELD_LABELS = /^(religion|sex|gender|name|date|place|birth|father|mother|issued|expiry|no|number)$/i;
 
 /**
  * Turns raw OCR text into the same object the model returns.
@@ -365,7 +380,8 @@ export function parseDocumentText(rawText, ocrConfidence = 0, mrz = null) {
   let type = '';
   let typeConfidence = 0;
 
-  const decisive = DECISIVE_TYPES.find(([, markers]) => markers.some((m) => lower.includes(m)));
+  const decisive = DECISIVE_TYPES.find(([, markers]) =>
+    markers.some((m) => (m instanceof RegExp ? m.test(lower) : lower.includes(m))));
   if (decisive) {
     [type] = decisive;
     typeConfidence = scale(0.88);
@@ -510,7 +526,10 @@ export function parseDocumentText(rawText, ocrConfidence = 0, mrz = null) {
     for (const line of lines) {
       const match = line.match(NATIONALITY_LABEL);
       if (match) {
-        label = match[1].trim().split(/\s+/).slice(0, 2).join(' ');
+        label = [match[1], match[2]]
+          .filter((word) => word && !FIELD_LABELS.test(word))
+          .join(' ')
+          .trim();
         break;
       }
     }

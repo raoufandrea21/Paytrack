@@ -4,7 +4,7 @@
  */
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { looksLikePortrait, pairingKey, readPath, readSide, readYear } from '../src/lib/filename.js';
+import { looksLikePortrait, pairingKey, readDocumentType, readPath, readSide, readYear } from '../src/lib/filename.js';
 
 const TODAY = new Date('2026-08-22T12:00:00');
 const at = (path) => readPath(path, { today: TODAY });
@@ -184,4 +184,38 @@ test('the chosen folder itself is not mistaken for a person', () => {
 test('but picking one person’s folder still names them', () => {
   // Here the chosen root IS the person, because the document sits in it.
   assert.equal(at('Raouf Andrea/Raouf Passport 2036.jpg').person, 'Raouf Andrea');
+});
+
+test('the filename names the document kind, typos and all', () => {
+  const cases = {
+    'Lily Birth ceritificate English': 'birth_certificate',
+    'New Digital Birth Certificate6788098253517130371': 'birth_certificate',
+    'Marriage Certificate English Attested': 'marriage_certificate',
+    'Power Of Attorney from Ali to Raouf': 'power_of_attorney',
+    'توكيل عام': 'power_of_attorney',
+    'Raouf Andrea University Certificate': 'education_certificate',
+    'Bella Vaccine Report 2027': 'vaccination',
+    'Lily Visa 2036': 'residency_visa',
+    'Raouf Golden Visa 2032': 'residency_visa',
+    'Lily EID 2036': 'emirates_id',
+    'Lily Cyprus ID': 'cyprus_id',
+    'Lily Cyprus Passport 2031': 'passport',
+    'Car License': 'vehicle_registration',
+    'Driving License': 'driving_license',
+    'Insurance Card': 'health_insurance',
+  };
+  for (const [name, expected] of Object.entries(cases)) {
+    assert.equal(readDocumentType(name), expected, `${name} should read as ${expected}`);
+  }
+});
+
+test('a filename that says nothing about the kind leaves it to the reader', () => {
+  assert.equal(readDocumentType('CamScanner 14-04-2026 19.02'), null);
+  assert.equal(readDocumentType('IMG_1746'), null);
+  assert.equal(readDocumentType('scan001'), null);
+});
+
+test('a passport is not read out of a birth certificate that merely quotes one', () => {
+  // "Father Passport No" appears on every UAE birth certificate.
+  assert.equal(readDocumentType('Lily Birth Certificate Arabic'), 'birth_certificate');
 });

@@ -256,6 +256,13 @@ What the path and filename are read for, before a single pixel is recognised:
   and the group supplies their relation.
 - **`Expired/`** describes the documents, not their owner. They arrive archived,
   and are not queued for review.
+- **The filename says what the document is.** "Lily Birth Certificate Arabic",
+  "Lily Visa 2036". This outranks recognition, because recognition is easily
+  fooled here: a birth certificate carries the parents' passport numbers, so the
+  word "passport" appears on it, and a UAE visa page quotes an Emirates ID
+  number. It tolerates the typos real filenames carry ("ceritificate") and
+  digits glued straight on ("Certificate6788098253517130371"). Where the two
+  disagree the record says so rather than hiding it.
 - **A year in the filename** is taken as the expiry year. It fills the gap when
   none could be read, and — more usefully — contradicts one that was: *"the
   document reads 2031 but the filename says 2036, one of them is wrong"* is a
@@ -320,6 +327,19 @@ Sync runs quietly when the app opens and when it comes back to the foreground,
 and on demand from Settings. A failure is logged and dropped: the app works
 entirely offline, so an unreachable OneDrive should never interrupt somebody
 looking up a passport.
+
+### Popup or redirect
+
+An installed PWA runs in its own window, and a popup opened from one never
+completes the handshake — the sign-in window lands on the redirect URI holding
+the code, visibly, in its address bar, and waits forever because the opener
+never reads it back. So an installed app uses the redirect flow instead: it
+navigates to Microsoft and returns to itself with the result in the fragment.
+
+That fragment is also the app's router, so `src/main.jsx` takes it out of the
+address bar and hands it to MSAL directly, before React mounts. Left in place
+for even a moment, HashRouter reads it as a route, fails to match, and redirects
+to the dashboard — taking the sign-in result with it.
 
 ### The one-time setup
 

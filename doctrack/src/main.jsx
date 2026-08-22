@@ -65,7 +65,36 @@ window.setTimeout(() => {
   }
 }, 10_000);
 
-if (!isAuthPopup) {
+/**
+ * A redirect sign-in comes back to this page with the result in the fragment.
+ * MSAL has to read it before React mounts, because HashRouter rewrites any
+ * fragment it does not recognise — which is how the popup flow lost its answer.
+ */
+async function consumeSignInResult() {
+  if (!/[#?&](code|error)=/.test(window.location.href) || window.opener) return;
+
+  // Take the fragment now and hand MSAL a copy. Leaving it in the address bar
+  // while an import loads gives the router a chance to see it, decide it is not
+  // a route, and redirect to the dashboard.
+  const authFragment = window.location.hash;
+  history.replaceState(null, '', `${window.location.pathname}#/settings`);
+
+  try {
+    const [{ getSetting }, onedrive] = await Promise.all([
+      import('./db.js'),
+      import('./lib/onedrive.js'),
+    ]);
+    const clientId = await getSetting('onedrive_client_id');
+    if (clientId) await onedrive.completeRedirectSignIn(clientId, authFragment);
+  } catch (error) {
+    console.warn('[doctrack] could not finish signing in', error);
+  } finally {
+    // MSAL may have moved the URL while processing; put the route back.
+    history.replaceState(null, '', `${window.location.pathname}#/settings`);
+  }
+}
+
+function mount() {
   createRoot(document.getElementById('root')).render(
     <StrictMode>
       <HashRouter>
@@ -73,6 +102,10 @@ if (!isAuthPopup) {
       </HashRouter>
     </StrictMode>,
   );
+}
+
+if (!isAuthPopup) {
+  consumeSignInResult().then(mount);
 }
 
 // Registered here rather than by the plugin so the app controls the timing and

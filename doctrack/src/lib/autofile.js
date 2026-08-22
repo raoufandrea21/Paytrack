@@ -68,7 +68,10 @@ export async function resolveMember(extraction, hints = {}) {
  * Plain-language reasons this document should be looked at. An empty list means
  * it filed itself cleanly and nobody needs to see it again.
  */
-export function reviewReasons(extraction, { holderUncertain = false, type, filenameYear } = {}) {
+export function reviewReasons(
+  extraction,
+  { holderUncertain = false, type, filenameYear, typeReadAs = null } = {},
+) {
   const reasons = [];
   const f = extraction.fields;
   const expiry = f.expiry_date.value;
@@ -94,7 +97,12 @@ export function reviewReasons(extraction, { holderUncertain = false, type, filen
     );
   }
 
-  if (!f.type.value) reasons.push('The document type was not obvious.');
+  if (!f.type.value && !type) reasons.push('The document type was not obvious.');
+  if (typeReadAs) {
+    reasons.push(
+      `Filed by its filename. The document itself reads more like a ${documentLabel({ type: typeReadAs })} — worth a glance.`,
+    );
+  }
   if (holderUncertain) reasons.push('Could not tell whose document this is.');
   if (f.number.value && f.number.confidence < LOW_CONFIDENCE) {
     reasons.push('The document number may be wrong.');
@@ -124,13 +132,22 @@ async function siblings({ memberId, type, label }) {
     .toArray();
 }
 
-export async function findDuplicate({ memberId, type, label, number, expiryDate }) {
+export async function findDuplicate({ memberId, type, label, number, expiryDate, filenameYear }) {
   const candidates = await siblings({ memberId, type, label });
+  const yearOf = (iso) => (iso ? Number(iso.slice(0, 4)) : null);
+
   return (
     candidates.find(
       (d) =>
         (number && d.number && d.number === number) ||
-        (expiryDate && d.expiry_date && d.expiry_date === expiryDate),
+        (expiryDate && d.expiry_date && d.expiry_date === expiryDate) ||
+        // The same document saved twice in different formats — a photo of an ID
+        // and a PDF of the same ID. The two read differently: one may give up
+        // the number, the other only a date. Same person, same kind, same year
+        // is the signal that survives both.
+        (filenameYear && yearOf(d.expiry_date) === filenameYear) ||
+        (filenameYear && expiryDate && yearOf(expiryDate) === filenameYear
+          && yearOf(d.expiry_date) === filenameYear),
     ) ?? null
   );
 }
@@ -160,7 +177,14 @@ export async function fileDocument({ prepared, extraction, hints = {} }) {
   const { member, created, uncertain } = await resolveMember(extraction, hints);
   const f = extraction.fields;
 
-  const type = f.type.value ?? 'other';
+  // The filename usually states the document's kind, and states it better than
+  // recognition can: a birth certificate quotes the parents' passport numbers,
+  // a visa page quotes an Emirates ID. Where the two disagree, the name a person
+  // typed wins, and the disagreement is worth surfacing.
+  const readType = f.type.value;
+  const namedType = hints.type ?? null;
+  const type = namedType ?? readType ?? 'other';
+  const typeDisagrees = Boolean(namedType && readType && namedType !== readType);
   const label = f.label?.value ?? '';
   const number = f.number.value ?? '';
   const expiry = isValidISODate(f.expiry_date.value) ? f.expiry_date.value : '';
@@ -172,6 +196,7 @@ export async function fileDocument({ prepared, extraction, hints = {} }) {
     label,
     number,
     expiryDate: expiry,
+    filenameYear: hints.year ?? null,
   });
   if (duplicate) {
     return {
@@ -188,6 +213,7 @@ export async function fileDocument({ prepared, extraction, hints = {} }) {
     holderUncertain: uncertain,
     type,
     filenameYear: hints.year ?? null,
+    typeReadAs: typeDisagrees ? readType : null,
   });
 
   const record = {

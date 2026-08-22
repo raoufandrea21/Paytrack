@@ -88,6 +88,45 @@ export function readYear(baseName, { today = new Date() } = {}) {
 const stripExtension = (name) => clean(name).replace(/\.[a-z0-9]{1,5}$/i, '');
 
 /**
+ * What the filename says the document is.
+ *
+ * People name a file after what it is — "Lily Birth Certificate Arabic",
+ * "Lily Visa 2036" — and that is a far stronger signal than text recognition
+ * scraping a scan. It is decisive where recognition is easily fooled: a birth
+ * certificate carries the parents' passport numbers, so the word "passport"
+ * appears on it, and a UAE visa page quotes an Emirates ID number.
+ *
+ * Order matters. The first match wins, so the specific phrases come before the
+ * general ones.
+ */
+const TYPE_FROM_NAME = [
+  // "birth cer…" rather than the whole word: real filenames carry typos
+  // ("Lily Birth ceritificate English") and digits glued straight on
+  // ("New Digital Birth Certificate6788098253517130371").
+  ['birth_certificate', /\bbirth\s*cer/i],
+  ['marriage_certificate', /\bmarriage\b/i],
+  ['power_of_attorney', /\bpower\s*of\s*attorney\b|\bpoa\b|توكيل/i],
+  ['education_certificate', /\buniversity\b|\bdiploma\b|\bdegree\b|\bgraduation\b|\btranscript\b|\beducation\s*cer/i],
+  ['vaccination', /\bvaccin|\bimmunis|\bimmuniz/i],
+  ['driving_license', /\bdriving\s*licen[cs]e\b|\bdriver'?s?\s*licen[cs]e\b/i],
+  ['vehicle_registration', /\bmulkiya\b|\bvehicle\s*(registration|licen[cs]e)\b|\bcar\s*licen[cs]e\b|\btraffic\s*plate\b/i],
+  ['car_insurance', /\b(car|motor|vehicle)\s*insur/i],
+  ['health_insurance', /\bhealth\s*insur|\bmedical\s*insur|\binsurance\s*card\b/i],
+  ['residency_visa', /\bgolden\s*visa\b|\bresidenc\w*\b|\bvisa\b|\bentry\s*permit\b/i],
+  ['cyprus_id', /\bcyprus\s*id\b|\bcypriot\s*id\b/i],
+  ['emirates_id', /\beid\b|\bemirates\s*id\b/i],
+  ['passport', /\bpassport\b/i],
+];
+
+export function readDocumentType(baseName) {
+  const name = clean(baseName);
+  for (const [type, pattern] of TYPE_FROM_NAME) {
+    if (pattern.test(name)) return type;
+  }
+  return null;
+}
+
+/**
  * Reads everything a path offers.
  *
  * `relativePath` is what the browser gives for a folder upload — the path
@@ -147,6 +186,7 @@ export function readPath(fullPath, { today = new Date() } = {}) {
     person,
     relation,
     archived,
+    type: readDocumentType(baseName),
     year: readYear(baseName, { today }),
     side: readSide(baseName),
     pairKey: pairingKey(baseName),
