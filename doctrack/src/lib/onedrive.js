@@ -172,28 +172,6 @@ function isWrongAuthority(error) {
   );
 }
 
-/**
- * An installed PWA runs in its own window, and a popup opened from one does not
- * complete the handshake: the sign-in window lands on the redirect URI holding
- * the code — visibly, in its address bar — and simply waits, because the opener
- * never reads it back.
- *
- * The redirect flow has no second window to coordinate with. The app navigates
- * to Microsoft and comes back to itself with the code in the fragment, which
- * completeRedirectSignIn() consumes on the next load.
- */
-export function prefersRedirect() {
-  try {
-    return (
-      window.matchMedia?.('(display-mode: standalone)').matches ||
-      window.matchMedia?.('(display-mode: window-controls-overlay)').matches ||
-      window.navigator.standalone === true
-    );
-  } catch {
-    return false;
-  }
-}
-
 /** True when this load is Microsoft handing back a sign-in result. */
 export function hasRedirectResult() {
   return /[#?&](code|error)=/.test(window.location.href) && !window.opener;
@@ -224,50 +202,37 @@ export async function completeRedirectSignIn(clientId, authFragment = null) {
   return null;
 }
 
+/**
+ * Signs in by leaving the page, not by opening one.
+ *
+ * The popup flow was tried and abandoned. It depends on the opened window
+ * handing its result back to whoever opened it, and that handshake has too many
+ * ways to fail here: an installed PWA opens a separate app window rather than a
+ * popup, a blocker or a reload severs the link, and a previous attempt can leave
+ * MSAL's interaction lock set. Each failure looks identical to the user — a
+ * window that sits on the Microsoft redirect holding the code, plainly visible
+ * in its address bar, and never closes.
+ *
+ * A redirect has no second window to coordinate with. The app navigates to
+ * Microsoft and comes back to itself with the result in the fragment, which
+ * completeRedirectSignIn() consumes on the next load. Nothing is lost by
+ * leaving: every document lives in IndexedDB, not in the page.
+ *
+ * Returns nothing, because the page is on its way out.
+ */
 export async function signIn(clientId) {
-  // In an installed app window there is no usable popup, so leave and come back.
-  if (prefersRedirect()) {
-    clearStaleInteraction();
-    const client = await getClient(clientId, candidateAuthorities(clientId)[0]);
-    await client.loginRedirect({ scopes: SCOPES, prompt: 'select_account' });
-    return null; // the page is navigating away; nothing follows
-  }
+  clearStaleInteraction();
+  const authority = candidateAuthorities(clientId)[0];
+  const client = await getClient(clientId, authority);
 
-  let lastError = null;
+  // Which endpoint suits this registration is only discoverable by trying, and
+  // a redirect cannot loop through candidates. Remember the attempt so the
+  // return trip can start from the same one, and completeRedirectSignIn() falls
+  // through the rest if it was wrong.
+  rememberAuthority(clientId, authority);
 
-  for (const authority of candidateAuthorities(clientId)) {
-    for (const attempt of [1, 2]) {
-      try {
-        clearStaleInteraction();
-        const client = await getClient(clientId, authority);
-        const result = await client.loginPopup({ scopes: SCOPES, prompt: 'select_account' });
-        rememberAuthority(clientId, authority);
-        return result.account;
-      } catch (error) {
-        // A cancelled popup is the user's answer, not a wrong guess — stop.
-        if (error?.errorCode === 'user_cancelled') {
-          throw new OneDriveError('Sign-in was cancelled.');
-        }
-        lastError = error;
-        // A lock left by an earlier attempt clears and this one retries once.
-        if (isInteractionLocked(error) && attempt === 1) continue;
-        break;
-      }
-    }
-    if (!isWrongAuthority(lastError)) break;
-  }
-
-  if (isInteractionLocked(lastError)) {
-    throw new OneDriveError(
-      'A previous sign-in is still marked as in progress. Tap "Reset connection" below, then try again.',
-      { cause: lastError },
-    );
-  }
-
-  throw new OneDriveError(
-    lastError?.errorMessage || lastError?.message || 'Could not sign in to Microsoft.',
-    { cause: lastError },
-  );
+  await client.loginRedirect({ scopes: SCOPES, prompt: 'select_account' });
+  return null;
 }
 
 async function activeClient(clientId) {
@@ -299,11 +264,14 @@ async function getToken(clientId) {
   try {
     const result = await client.acquireTokenSilent({ scopes: SCOPES, account });
     return result.accessToken;
-  } catch {
-    // The refresh token expired or consent changed — the only way back is to
-    // ask, so surface it rather than failing the sync silently.
-    const result = await client.acquireTokenPopup({ scopes: SCOPES, account });
-    return result.accessToken;
+  } catch (error) {
+    // Consent changed or the refresh token expired. Redirecting from inside a
+    // background sync would yank the page out from under someone mid-task, so
+    // say what is needed and let them choose the moment.
+    throw new OneDriveError(
+      'Microsoft needs you to sign in again — open Settings and tap Connect OneDrive.',
+      { cause: error },
+    );
   }
 }
 

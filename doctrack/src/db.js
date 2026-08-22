@@ -51,9 +51,13 @@ db.version(2)
 // back on the next merge.
 db.version(3)
   .stores({
-    members: '++id, &uid, name, relation, created_at, auto_created',
+    // uid is indexed but not unique. A unique index has to be satisfied the
+    // instant it is created, before the upgrade below has given the existing
+    // rows their uids — and a failed upgrade leaves the database unopenable,
+    // which the app can only show as a spinner that never stops.
+    members: '++id, uid, name, relation, created_at, auto_created',
     documents:
-      '++id, &uid, member_id, type, expiry_date, status, created_at, renewed_from, review_needed',
+      '++id, uid, member_id, type, expiry_date, status, created_at, renewed_from, review_needed',
     reminders: '&key, document_id, threshold, notified_at',
     tombstones: '&uid, kind, deleted_at',
     settings: '&key',
@@ -74,6 +78,67 @@ db.version(3)
 export function recordTombstone(uid, kind) {
   if (!uid) return Promise.resolve();
   return db.tombstones.put({ uid, kind, deleted_at: new Date().toISOString() });
+}
+
+/**
+ * Opening the database, and saying so when it will not open.
+ *
+ * Dexie opens lazily on the first query, so a failure has nowhere to surface:
+ * every query simply never settles and the app sits on "Loading…" forever. Two
+ * things cause it in practice — an upgrade that throws, and an older copy of the
+ * app still holding the database open in another tab or window, which blocks the
+ * version change indefinitely.
+ */
+export const DATABASE_STATE = { OPENING: 'opening', READY: 'ready', BLOCKED: 'blocked', FAILED: 'failed' };
+
+let blocked = false;
+
+db.on('blocked', () => {
+  // Another tab or window is still on the previous version and will not let go.
+  blocked = true;
+  console.warn('[doctrack] the database upgrade is blocked by another open copy of the app');
+});
+
+/**
+ * Resolves to { state, error } the UI can act on. Never rejects.
+ *
+ * The error text is carried in the result rather than read from a module
+ * variable: a remote device cannot be debugged, so the only way to learn what
+ * actually went wrong is for the screen to show it.
+ */
+export function openDatabase({ timeoutMs = 8000 } = {}) {
+  const failure = () => (blocked ? DATABASE_STATE.BLOCKED : DATABASE_STATE.FAILED);
+
+  const opened = db
+    .open()
+    .then(() => ({ state: DATABASE_STATE.READY, error: null }))
+    .catch((error) => {
+      console.error('[doctrack] could not open the database', error);
+      return { state: failure(), error: `${error?.name ?? 'Error'}: ${error?.message ?? 'unknown'}` };
+    });
+
+  // A blocked upgrade never settles either way, so the wait needs its own end.
+  const gaveUp = new Promise((resolve) => {
+    setTimeout(
+      () => resolve({
+        state: failure(),
+        error: `Storage did not open within ${Math.round(timeoutMs / 1000)} seconds.`,
+      }),
+      timeoutMs,
+    );
+  });
+
+  return Promise.race([opened, gaveUp]);
+}
+
+/**
+ * Deletes everything and starts over. The escape hatch when an upgrade has left
+ * the database in a state it cannot open — destructive, and only ever offered
+ * with that said plainly.
+ */
+export async function resetDatabase() {
+  db.close();
+  await db.delete();
 }
 
 // ---------------------------------------------------------------- members

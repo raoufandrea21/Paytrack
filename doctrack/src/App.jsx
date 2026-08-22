@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import Dashboard from './screens/Dashboard.jsx';
 import DocumentEditor from './screens/DocumentEditor.jsx';
@@ -10,7 +10,8 @@ import Library from './screens/Library.jsx';
 import Review from './screens/Review.jsx';
 import Settings from './screens/Settings.jsx';
 import { checkRemindersNow } from './lib/notifications.js';
-import { getSettings } from './db.js';
+import { DATABASE_STATE, getSettings, openDatabase } from './db.js';
+import DatabaseError from './components/DatabaseError.jsx';
 import { currentAccount } from './lib/onedrive.js';
 import { runSync } from './lib/cloudsync.js';
 
@@ -43,9 +44,18 @@ async function syncQuietly() {
 }
 
 export default function App() {
+  // Dexie opens lazily, so a failed or blocked upgrade would otherwise show as
+  // a spinner that never resolves. Gate the app on a definite answer.
+  const [database, setDatabase] = useState({ state: DATABASE_STATE.OPENING, error: null });
+
+  useEffect(() => {
+    openDatabase().then(setDatabase);
+  }, []);
+
   // The reliable reminder trigger: every launch, and every time the app comes
   // back to the foreground. Background sync, where it exists, is a bonus on top.
   useEffect(() => {
+    if (database.state !== DATABASE_STATE.READY) return undefined;
     checkRemindersNow();
     syncQuietly();
 
@@ -56,7 +66,19 @@ export default function App() {
     };
     document.addEventListener('visibilitychange', onVisible);
     return () => document.removeEventListener('visibilitychange', onVisible);
-  }, []);
+  }, [database.state]);
+
+  if (database.state === DATABASE_STATE.OPENING) {
+    return (
+      <div className="flex min-h-full items-center justify-center p-8 text-slate-400">
+        <span className="text-[15px]">Opening your documents…</span>
+      </div>
+    );
+  }
+
+  if (database.state !== DATABASE_STATE.READY) {
+    return <DatabaseError state={database.state} error={database.error} />;
+  }
 
   return (
     <Routes>

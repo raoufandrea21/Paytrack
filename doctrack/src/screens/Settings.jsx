@@ -296,15 +296,11 @@ export default function Settings() {
               <Button
                 disabled={!clientId.trim() || syncing}
                 onClick={async () => {
-                  setSync('Opening Microsoft sign-in…');
+                  setSync('Taking you to Microsoft — you will come straight back…');
                   try {
-                    const signedIn = await signIn(clientId.trim());
-                    // In an installed app the page navigates away and comes
-                    // back; there is nothing to set here.
-                    if (signedIn) {
-                      setAccount(signedIn);
-                      setSync(null);
-                    }
+                    // The page navigates away and returns with the result, so
+                    // nothing here runs afterwards on the happy path.
+                    await signIn(clientId.trim());
                   } catch (error) {
                     setSync(error?.message ?? 'Could not sign in.');
                   }

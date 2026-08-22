@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db, documentsNeedingReview, duplicateMembers, mergeMembers } from '../db.js';
@@ -21,6 +21,14 @@ export default function Dashboard() {
   );
   const reviewCount = useLiveQuery(async () => (await documentsNeedingReview()).length, [], 0);
   const duplicates = useLiveQuery(() => duplicateMembers(), [], []);
+
+  // Nothing should take this long. If it does, say so rather than spinning.
+  const [stalled, setStalled] = useState(false);
+  useEffect(() => {
+    if (members && documents) return undefined;
+    const timer = setTimeout(() => setStalled(true), 12_000);
+    return () => clearTimeout(timer);
+  }, [members, documents]);
 
   const grouped = useMemo(() => {
     if (!members || !documents) return null;
@@ -89,9 +97,21 @@ export default function Dashboard() {
       }
     >
       {grouped === null ? (
-        <div className="flex justify-center py-16 text-slate-400">
-          <Spinner className="size-7" />
-        </div>
+        stalled ? (
+          <EmptyState icon="⏳" title="This is taking too long">
+            <p>
+              Your documents are stored on this device and something is stopping DocTrack reading
+              them. Closing every other DocTrack tab and window, then reloading, usually clears it.
+            </p>
+            <Button className="mt-4" onClick={() => window.location.reload()}>
+              Reload
+            </Button>
+          </EmptyState>
+        ) : (
+          <div className="flex justify-center py-16 text-slate-400">
+            <Spinner className="size-7" />
+          </div>
+        )
       ) : grouped.length === 0 ? (
         <EmptyState icon="📄" title="Nothing on file yet">
           <p>
