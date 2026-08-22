@@ -4,7 +4,7 @@
  */
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { looksLikePortrait, pairingKey, readDocumentType, readPath, readSide, readYear } from '../src/lib/filename.js';
+import { looksLikePortrait, pairingKey, readDocumentType, readPath, readPersonFromName, readSide, readYear } from '../src/lib/filename.js';
 
 const TODAY = new Date('2026-08-22T12:00:00');
 const at = (path) => readPath(path, { today: TODAY });
@@ -218,4 +218,44 @@ test('a filename that says nothing about the kind leaves it to the reader', () =
 test('a passport is not read out of a birth certificate that merely quotes one', () => {
   // "Father Passport No" appears on every UAE birth certificate.
   assert.equal(readDocumentType('Lily Birth Certificate Arabic'), 'birth_certificate');
+});
+
+// -------------------------------------------------- a person in the filename
+
+test('a filename says who it belongs to when no folder does', () => {
+  assert.equal(readPersonFromName('Raouf Andrea Driving Licence 2035'), 'Raouf Andrea');
+  assert.equal(readPersonFromName('Sandy Charif Passport'), 'Sandy Charif');
+  assert.equal(readPersonFromName('Lily Emirates ID 2030 front'), 'Lily');
+  assert.equal(readPersonFromName('Bella vaccination record'), 'Bella');
+});
+
+test('filing noise is not mistaken for a name', () => {
+  assert.equal(readPersonFromName('Passport 2035'), null);
+  assert.equal(readPersonFromName('Emirates ID copy'), null);
+  assert.equal(readPersonFromName('scan 001'), null);
+  assert.equal(readPersonFromName('IMG_20240103'), null);
+  assert.equal(readPersonFromName(''), null);
+  assert.equal(readPersonFromName(null), null);
+});
+
+test('a sentence is not a name', () => {
+  assert.equal(
+    readPersonFromName('please find attached herewith the renewed papers for review'),
+    null,
+  );
+});
+
+test('initials alone are not enough to name anyone', () => {
+  assert.equal(readPersonFromName('A B Passport'), null);
+  assert.equal(readPersonFromName('R C Emirates ID 2031'), null);
+});
+
+test('a guessed name is only offered when the folder is silent', () => {
+  const fromFolder = readPath('Raouf Andrea/Sandy Charif Passport 2035.jpg');
+  assert.equal(fromFolder.person, 'Raouf Andrea');
+  assert.equal(fromFolder.personGuess, null, 'the folder already answered');
+
+  const loose = readPath('Sandy Charif Passport 2035.jpg');
+  assert.equal(loose.person, null);
+  assert.equal(loose.personGuess, 'Sandy Charif');
 });

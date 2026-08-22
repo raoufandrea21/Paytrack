@@ -116,6 +116,9 @@ export async function importOne(clientId, planned, settings, { api = drive } = {
   if (seen && seen.c_tag === (planned.item.cTag ?? '')) {
     return { outcome: 'skipped', message: `${planned.name} was read before` };
   }
+  // Read before, and changed since. The record it produced is the one to
+  // update — see fileDocument, which would otherwise have to guess.
+  const replaces = seen?.document_id ?? null;
 
   if (planned.hints.portrait) {
     await remember(planned, 'portrait', null);
@@ -150,7 +153,11 @@ export async function importOne(clientId, planned, settings, { api = drive } = {
     };
   }
 
-  const result = await fileDocument({ prepared, extraction, hints: planned.hints });
+  const result = await fileDocument({
+    prepared,
+    extraction,
+    hints: { ...planned.hints, replaces },
+  });
   await remember(planned, result.outcome, result.documentId);
   // The back of a card is a file in its own right; remembering it stops the
   // next run treating it as something new that has never been read.
@@ -214,7 +221,7 @@ export async function importFolder(clientId, root, settings, { api = drive, onIt
 }
 
 const bucket = (outcome) => {
-  if (['filed', 'needs_review', 'archived', 'renewed'].includes(outcome)) return 'filed';
+  if (['filed', 'needs_review', 'archived', 'renewed', 'updated'].includes(outcome)) return 'filed';
   if (outcome === 'duplicate') return 'duplicate';
   if (outcome === 'portrait') return 'portrait';
   if (outcome === 'skipped') return 'skipped';

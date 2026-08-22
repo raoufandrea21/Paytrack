@@ -5,7 +5,7 @@
  */
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { reviewReasons } from '../src/lib/autofile.js';
+import { memberNamedIn, reviewReasons } from '../src/lib/autofile.js';
 import { matchMemberByName } from '../src/db.js';
 import { normaliseExtraction } from '../src/lib/extract.js';
 import { buildExtractionRequest, PDF_MEDIA_TYPE } from '../shared/extraction-spec.js';
@@ -104,4 +104,50 @@ test('a PDF is sent as a document block, not an image block', () => {
 test('a photo is still sent as an image block', () => {
   const body = buildExtractionRequest({ imageBase64: 'AAAA', mediaType: 'image/png' });
   assert.equal(body.messages[0].content[0].type, 'image');
+});
+
+// ------------------------------------- finding a known person in a filename
+
+const household = [
+  { id: 1, name: 'Raouf Andrea' },
+  { id: 2, name: 'Sandy Charif' },
+  { id: 3, name: 'Lily Charalambous' },
+  { id: 4, name: 'Andreas Charalambous' },
+  { id: 5, name: 'Bella' },
+];
+
+test('a filename that names someone on file is filed under them', () => {
+  assert.equal(memberNamedIn('Raouf Andrea Driving Licence 2035', household)?.id, 1);
+  assert.equal(memberNamedIn('sandy charif passport', household)?.id, 2);
+  assert.equal(memberNamedIn('Bella vaccination 2027', household)?.id, 5);
+});
+
+test('a filename that names nobody on file matches nobody', () => {
+  assert.equal(memberNamedIn('Passport 2035', household), null);
+  assert.equal(memberNamedIn('Mohammed Hassan Emirates ID', household), null);
+  assert.equal(memberNamedIn('', household), null);
+});
+
+test('half a name is not the person', () => {
+  // "Charalambous" alone is two people's surname and neither one's whole name.
+  assert.equal(memberNamedIn('Charalambous passport', household), null);
+});
+
+test('the fuller name wins when one contains the other', () => {
+  const both = [{ id: 1, name: 'Andreas' }, { id: 2, name: 'Andreas Charalambous' }];
+  assert.equal(memberNamedIn('Andreas Charalambous Passport', both)?.id, 2);
+  assert.equal(memberNamedIn('Andreas Passport', both)?.id, 1);
+});
+
+test('a genuine tie is left unanswered rather than guessed', () => {
+  const twins = [{ id: 1, name: 'Lily' }, { id: 2, name: 'Lily' }];
+  assert.equal(memberNamedIn('Lily Passport', twins), null);
+});
+
+test('a one-letter member name cannot swallow every file', () => {
+  assert.equal(memberNamedIn('A Passport 2030', [{ id: 1, name: 'A' }]), null);
+});
+
+test('the name has to be whole words, not a fragment', () => {
+  assert.equal(memberNamedIn('Lilypad Insurance', [{ id: 1, name: 'Lily' }]), null);
 });

@@ -9,15 +9,66 @@
  * The one field that always earns a flag when it is shaky is the expiry date.
  * Everything else in this app is decoration around getting that date right.
  */
-import { db, addDocument, findOrCreateMember, matchMemberByName, renewDocument } from '../db.js';
+import {
+  db, addDocument, findOrCreateMember, matchMemberByName, renewDocument, updateDocument,
+} from '../db.js';
 import { LOW_CONFIDENCE, documentLabel, typeIsPermanent } from './constants.js';
 import { isValidISODate } from './dates.js';
 
 export const UNKNOWN_HOLDER = 'Unknown holder';
 
+const nameWords = (text) =>
+  String(text ?? '')
+    .toLowerCase()
+    .replace(/[^a-z\u00c0-\u024f\s]+/g, ' ')
+    .split(/\s+/)
+    .filter(Boolean);
+
+/**
+ * Which person on file, if any, is named inside a filename.
+ *
+ * Only people who already exist are candidates, and the match has to be their
+ * whole name appearing as consecutive words — "Andreas Charalambous Passport"
+ * finds Andreas, "Passport 2035" finds nobody. The longest match wins, so a
+ * household with both "Andreas" and "Andreas Charalambous" resolves to the one
+ * the filename actually spells out; a genuine tie is left unanswered rather
+ * than guessed.
+ */
+export function memberNamedIn(baseName, members = []) {
+  const words = nameWords(baseName);
+  if (words.length === 0) return null;
+
+  let best = null;
+  let bestLength = 0;
+  let tied = false;
+
+  for (const member of members) {
+    const target = nameWords(member.name);
+    if (target.length === 0) continue;
+    // A one-word name has to be a real word, not an initial that could fall
+    // anywhere: "A Passport.jpg" must not become person "A".
+    if (target.length === 1 && target[0].length < 3) continue;
+
+    const found = words.some((_, i) => target.every((word, j) => words[i + j] === word));
+    if (!found) continue;
+
+    if (target.length > bestLength) {
+      best = member;
+      bestLength = target.length;
+      tied = false;
+    } else if (target.length === bestLength && best?.id !== member.id) {
+      tied = true;
+    }
+  }
+
+  return tied ? null : best;
+}
+
 /**
  * Works out which family member a document belongs to.
  *
+ *   - a folder named after someone            → that person
+ *   - a filename that names someone on file    → that person
  *   - a confident name that matches someone   → that person
  *   - a confident name that matches nobody    → create them
  *   - no readable name, and only one person on file → that person
@@ -36,6 +87,13 @@ export async function resolveMember(extraction, hints = {}) {
   const name = extraction.fields.holder_name.value;
   const confident = name && extraction.fields.holder_name.confidence >= LOW_CONFIDENCE;
   const members = await db.members.toArray();
+
+  // "Raouf Andrea Driving Licence 2035.jpg", dropped straight into the watched
+  // folder rather than into a per-person one. Only names of people already on
+  // file count: matching loose words against nobody would invent a person out
+  // of a document type. Typed by hand, so it still beats reading the photo.
+  const named = memberNamedIn(hints.baseName ?? '', members);
+  if (named) return { member: named, created: false, uncertain: false, fromFilename: true };
 
   if (confident) {
     const { member, created } = await findOrCreateMember(name);
@@ -58,6 +116,15 @@ export async function resolveMember(extraction, hints = {}) {
   if (name) {
     const { member, created } = await findOrCreateMember(name);
     return { member, created, uncertain: true };
+  }
+
+  // Last resort before a nameless bucket: the filename, with the document type
+  // and the year taken out of it. A guess, so it is flagged — but a flagged
+  // "Raouf Andrea" is something the user recognises and can confirm in a tap,
+  // where "Unknown holder" is a pile they have to open one by one.
+  if (hints.personGuess) {
+    const { member, created } = await findOrCreateMember(hints.personGuess);
+    return { member, created, uncertain: true, fromFilename: true };
   }
 
   const { member, created } = await findOrCreateMember(UNKNOWN_HOLDER);
@@ -190,14 +257,24 @@ export async function fileDocument({ prepared, extraction, hints = {} }) {
   const expiry = isValidISODate(f.expiry_date.value) ? f.expiry_date.value : '';
   const describe = { type, label };
 
-  const duplicate = await findDuplicate({
-    memberId: member.id,
-    type,
-    label,
-    number,
-    expiryDate: expiry,
-    filenameYear: hints.year ?? null,
-  });
+  // A file that was read before and has since changed in OneDrive. We know
+  // exactly which record came out of it, so duplicate detection has nothing to
+  // decide: this *is* that document, freshly photographed. Guessing from the
+  // number or the year instead is how a replaced file gets waved away as a
+  // duplicate of the record it is supposed to be replacing.
+  const replaces =
+    hints.replaces == null ? null : await db.documents.get(hints.replaces);
+
+  const duplicate = replaces
+    ? null
+    : await findDuplicate({
+        memberId: member.id,
+        type,
+        label,
+        number,
+        expiryDate: expiry,
+        filenameYear: hints.year ?? null,
+      });
   if (duplicate) {
     return {
       outcome: 'duplicate',
@@ -241,10 +318,30 @@ export async function fileDocument({ prepared, extraction, hints = {} }) {
     },
   };
 
+  // A replaced file whose date has moved on is a renewal like any other; one
+  // whose date has not is the same document rephotographed, so it is written
+  // over in place rather than filed a second time.
+  if (replaces && replaces.status === 'active') {
+    const laterThanBefore = expiry && replaces.expiry_date && expiry > replaces.expiry_date;
+    if (!laterThanBefore) {
+      await updateDocument(replaces.id, record);
+      return {
+        outcome: 'updated',
+        member,
+        memberCreated: created,
+        documentId: replaces.id,
+        ...describe,
+        reasons,
+      };
+    }
+  }
+
   // An upload that runs later than the copy on file is that document renewed.
   // renewDocument archives the old row, links the new one to it, and clears the
   // old reminders so the milestones re-arm against the new expiry date.
-  const renewing = await findRenewalTarget({ memberId: member.id, type, label, expiryDate: expiry });
+  const renewing = replaces?.status === 'active'
+    ? replaces
+    : await findRenewalTarget({ memberId: member.id, type, label, expiryDate: expiry });
   if (renewing) {
     const documentId = await renewDocument(renewing.id, record);
     return {
@@ -285,6 +382,8 @@ export function describeResult(result) {
       return `${label} saved for ${result.member.name} — needs checking`;
     case 'renewed':
       return `${label} renewed for ${result.member.name} — the old one is archived`;
+    case 'updated':
+      return `${label} for ${result.member.name} updated from the newer file`;
     case 'duplicate':
       return `${label} for ${result.member.name} is already on file`;
     default:

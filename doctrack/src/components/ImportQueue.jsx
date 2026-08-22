@@ -63,6 +63,8 @@ const STATUS_STYLE = {
   reading: { dot: 'bg-indigo-500 animate-pulse', text: 'text-slate-600 dark:text-slate-300' },
   filing: { dot: 'bg-indigo-500 animate-pulse', text: 'text-slate-600 dark:text-slate-300' },
   filed: { dot: 'bg-emerald-500', text: 'text-slate-700 dark:text-slate-200' },
+  renewed: { dot: 'bg-emerald-500', text: 'text-slate-700 dark:text-slate-200' },
+  updated: { dot: 'bg-emerald-500', text: 'text-slate-700 dark:text-slate-200' },
   archived: { dot: 'bg-slate-400', text: 'text-slate-600 dark:text-slate-300' },
   portrait: { dot: 'bg-slate-300', text: 'text-slate-500 dark:text-slate-400' },
   needs_review: { dot: 'bg-amber-500', text: 'text-amber-800 dark:text-amber-300' },

@@ -127,6 +127,77 @@ export function readDocumentType(baseName) {
 }
 
 /**
+ * Words that turn up in filenames and are never part of a person's name.
+ *
+ * Deliberately short. Everything a document could be called is already stripped
+ * by the type patterns above; this covers the joining words and the filing
+ * noise left over — copies, scans, renewals, languages, numbering.
+ */
+const NOT_A_NAME = new Set([
+  'copy', 'copies', 'scan', 'scanned', 'scans', 'new', 'old', 'latest', 'final',
+  'renewed', 'renewal', 'updated', 'original', 'doc', 'document', 'documents',
+  'file', 'files', 'img', 'image', 'photo', 'pic', 'front', 'back', 'rear',
+  'reverse', 'page', 'pages', 'side', 'and', 'the', 'of', 'for', 'my', 'mr',
+  'mrs', 'ms', 'dr', 'english', 'arabic', 'greek', 'french', 'translated',
+  'translation', 'attested', 'stamped', 'signed', 'card', 'id', 'ids', 'no',
+  'number', 'expired', 'expiry', 'exp', 'valid', 'copy1', 'final1', 'whatsapp',
+  'pdf', 'jpeg', 'jpg', 'png', 'untitled', 'attachment',
+]);
+
+/**
+ * The person a filename appears to be about, when there is no folder to say.
+ *
+ * "Raouf Andrea Driving Licence 2035" is somebody's licence, and the somebody
+ * is written on the front of it. Taken by removing everything the name is
+ * known to be *about* — the document type, the year, the side, the filing
+ * noise — and keeping the words left over, if what is left still reads like a
+ * name.
+ *
+ * A guess, and treated as one by the caller: it is used only when nothing more
+ * reliable is available, and the document it names is flagged for checking.
+ * Anything doubtful returns null rather than inventing a household member —
+ * a wrong person is worse than no person, because it is not obviously wrong.
+ */
+export function readPersonFromName(baseName) {
+  const text = clean(baseName);
+  if (!text) return null;
+
+  // People write the name first and the description after it: "Raouf Andrea
+  // Driving Licence 2035", "Lily Birth Certificate English". So rather than
+  // cutting the description out — which leaves the tails of partial-word
+  // patterns behind, "vaccin" out of "vaccination" — take what comes before
+  // the first thing that describes the document.
+  let cut = text.length;
+  for (const [, pattern] of TYPE_FROM_NAME) {
+    const at = text.search(new RegExp(pattern.source, 'i'));
+    if (at >= 0 && at < cut) cut = at;
+  }
+  for (const pattern of [/\b(19|20)\d{2}\b/, /\b(front|back|rear|reverse)\b/i]) {
+    const at = text.search(pattern);
+    if (at >= 0 && at < cut) cut = at;
+  }
+
+  const words = text
+    .slice(0, cut)
+    .replace(/[_\-.]+/g, ' ')
+    .replace(/[^\p{L}\s]+/gu, ' ')
+    .split(/\s+/)
+    .filter(Boolean)
+    .filter((word) => !NOT_A_NAME.has(word.toLowerCase()))
+    // Initials and stray letters are not enough to name anyone by.
+    .filter((word) => word.length >= 2);
+
+  // One word can be a name — a maid known by her first name, a pet — but four
+  // is a sentence, and a sentence is a filename that beat the type patterns.
+  if (words.length === 0 || words.length > 3) return null;
+  // Require it to look like a name rather than a code: at least one word long
+  // enough to be one.
+  if (!words.some((word) => word.length >= 3)) return null;
+
+  return words.join(' ').replace(/\b\p{Ll}/gu, (c) => c.toUpperCase());
+}
+
+/**
  * Reads everything a path offers.
  *
  * `relativePath` is what the browser gives for a folder upload — the path
@@ -187,6 +258,7 @@ export function readPath(fullPath, { today = new Date() } = {}) {
     relation,
     archived,
     type: readDocumentType(baseName),
+    personGuess: person ? null : readPersonFromName(baseName),
     year: readYear(baseName, { today }),
     side: readSide(baseName),
     pairKey: pairingKey(baseName),
