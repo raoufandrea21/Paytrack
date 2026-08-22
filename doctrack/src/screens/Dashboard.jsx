@@ -7,6 +7,11 @@ import Screen from '../components/Screen.jsx';
 import DocumentRow from '../components/DocumentRow.jsx';
 import { Button, Card, EmptyState, Spinner } from '../components/ui.jsx';
 
+// How much of a long list is shown before it asks to be opened. Enough to see
+// what is urgent, few enough that eight people still fit on a phone screen.
+const VISIBLE_SOON = 6;
+const VISIBLE_PER_MEMBER = 3;
+
 /**
  * Home screen. One card per family member, their documents inside sorted by
  * urgency, and the members with something expiring soonest floated to the top —
@@ -54,6 +59,23 @@ export default function Dashboard() {
     () => (documents ?? []).filter((d) => urgencyForDocument(d).rank <= 1).length,
     [documents],
   );
+
+  /**
+   * Everything falling due in the next two months, whoever it belongs to.
+   *
+   * With eight people on file the per-person cards answer "what does Lily
+   * have"; they do not answer "what do I have to deal with this month", which
+   * is the reason to open the app at all. Sorted hardest-first and named by
+   * person, this is that answer without scrolling through anybody's card.
+   */
+  const soon = useMemo(() => {
+    if (!members || !documents) return [];
+    const names = new Map(members.map((m) => [m.id, shortNameFor(m, members)]));
+    return documents
+      .filter((d) => urgencyForDocument(d).rank <= 2)
+      .sort(byUrgency)
+      .map((d) => ({ doc: d, holder: names.get(d.member_id) ?? 'Unknown' }));
+  }, [members, documents]);
 
   return (
     <Screen
@@ -130,6 +152,8 @@ export default function Dashboard() {
         </EmptyState>
       ) : (
         <div className="space-y-3">
+          {soon.length > 0 ? <ComingUp entries={soon} /> : null}
+
           {reviewCount > 0 ? (
             <Link
               to="/review"
@@ -200,7 +224,50 @@ export default function Dashboard() {
   );
 }
 
+/** The next two months for the whole household, in one list. */
+function ComingUp({ entries }) {
+  const [expanded, setExpanded] = useState(false);
+  const shown = expanded ? entries : entries.slice(0, VISIBLE_SOON);
+  const hidden = entries.length - shown.length;
+  const overdue = entries.filter((e) => urgencyForDocument(e.doc).rank === 0).length;
+
+  return (
+    <Card className="overflow-hidden ring-2 ring-indigo-200 dark:ring-indigo-900">
+      <div className="flex items-baseline justify-between gap-2 px-3.5 pt-3 pb-2">
+        <h2 className="text-[15px] font-bold">Next 60 days</h2>
+        <p className="text-[13px] text-slate-500 dark:text-slate-400">
+          {overdue > 0
+            ? `${overdue} already ${overdue === 1 ? 'needs' : 'need'} renewing`
+            : `${entries.length} coming up`}
+        </p>
+      </div>
+      <div className="divide-y divide-slate-100 border-t border-slate-100 dark:divide-slate-800 dark:border-slate-800">
+        {shown.map(({ doc, holder }) => (
+          <DocumentRow key={doc.id} document={doc} showHolder={holder} />
+        ))}
+        {hidden > 0 ? (
+          <button
+            type="button"
+            onClick={() => setExpanded(true)}
+            className="block w-full px-3.5 py-3 text-left text-[14px] font-medium text-indigo-600 dark:text-indigo-400"
+          >
+            Show {hidden} more
+          </button>
+        ) : null}
+      </div>
+    </Card>
+  );
+}
+
 function MemberCard({ member, docs }) {
+  // Someone with a dozen documents should not push everybody else off the
+  // screen. The urgent few are always visible; the rest are one tap away.
+  const [expanded, setExpanded] = useState(false);
+  const shown = expanded || docs.length <= VISIBLE_PER_MEMBER + 1
+    ? docs
+    : docs.slice(0, VISIBLE_PER_MEMBER);
+  const hidden = docs.length - shown.length;
+
   return (
     <Card className="overflow-hidden">
       <div className="flex items-center gap-3 px-3.5 pt-3 pb-2">
@@ -234,9 +301,18 @@ function MemberCard({ member, docs }) {
           </Link>
         ) : (
           <>
-            {docs.map((doc) => (
+            {shown.map((doc) => (
               <DocumentRow key={doc.id} document={doc} />
             ))}
+            {hidden > 0 ? (
+              <button
+                type="button"
+                onClick={() => setExpanded(true)}
+                className="block w-full px-3.5 py-3 text-left text-[14px] font-medium text-slate-500 dark:text-slate-400"
+              >
+                Show {hidden} more document{hidden === 1 ? '' : 's'}
+              </button>
+            ) : null}
             <Link
               to={`/documents/new?member=${member.id}`}
               className="block px-3.5 py-3 text-[14px] font-medium text-indigo-600 dark:text-indigo-400"
@@ -248,6 +324,18 @@ function MemberCard({ member, docs }) {
       </div>
     </Card>
   );
+}
+
+/**
+ * A first name, which is how a household refers to each other and leaves room
+ * for the date beside it on a phone. Two people sharing one keep their full
+ * names, because a list that says "Maria" twice answers nothing.
+ */
+function shortNameFor(member, members) {
+  const first = (m) => m.name.trim().split(/\s+/)[0] ?? m.name;
+  const mine = first(member);
+  const shared = members.filter((m) => first(m).toLowerCase() === mine.toLowerCase()).length > 1;
+  return shared ? member.name : mine;
 }
 
 function initials(name) {
