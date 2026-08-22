@@ -104,6 +104,7 @@ export function UrgencyChip({ urgency, children, className = '' }) {
 export function Banner({ tone = 'info', title, children, className = '' }) {
   const tones = {
     info: 'bg-slate-100 text-slate-700 dark:bg-slate-800/70 dark:text-slate-300',
+    ok: 'bg-emerald-50 text-emerald-900 ring-1 ring-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-200 dark:ring-emerald-900',
     warn: 'bg-amber-50 text-amber-900 ring-1 ring-amber-200 dark:bg-amber-950/50 dark:text-amber-200 dark:ring-amber-900',
     error:
       'bg-red-50 text-red-900 ring-1 ring-red-200 dark:bg-red-950/50 dark:text-red-200 dark:ring-red-900',

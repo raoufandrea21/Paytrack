@@ -8,6 +8,7 @@ import Archive from './screens/Archive.jsx';
 import BulkAdd from './screens/BulkAdd.jsx';
 import DriveImport from './screens/DriveImport.jsx';
 import Library from './screens/Library.jsx';
+import Reminders from './screens/Reminders.jsx';
 import Review from './screens/Review.jsx';
 import Settings from './screens/Settings.jsx';
 import { checkRemindersNow } from './lib/notifications.js';
@@ -129,6 +130,7 @@ export default function App() {
         <Route path="/documents/:id/renew" element={<DocumentEditor mode="renew" />} />
         <Route path="/archive" element={<Archive />} />
         <Route path="/settings" element={<Settings />} />
+        <Route path="/reminders" element={<Reminders />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </>

@@ -3,29 +3,39 @@
  * both on the page (on every app load) and inside the service worker (periodic
  * background sync), and IndexedDB is available in both.
  */
-import { db, markReminded, wasReminded } from '../db.js';
-import { REMINDER_THRESHOLDS, documentType } from './constants.js';
+import { db, getSetting, markReminded, wasReminded } from '../db.js';
+import { documentType } from './constants.js';
 import { daysUntil, expiryPhrase, formatDate } from './dates.js';
+import { RULES_SETTING, normaliseRules, rungsFor } from './reminderrules.js';
 
 export const REMINDER_TAG_PREFIX = 'doctrack-expiry';
 
 /**
- * Every (document, threshold) pair that is now due and has not been announced.
- * Thresholds are checked most-urgent-first so a document that jumps straight
- * past 60 and 30 days (e.g. added late) still only produces one notification.
+ * Every (document, rung) pair that is now due and has not been announced.
+ *
+ * Rungs come from the user's own rules and are checked most-urgent-first, so a
+ * document that jumps straight past the six-month and one-month marks — added
+ * late, or renewed with a short validity — still produces one notification
+ * rather than three. Negative rungs are the repeat once a document is overdue.
  */
-export async function dueReminders({ today = new Date() } = {}) {
+export async function dueReminders({ today = new Date(), rules = undefined } = {}) {
+  const settings = rules === undefined ? await getSetting(RULES_SETTING, null) : rules;
+  const active = normaliseRules(settings);
+
   const documents = await db.documents.where('status').equals('active').toArray();
   const members = await db.members.toArray();
   const memberName = new Map(members.map((m) => [m.id, m.name]));
 
   const due = [];
   for (const doc of documents) {
+    if (doc.no_expiry) continue;
     const days = daysUntil(doc.expiry_date, { today });
     if (days === null) continue;
 
-    for (const threshold of REMINDER_THRESHOLDS) {
-      if (days > threshold) continue;
+    for (const threshold of rungsFor(doc.type, days, active)) {
+      // A negative rung is an overdue repeat and is due by construction; a
+      // positive one only once the document is inside that many days.
+      if (threshold >= 0 && days > threshold) continue;
       if (await wasReminded(doc.id, threshold)) break; // already told them, and anything
       due.push({                                      // less urgent was told earlier
         document: doc,
@@ -44,10 +54,10 @@ export async function dueReminders({ today = new Date() } = {}) {
  * Finds what is due, shows one notification per document, records that it was
  * shown. Safe to call repeatedly — the reminders table makes it idempotent.
  */
-export async function runReminderCheck({ registration = null, today = new Date() } = {}) {
-  if (!canNotify()) return { shown: 0, due: await dueReminders({ today }) };
+export async function runReminderCheck({ registration = null, today = new Date(), rules = undefined } = {}) {
+  if (!canNotify()) return { shown: 0, due: await dueReminders({ today, rules }) };
 
-  const due = await dueReminders({ today });
+  const due = await dueReminders({ today, rules });
   let shown = 0;
 
   for (const item of due) {

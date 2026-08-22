@@ -5,7 +5,6 @@ import { backupFilename, buildBackup, restoreBackup } from '../lib/backup.js';
 import {
   DEFAULT_EXTRACTION_MODE,
   EXTRACTION_MODES,
-  REMINDER_THRESHOLDS,
 } from '../lib/constants.js';
 import { EXTRACTION_MODEL } from '../../shared/extraction-spec.js';
 import {
@@ -15,6 +14,7 @@ import {
   requestNotificationPermission,
 } from '../lib/notifications.js';
 import { dueReminders } from '../lib/reminders.js';
+import { RULES_SETTING, describeRules } from '../lib/reminderrules.js';
 import {
   ACCOUNT_KINDS,
   accountKind,
@@ -93,10 +93,13 @@ export default function Settings() {
       <div className="space-y-4 pb-6">
         <Section title="Reminders">
           <p className="mb-3 text-[14px] text-slate-600 dark:text-slate-400">
-            DocTrack notifies you {REMINDER_THRESHOLDS.slice().reverse().join(', ')} days before
-            each expiry — once per document per milestone. The check runs every time you open the
-            app, and in the background where the browser allows it.
+            {describeRules(settings?.[RULES_SETTING])}. The check runs every time you open the app, and in the
+            background where the browser allows it.
           </p>
+
+          <Button as="link" to="/reminders" variant="secondary" className="mb-3 w-full">
+            Choose when to be reminded
+          </Button>
 
           {permission === 'unsupported' ? (
             <Banner tone="info">This browser does not support notifications. The dashboard still shows everything.</Banner>
