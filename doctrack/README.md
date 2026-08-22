@@ -285,9 +285,10 @@ free and takes about ten minutes, once, for all your devices.
 2. Search for **App registrations** at the top, and open it
 3. Click **New registration**
 4. **Name:** `DocTrack`
-5. **Supported account types:** choose the option that mentions
-   *"any organizational directory and personal Microsoft accounts"* — the
-   longest one in the list. Anything narrower will reject a personal account.
+5. **Supported account types:** any option that includes *personal Microsoft
+   accounts* — either "Personal Microsoft account users" or the multitenant
+   variant. The app works out which sign-in endpoint your choice implies (see
+   below), so this does not have to be exact.
 6. Under **Redirect URI**, change the dropdown from *Web* to
    **Single-page application (SPA)**, and enter the address you open DocTrack
    at, with no trailing slash — e.g. `https://your-app.vercel.app`
@@ -301,6 +302,26 @@ Repeat only step 9 on your other devices — the registration is shared.
 
 To also use it on `http://localhost:5173` while developing, add that as a second
 SPA redirect URI on the same registration.
+
+### Sign-in endpoints
+
+Microsoft has three, and picking the wrong one is a hard rejection rather than a
+warning: `consumers` for personal accounts, `organizations` for work or school
+accounts, and `common` for both — but `common` only works for an app registered
+as multitenant, and returns AADSTS50194 for a personal-only registration.
+
+Rather than making anyone understand that, sign-in tries each in turn and
+remembers the one that worked, so the registration can be made either way.
+
+### A personal Microsoft account needs a directory
+
+Registering an app requires a directory, and Microsoft has deprecated creating
+apps outside one — a bare personal account now gets "The ability to create
+applications outside of a directory has been deprecated" and no usable button.
+Signing up for an **Azure free account** creates a default directory and unblocks
+it. It asks for a card for identity verification and does not auto-charge;
+nothing DocTrack uses is billable, and app registrations live in Entra ID's free
+tier, so they keep working after the trial credit expires.
 
 ### What it can and cannot see
 

@@ -29,66 +29,142 @@ export class OneDriveError extends Error {
   }
 }
 
-let msalPromise = null;
-let clientApp = null;
-let configuredClientId = null;
+/**
+ * Which sign-in endpoint to use depends on how the app was registered, and
+ * getting it wrong is a hard rejection rather than a warning:
+ *
+ *   consumers     personal Microsoft accounts only
+ *   organizations work or school accounts only
+ *   common        both — but only for an app registered as multitenant.
+ *                 Microsoft rejects /common outright for a personal-only app
+ *                 (AADSTS50194), so it cannot simply be the default.
+ *
+ * Rather than making the user understand any of that, sign-in tries each in
+ * turn and remembers the one that worked.
+ */
+export const AUTHORITIES = ['consumers', 'common', 'organizations'];
 
-async function getClient(clientId) {
+const authorityUrl = (name) => `https://login.microsoftonline.com/${name}`;
+
+let msalPromise = null;
+const clients = new Map();
+
+async function getClient(clientId, authority = 'consumers') {
   if (!clientId) throw new OneDriveError('No Microsoft app ID saved yet.');
-  if (clientApp && configuredClientId === clientId) return clientApp;
+
+  const key = `${clientId}:${authority}`;
+  if (clients.has(key)) return clients.get(key);
 
   if (!msalPromise) msalPromise = import('@azure/msal-browser');
   const { PublicClientApplication } = await msalPromise;
 
-  clientApp = new PublicClientApplication({
+  const app = new PublicClientApplication({
     auth: {
       clientId,
-      // "common" so a personal Microsoft account and a work or school account
-      // both work — a household is likely to have one of each.
-      authority: 'https://login.microsoftonline.com/common',
+      authority: authorityUrl(authority),
       redirectUri: window.location.origin,
     },
     cache: { cacheLocation: 'localStorage' },
   });
-  await clientApp.initialize();
-  configuredClientId = clientId;
-  return clientApp;
+  await app.initialize();
+  clients.set(key, app);
+  return app;
 }
 
-export async function currentAccount(clientId) {
+/** The endpoint a previous sign-in settled on, so later calls skip the search. */
+function rememberedAuthority(clientId) {
   try {
-    const client = await getClient(clientId);
-    return client.getAllAccounts()[0] ?? null;
+    return window.localStorage.getItem(`doctrack.authority.${clientId}`);
   } catch {
     return null;
   }
 }
 
-export async function signIn(clientId) {
-  const client = await getClient(clientId);
+function rememberAuthority(clientId, authority) {
   try {
-    const result = await client.loginPopup({ scopes: SCOPES, prompt: 'select_account' });
-    return result.account;
-  } catch (error) {
-    if (error?.errorCode === 'user_cancelled') {
-      throw new OneDriveError('Sign-in was cancelled.');
-    }
-    throw new OneDriveError(error?.message ?? 'Could not sign in to Microsoft.', { cause: error });
+    window.localStorage.setItem(`doctrack.authority.${clientId}`, authority);
+  } catch {
+    /* private browsing; the search just runs again next time */
   }
 }
 
+/** Authorities to try, best guess first. */
+function candidateAuthorities(clientId) {
+  const known = rememberedAuthority(clientId);
+  return known ? [known, ...AUTHORITIES.filter((a) => a !== known)] : AUTHORITIES;
+}
+
+export async function currentAccount(clientId) {
+  for (const authority of candidateAuthorities(clientId)) {
+    try {
+      const client = await getClient(clientId, authority);
+      const account = client.getAllAccounts()[0];
+      if (account) return account;
+    } catch {
+      /* try the next endpoint */
+    }
+  }
+  return null;
+}
+
+/** A rejection that means "wrong endpoint for this registration", not "no". */
+function isWrongAuthority(error) {
+  const text = `${error?.errorCode ?? ''} ${error?.errorMessage ?? ''} ${error?.message ?? ''}`;
+  return /AADSTS50194|AADSTS500011|AADSTS700016|AADSTS90002|not configured as a multi-tenant|unauthorized_client/i.test(
+    text,
+  );
+}
+
+export async function signIn(clientId) {
+  let lastError = null;
+
+  for (const authority of candidateAuthorities(clientId)) {
+    try {
+      const client = await getClient(clientId, authority);
+      const result = await client.loginPopup({ scopes: SCOPES, prompt: 'select_account' });
+      rememberAuthority(clientId, authority);
+      return result.account;
+    } catch (error) {
+      // A cancelled popup is the user's answer, not a wrong guess — stop.
+      if (error?.errorCode === 'user_cancelled') {
+        throw new OneDriveError('Sign-in was cancelled.');
+      }
+      lastError = error;
+      if (!isWrongAuthority(error)) break;
+    }
+  }
+
+  throw new OneDriveError(
+    lastError?.errorMessage || lastError?.message || 'Could not sign in to Microsoft.',
+    { cause: lastError },
+  );
+}
+
+async function activeClient(clientId) {
+  for (const authority of candidateAuthorities(clientId)) {
+    try {
+      const client = await getClient(clientId, authority);
+      if (client.getAllAccounts()[0]) return client;
+    } catch {
+      /* try the next endpoint */
+    }
+  }
+  throw new OneDriveError('Not signed in to Microsoft.');
+}
+
 export async function signOut(clientId) {
-  const client = await getClient(clientId);
-  const account = client.getAllAccounts()[0];
-  if (account) await client.logoutPopup({ account });
-  clientApp = null;
-  configuredClientId = null;
+  try {
+    const client = await activeClient(clientId);
+    const account = client.getAllAccounts()[0];
+    if (account) await client.logoutPopup({ account });
+  } finally {
+    clients.clear();
+  }
 }
 
 async function getToken(clientId) {
-  const client = await getClient(clientId);
+  const client = await activeClient(clientId);
   const account = client.getAllAccounts()[0];
-  if (!account) throw new OneDriveError('Not signed in to Microsoft.');
 
   try {
     const result = await client.acquireTokenSilent({ scopes: SCOPES, account });
