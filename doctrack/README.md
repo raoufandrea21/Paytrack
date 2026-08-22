@@ -8,6 +8,11 @@ Upload a pile of photos or PDFs and walk away. Each one is read, classified,
 filed under the right person — creating that person if they are new — and its
 reminders set at 60, 30 and 7 days before expiry. No form in between.
 
+**It costs nothing to run.** Reading happens on the device by default: an OCR
+engine compiled to WebAssembly, served from the app's own origin, no account and
+no API key. Claude is available as a more accurate paid alternative, and neither
+is required — every field can be typed by hand.
+
 Everything — records, photos, history — is stored in IndexedDB on the device.
 No account, no backend, no sync.
 
@@ -18,11 +23,28 @@ No account, no backend, no sync.
 ```bash
 cd doctrack
 npm install
-cp .env.example .env.local     # then paste your Anthropic API key into it
 npm run dev
 ```
 
-Open http://localhost:5173.
+Open http://localhost:5173. That is the whole setup — the default reader needs
+no key and no account.
+
+`npm install` also vendors the OCR engine into `public/tesseract/` (see
+`scripts/vendor-ocr.mjs`). It is ~15 MB of build output that never gets
+committed, and a browser downloads about 7 MB of it the first time a document is
+read, then caches it.
+
+### Optional: reading documents with Claude
+
+More accurate than the on-device reader, handles PDFs and Arabic, and costs
+roughly a penny a document.
+
+```bash
+cp .env.example .env.local     # then paste your Anthropic API key into it
+```
+
+Then switch **Settings → How documents are read** to *Claude, through a server
+endpoint*.
 
 `npm run dev` also serves `POST /api/extract`, the endpoint that talks to the
 Claude API, so there is nothing else to run alongside Vite.
@@ -101,15 +123,35 @@ function works the same way; on a purely static host, use direct mode instead.
 
 ---
 
-## Auto-fill modes
+## Reader modes
 
-Settings → *Auto-fill from photos* → *How to reach the API*:
+Settings → *Reading documents* → *How documents are read*:
 
-| Mode | The key lives | Use it when |
+| Mode | Cost | Where the reading happens |
 | --- | --- | --- |
-| **Through a server endpoint** (default) | In `.env.local` / your host's env, server-side | Normal use. The browser never sees the key. |
-| **Straight from this device** | In this browser's IndexedDB, entered in Settings | You want no server at all — a static host, or the app installed on one phone you control. |
-| **Off** | Nowhere | You would rather type the fields in. |
+| **On this device** (default) | Free | In the browser, via WebAssembly. No key, no account, works offline, and the photo never leaves the device — not even to be read. |
+| **Claude, through a server endpoint** | ~1¢/doc | Key in `.env.local` or your host's env. The browser never sees it. |
+| **Claude, straight from this device** | ~1¢/doc | Key in this browser's IndexedDB. For a static host with no server. |
+| **Off** | Free | Nowhere. Type the fields in yourself. |
+
+### What the free reader gives up
+
+It recognises printed English. That is enough for UAE and Cypriot documents —
+the English side of a bilingual card carries every field — but it means:
+
+- **No PDFs.** Photograph the page instead.
+- **No Arabic-script fields.** Which matches the app's rule anyway: leave them
+  blank and flag them rather than transliterate.
+- **More review.** It is a text recogniser with a parser on top, not a model, so
+  more documents land in "Needs checking". Confidence is set deliberately
+  pessimistically: a field found next to its printed label clears the bar, a
+  field inferred from position does not.
+
+The parser knows what these documents look like. It reads `DD/MM/YYYY` as the
+UAE prints it, ignores dates on a *date of birth* line, understands an insurance
+certificate's "Period of Insurance: from X to Y", and separates a Cypriot
+passport from a Cypriot identity card — both say REPUBLIC OF CYPRUS, so the word
+"passport" has to outrank the country.
 
 Direct mode calls `api.anthropic.com` from the page itself, using the SDK's
 `dangerouslyAllowBrowser` flag. That is a real trade-off, stated plainly: any
@@ -133,10 +175,13 @@ Drop several files into **Upload documents** and each one goes through:
    or a *unique* first name. A confident name that matches nobody creates a new
    family member; an unreadable name on a single-person setup goes to that
    person, and otherwise to a holding record called "Unknown holder"
-4. **De-duplicate** — same person, same type, and the same number *or* the same
-   expiry date means it is already on file, so it is skipped. A genuine renewal
-   changes both, so this never swallows one
-5. **Save** and set the reminders
+4. **De-duplicate** — same person, same kind, and the same number *or* the same
+   expiry date means it is already on file, so it is skipped
+5. **Detect a renewal** — same person, same kind, but running later than the
+   copy on file. The old record is archived and linked rather than left beside
+   the new one with stale reminders. Only fires when there is exactly one
+   candidate; two passports and an unlabelled upload is a question, not an answer
+6. **Save** and set the reminders
 
 ### The one thing it will not do silently
 
@@ -227,9 +272,17 @@ reminders     one row per (document, milestone) already notified about
 settings      key/value: API mode, key, endpoint
 ```
 
-`type` is one of `emirates_id`, `driving_license`, `passport`,
-`residency_visa`, `vehicle_registration`, `car_insurance`,
-`health_insurance`, `other`.
+`type` is one of `emirates_id`, `cyprus_id`, `driving_license`, `passport`,
+`residency_visa`, `vehicle_registration`, `car_insurance`, `health_insurance`,
+`other`.
+
+`label` does two jobs. On `other` it *is* the type — a tenancy contract, a trade
+licence, whatever the built-in list does not cover, with previously used labels
+offered back as suggestions. On any other type it is a qualifier, which is what
+makes two passports for one person distinguishable: *Passport · Cypriot* and
+*Passport · Lebanese*. The reader fills it from the issuing country where it
+can, and it is part of a document's identity for de-duplication and renewal
+matching.
 
 Dates are plain `YYYY-MM-DD` strings, never `Date` objects, so nothing shifts by
 a day when the device changes timezone.
@@ -263,7 +316,8 @@ doctrack/
 ├── src/
 │   ├── db.js                   Dexie schema and every query
 │   ├── lib/
-│   │   ├── extract.js          proxy / direct transports, response normalising
+│   │   ├── extract.js          picks a reader; normalises whatever it returns
+│   │   ├── localread.js        free on-device OCR + a UAE/Cyprus-aware parser
 │   │   ├── autofile.js         holder resolution, de-duplication, review rules
 │   │   ├── dates.js            Arabic digits, loose date parsing, urgency
 │   │   ├── files.js            photo downscale, PDF passthrough, base64
@@ -274,6 +328,7 @@ doctrack/
 │   │                           Archive, Settings
 │   ├── components/             Screen, DocumentForm, PhotoInput, ui primitives
 │   └── sw.js                   service worker (precache + periodic sync)
+├── scripts/vendor-ocr.mjs      copies the OCR engine into public/ at build time
 └── test/
     ├── extraction.test.mjs
     └── autofile.test.mjs

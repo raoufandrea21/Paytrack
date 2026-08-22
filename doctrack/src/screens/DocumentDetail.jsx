@@ -8,7 +8,7 @@ import {
   renewalHistory,
   unarchiveDocument,
 } from '../db.js';
-import { documentType } from '../lib/constants.js';
+import { documentLabel, documentType } from '../lib/constants.js';
 import { expiryPhrase, formatDate, urgencyFor } from '../lib/dates.js';
 import { previewUrl } from '../lib/files.js';
 import Screen from '../components/Screen.jsx';
@@ -62,7 +62,7 @@ export default function DocumentDetail() {
 
   return (
     <Screen
-      title={type.label}
+      title={documentLabel(doc)}
       subtitle={member?.name}
       back="/"
       actions={
@@ -178,7 +178,7 @@ export default function DocumentDetail() {
           </Card>
         ) : photoUrl ? (
           <Card className="overflow-hidden">
-            <img src={photoUrl} alt={`${type.label} scan`} className="w-full bg-slate-100 object-contain dark:bg-slate-800" />
+            <img src={photoUrl} alt={`${documentLabel(doc)} scan`} className="w-full bg-slate-100 object-contain dark:bg-slate-800" />
           </Card>
         ) : (
           <Card className="p-4 text-center text-[14px] text-slate-500 dark:text-slate-400">

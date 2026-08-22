@@ -9,8 +9,8 @@
  * The one field that always earns a flag when it is shaky is the expiry date.
  * Everything else in this app is decoration around getting that date right.
  */
-import { db, addDocument, findOrCreateMember, matchMemberByName } from '../db.js';
-import { LOW_CONFIDENCE, documentType } from './constants.js';
+import { db, addDocument, findOrCreateMember, matchMemberByName, renewDocument } from '../db.js';
+import { LOW_CONFIDENCE, documentLabel } from './constants.js';
 import { isValidISODate } from './dates.js';
 
 export const UNKNOWN_HOLDER = 'Unknown holder';
@@ -42,6 +42,13 @@ export async function resolveMember(extraction) {
 
   if (members.length === 1) {
     return { member: members[0], created: false, uncertain: false };
+  }
+
+  // A shaky name that matches nobody still beats a nameless bucket: the user
+  // sees something they can recognise and rename. It is flagged either way.
+  if (name) {
+    const { member, created } = await findOrCreateMember(name);
+    return { member, created, uncertain: true };
   }
 
   const { member, created } = await findOrCreateMember(UNKNOWN_HOLDER);
@@ -76,13 +83,24 @@ export function reviewReasons(extraction, { holderUncertain = false } = {}) {
  * the same number or the same expiry date — a genuine renewal changes both, so
  * this does not swallow one.
  */
-export async function findDuplicate({ memberId, type, number, expiryDate }) {
-  const candidates = await db.documents
+const sameLabel = (a, b) =>
+  String(a ?? '').trim().toLowerCase() === String(b ?? '').trim().toLowerCase();
+
+/**
+ * Documents of the same kind already on file for this person. Label is part of
+ * the identity: two passports for one person are two different documents, not
+ * two copies of one, once they are labelled "Cypriot" and "Lebanese".
+ */
+async function siblings({ memberId, type, label }) {
+  return db.documents
     .where('member_id')
     .equals(memberId)
-    .filter((d) => d.status === 'active' && d.type === type)
+    .filter((d) => d.status === 'active' && d.type === type && sameLabel(d.label, label))
     .toArray();
+}
 
+export async function findDuplicate({ memberId, type, label, number, expiryDate }) {
+  const candidates = await siblings({ memberId, type, label });
   return (
     candidates.find(
       (d) =>
@@ -90,6 +108,23 @@ export async function findDuplicate({ memberId, type, number, expiryDate }) {
         (expiryDate && d.expiry_date && d.expiry_date === expiryDate),
     ) ?? null
   );
+}
+
+/**
+ * The same document, renewed. Same person, same kind, same label, but running
+ * later than the copy on file — so the old record should be archived and linked
+ * rather than left sitting alongside the new one with stale reminders.
+ *
+ * Only fires when there is exactly one candidate. Two existing passports and an
+ * unlabelled upload is a question, not an answer, so that case just files
+ * normally and the review queue picks it up.
+ */
+export async function findRenewalTarget({ memberId, type, label, expiryDate }) {
+  if (!expiryDate) return null;
+  const candidates = (await siblings({ memberId, type, label })).filter(
+    (d) => d.expiry_date && d.expiry_date < expiryDate,
+  );
+  return candidates.length === 1 ? candidates[0] : null;
 }
 
 /**
@@ -101,12 +136,15 @@ export async function fileDocument({ prepared, extraction }) {
   const f = extraction.fields;
 
   const type = f.type.value ?? 'other';
+  const label = f.label?.value ?? '';
   const number = f.number.value ?? '';
   const expiry = isValidISODate(f.expiry_date.value) ? f.expiry_date.value : '';
+  const describe = { type, label };
 
   const duplicate = await findDuplicate({
     memberId: member.id,
     type,
+    label,
     number,
     expiryDate: expiry,
   });
@@ -116,16 +154,17 @@ export async function fileDocument({ prepared, extraction }) {
       member,
       memberCreated: created,
       documentId: duplicate.id,
-      type,
+      ...describe,
       reasons: [],
     };
   }
 
   const reasons = reviewReasons(extraction, { holderUncertain: uncertain });
 
-  const documentId = await addDocument({
+  const record = {
     member_id: member.id,
     type,
+    label,
     number,
     issue_date: isValidISODate(f.issue_date.value) ? f.issue_date.value : '',
     expiry_date: expiry,
@@ -141,26 +180,48 @@ export async function fileDocument({ prepared, extraction }) {
       warnings: extraction.warnings,
       needsReview: extraction.needsReview,
     },
-  });
+  };
+
+  // An upload that runs later than the copy on file is that document renewed.
+  // renewDocument archives the old row, links the new one to it, and clears the
+  // old reminders so the milestones re-arm against the new expiry date.
+  const renewing = await findRenewalTarget({ memberId: member.id, type, label, expiryDate: expiry });
+  if (renewing) {
+    const documentId = await renewDocument(renewing.id, record);
+    return {
+      outcome: 'renewed',
+      member,
+      memberCreated: created,
+      documentId,
+      replacedId: renewing.id,
+      previousExpiry: renewing.expiry_date,
+      ...describe,
+      reasons,
+    };
+  }
+
+  const documentId = await addDocument(record);
 
   return {
     outcome: reasons.length > 0 ? 'needs_review' : 'filed',
     member,
     memberCreated: created,
     documentId,
-    type,
+    ...describe,
     reasons,
   };
 }
 
 /** One-line summary of a filing result, for the upload queue. */
 export function describeResult(result) {
-  const label = documentType(result.type).label;
+  const label = documentLabel(result);
   switch (result.outcome) {
     case 'filed':
       return `${label} filed under ${result.member.name}`;
     case 'needs_review':
       return `${label} saved for ${result.member.name} — needs checking`;
+    case 'renewed':
+      return `${label} renewed for ${result.member.name} — the old one is archived`;
     case 'duplicate':
       return `${label} for ${result.member.name} is already on file`;
     default:

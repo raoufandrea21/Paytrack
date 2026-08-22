@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db, documentsNeedingReview } from '../db.js';
-import { documentType } from '../lib/constants.js';
+import { documentLabel, documentType } from '../lib/constants.js';
 import { formatDate } from '../lib/dates.js';
 import Screen from '../components/Screen.jsx';
 import { Card, EmptyState, Spinner } from '../components/ui.jsx';
@@ -48,9 +48,7 @@ export default function Review() {
                 <div className="flex items-center gap-2.5">
                   <span className="text-xl" aria-hidden="true">{documentType(doc.type).icon}</span>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-[15px] font-semibold">
-                      {documentType(doc.type).label}
-                    </p>
+                    <p className="truncate text-[15px] font-semibold">{documentLabel(doc)}</p>
                     <p className="truncate text-[13px] text-slate-500 dark:text-slate-400">
                       {holder} ·{' '}
                       {doc.expiry_date ? `expires ${formatDate(doc.expiry_date)}` : 'no expiry date'}
@@ -82,7 +80,9 @@ export default function Review() {
 function reasonsFor(doc) {
   const reasons = [];
   if (!doc.expiry_date) reasons.push('No expiry date — no reminders will fire.');
-  if (doc.type === 'other') reasons.push('Document type was not recognised.');
+  if (doc.type === 'other' && !doc.label) {
+    reasons.push('Document type was not recognised — say what it is.');
+  }
   if (!doc.number) reasons.push('No document number was read.');
   for (const warning of doc.extraction?.warnings ?? []) reasons.push(warning);
   return reasons.length > 0 ? reasons : ['Read with low confidence.'];

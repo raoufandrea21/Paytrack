@@ -6,3 +6,6 @@ dev-dist/
 .env.*.local
 *.log
 .DS_Store
+
+# Vendored at build time by scripts/vendor-ocr.mjs — not source.
+public/tesseract/

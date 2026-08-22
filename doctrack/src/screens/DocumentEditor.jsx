@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { db, addDocument, getSettings, renewDocument, updateDocument } from '../db.js';
-import { documentType } from '../lib/constants.js';
+import { documentLabel } from '../lib/constants.js';
 import { extractDocument, extractionAvailable, ExtractionError } from '../lib/extract.js';
 import Screen from '../components/Screen.jsx';
 import PhotoInput from '../components/PhotoInput.jsx';
@@ -12,6 +12,7 @@ import { Banner, Button, Spinner } from '../components/ui.jsx';
 const EMPTY = {
   member_id: '',
   type: 'other',
+  label: '',
   number: '',
   issue_date: '',
   expiry_date: '',
@@ -34,6 +35,8 @@ export default function DocumentEditor({ mode }) {
   const documentId = params.id ? Number(params.id) : null;
 
   const members = useLiveQuery(() => db.members.orderBy('created_at').toArray(), [], null);
+  // Only needed for the label suggestions, so an empty list is a fine default.
+  const knownDocuments = useLiveQuery(() => db.documents.toArray(), [], []);
   const existing = useLiveQuery(
     () => (documentId ? db.documents.get(documentId) : null),
     [documentId],
@@ -75,6 +78,8 @@ export default function DocumentEditor({ mode }) {
     setForm({
       member_id: existing.member_id,
       type: existing.type,
+      // A renewal is the same document again, so its label carries over.
+      label: existing.label ?? '',
       number: mode === 'renew' ? '' : existing.number ?? '',
       issue_date: mode === 'renew' ? '' : existing.issue_date ?? '',
       expiry_date: mode === 'renew' ? '' : existing.expiry_date ?? '',
@@ -128,6 +133,7 @@ export default function DocumentEditor({ mode }) {
       const next = { ...prev };
       const f = result.fields;
       if (f.type.value) next.type = f.type.value;
+      if (f.label?.value) next.label = f.label.value;
       if (f.number.value) next.number = f.number.value;
       if (f.issue_date.value) next.issue_date = f.issue_date.value;
       if (f.expiry_date.value) next.expiry_date = f.expiry_date.value;
@@ -155,6 +161,7 @@ export default function DocumentEditor({ mode }) {
       const payload = {
         member_id: Number(form.member_id),
         type: form.type,
+        label: form.label.trim(),
         number: form.number.trim(),
         issue_date: form.issue_date || '',
         expiry_date: form.expiry_date || '',
@@ -200,7 +207,7 @@ export default function DocumentEditor({ mode }) {
 
   const title =
     mode === 'renew'
-      ? `Renew ${documentType(existing?.type).label}`
+      ? `Renew ${documentLabel(existing ?? {})}`
       : mode === 'edit'
         ? 'Edit document'
         : 'Add document';
@@ -289,6 +296,7 @@ export default function DocumentEditor({ mode }) {
                 extraction={extraction}
                 errors={errors}
                 lockMember={mode === 'renew'}
+                knownDocuments={knownDocuments}
               />
             </>
           ) : null}

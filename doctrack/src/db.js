@@ -148,6 +148,9 @@ export function documentsForMember(memberId, { includeArchived = false } = {}) {
 
 const BLANK_DOCUMENT = {
   type: 'other',
+  // Free text, only meaningful when type is 'other'. Not indexed — the whole
+  // table is loaded for the library screen anyway.
+  label: '',
   number: '',
   issue_date: '',
   expiry_date: '',

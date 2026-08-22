@@ -23,7 +23,7 @@ export default function MemberForm({ mode }) {
   );
 
   const [name, setName] = useState('');
-  const [relation, setRelation] = useState('Self');
+  const [relation, setRelation] = useState('Me');
   const [error, setError] = useState(null);
   const [saving, setSaving] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -90,9 +90,18 @@ export default function MemberForm({ mode }) {
           />
         </Field>
 
+        {mode === 'add' ? (
+          <p className="px-1 text-[13px] text-slate-500 dark:text-slate-400">
+            A placeholder is fine — "Maid 1" now, the real name later. You can rename anyone from
+            the dashboard at any time and their documents follow them.
+          </p>
+        ) : null}
+
         <Field label="Relation" htmlFor="relation">
           <Select id="relation" value={relation} onChange={(e) => setRelation(e.target.value)}>
-            {RELATIONS.map((r) => (
+            {/* "Self" was the old label for "Me"; keep it selectable so an
+                existing member does not silently change relation on edit. */}
+            {(RELATIONS.includes(relation) ? RELATIONS : [relation, ...RELATIONS]).map((r) => (
               <option key={r} value={r}>{r}</option>
             ))}
           </Select>

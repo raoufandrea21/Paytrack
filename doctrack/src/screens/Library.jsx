@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db.js';
-import { DOCUMENT_TYPES, documentType } from '../lib/constants.js';
+import { DOCUMENT_TYPES, documentLabel, documentType } from '../lib/constants.js';
 import { byUrgency } from '../lib/dates.js';
 import Screen from '../components/Screen.jsx';
 import DocumentRow from '../components/DocumentRow.jsx';
@@ -33,7 +33,7 @@ export default function Library() {
         if (!needle) return true;
         const haystack = [
           names.get(d.member_id) ?? '',
-          documentType(d.type).label,
+          documentLabel(d),
           d.number ?? '',
           d.notes ?? '',
         ]
