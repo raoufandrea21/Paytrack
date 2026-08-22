@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db, documentsNeedingReview, duplicateMembers, mergeMembers } from '../db.js';
-import { byUrgency, shortRemainingFor, urgencyForDocument } from '../lib/dates.js';
+import { byUrgency, shortRemainingFor, standingFor, urgencyForDocument } from '../lib/dates.js';
 import Screen from '../components/Screen.jsx';
 import DocumentRow from '../components/DocumentRow.jsx';
 import { Button, Card, EmptyState, Spinner, UrgencyChip } from '../components/ui.jsx';
@@ -73,11 +73,6 @@ export default function Dashboard() {
       });
   }, [members, documents]);
 
-  const attention = useMemo(
-    () => (documents ?? []).filter((d) => urgencyForDocument(d).rank <= 1).length,
-    [documents],
-  );
-
   /**
    * Everything falling due in the next two months, whoever it belongs to.
    *
@@ -101,9 +96,12 @@ export default function Dashboard() {
       subtitle={
         grouped === null
           ? 'Loading…'
-          : attention > 0
-            ? `${attention} document${attention === 1 ? ' needs' : 's need'} attention`
-            : 'Everything is in date'
+          : grouped.length === 0
+            ? 'Nothing on file yet'
+            // The three tiles below already say how urgent things are, so this
+            // says the other thing worth knowing at a glance: how much is here.
+            : `${grouped.length} ${grouped.length === 1 ? 'person' : 'people'} · ` +
+              `${documents?.length ?? 0} document${documents?.length === 1 ? '' : 's'}`
       }
       actions={
         <Link
@@ -127,10 +125,14 @@ export default function Dashboard() {
               </svg>
               Upload documents
             </Button>
-            <Button as="link" to="/library" variant="secondary" className="px-4" aria-label="All documents">
+            {/* An unlabelled icon is a guess. This one is used to go and find
+                something, so it says so. */}
+            <Button as="link" to="/library" variant="secondary" className="px-3.5">
               <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
+                <circle cx="11" cy="11" r="7" />
+                <path d="M20 20l-3.5-3.5" />
               </svg>
+              Find
             </Button>
           </div>
         ) : null
@@ -170,6 +172,8 @@ export default function Dashboard() {
         </EmptyState>
       ) : (
         <div className="space-y-3">
+          <StatusStrip documents={documents ?? []} />
+
           {soon.length > 0 ? <ComingUp entries={soon} /> : null}
 
           {reviewCount > 0 ? (
@@ -262,38 +266,125 @@ export default function Dashboard() {
   );
 }
 
-/** The next two months for the whole household, in one list. */
+/**
+ * How the household stands, in three numbers, at the top of the first screen.
+ *
+ * "21 documents need attention" is a number without a next step. These are the
+ * same information split the way the work actually splits — what is already
+ * late, what is about to be, and what is fine — and each one opens the list it
+ * is counting, so the glance and the action are the same tap.
+ */
+function StatusStrip({ documents }) {
+  const tally = useMemo(() => {
+    const out = { overdue: 0, soon: 0, fine: 0 };
+    for (const doc of documents) out[standingFor(doc)] += 1;
+    return out;
+  }, [documents]);
+
+  const tiles = [
+    { to: '/library?when=overdue', n: tally.overdue, label: 'out of date',
+      on: 'bg-red-50 text-red-700 ring-red-200 dark:bg-red-950/60 dark:text-red-300 dark:ring-red-900' },
+    { to: '/library?when=soon', n: tally.soon, label: 'due soon',
+      on: 'bg-amber-50 text-amber-800 ring-amber-200 dark:bg-amber-950/60 dark:text-amber-300 dark:ring-amber-900' },
+    { to: '/library?when=fine', n: tally.fine, label: 'all fine',
+      on: 'bg-emerald-50 text-emerald-800 ring-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-300 dark:ring-emerald-900' },
+  ];
+  const quiet =
+    'bg-white text-slate-400 ring-slate-200 dark:bg-slate-900 dark:text-slate-500 dark:ring-slate-800';
+
+  return (
+    <div className="grid grid-cols-3 gap-2">
+      {tiles.map((tile) => (
+        <Link
+          key={tile.to}
+          to={tile.to}
+          className={`flex min-h-20 flex-col justify-center rounded-2xl px-3 py-2.5 ring-1 transition-colors ${
+            tile.n > 0 ? tile.on : quiet
+          }`}
+        >
+          <span className="text-[26px] font-bold leading-none tabular-nums">{tile.n}</span>
+          <span className="mt-1 text-[12px] font-semibold leading-tight">{tile.label}</span>
+        </Link>
+      ))}
+    </div>
+  );
+}
+
+/**
+ * The next two months for the whole household, in one list.
+ *
+ * Split at the line between "this has already run out" and "this is coming".
+ * They are different jobs — one is a queue to work through today, the other is
+ * a diary — and running them together made a column of identical red pills
+ * where nothing stood out as first.
+ */
 function ComingUp({ entries }) {
   const [expanded, setExpanded] = useState(false);
-  const shown = expanded ? entries : entries.slice(0, VISIBLE_SOON);
-  const hidden = entries.length - shown.length;
-  const overdue = entries.filter((e) => urgencyForDocument(e.doc).rank === 0).length;
+  const overdue = entries.filter((e) => standingFor(e.doc) === 'overdue');
+  const upcoming = entries.filter((e) => standingFor(e.doc) !== 'overdue');
+
+  // The fold is over the list as a whole, so a household with thirty overdue
+  // documents does not push everything else off the screen — but whatever is
+  // already overdue is always shown before anything merely approaching.
+  const budget = expanded ? entries.length : VISIBLE_SOON;
+  const shownOverdue = overdue.slice(0, budget);
+  const shownUpcoming = upcoming.slice(0, Math.max(0, budget - shownOverdue.length));
+  const hidden = entries.length - shownOverdue.length - shownUpcoming.length;
+
+  const rows = (list) => (
+    <div className="divide-y divide-slate-100 dark:divide-slate-800">
+      {list.map(({ doc, holder }) => (
+        <DocumentRow key={doc.id} document={doc} showHolder={holder} />
+      ))}
+    </div>
+  );
 
   return (
     <Card className="overflow-hidden ring-2 ring-indigo-200 dark:ring-indigo-900">
-      <div className="flex items-baseline justify-between gap-2 px-3.5 pt-3 pb-2">
-        <h2 className="text-[15px] font-bold">Next 60 days</h2>
-        <p className="text-[13px] text-slate-500 dark:text-slate-400">
-          {overdue > 0
-            ? `${overdue} already ${overdue === 1 ? 'needs' : 'need'} renewing`
-            : `${entries.length} coming up`}
-        </p>
-      </div>
-      <div className="divide-y divide-slate-100 border-t border-slate-100 dark:divide-slate-800 dark:border-slate-800">
-        {shown.map(({ doc, holder }) => (
-          <DocumentRow key={doc.id} document={doc} showHolder={holder} />
-        ))}
-        {hidden > 0 ? (
-          <button
-            type="button"
-            onClick={() => setExpanded(true)}
-            className="block w-full px-3.5 py-3 text-left text-[14px] font-medium text-indigo-600 dark:text-indigo-400"
-          >
-            Show {hidden} more
-          </button>
-        ) : null}
-      </div>
+      {shownOverdue.length > 0 ? (
+        <>
+          <SectionBar tone="urgent">
+            {overdue.length} out of date — renew {overdue.length === 1 ? 'it' : 'these'} first
+          </SectionBar>
+          {rows(shownOverdue)}
+        </>
+      ) : null}
+
+      {shownUpcoming.length > 0 ? (
+        <>
+          <SectionBar tone="calm">
+            {overdue.length > 0 ? 'Also coming up' : `${upcoming.length} coming up`} in the next
+            60 days
+          </SectionBar>
+          {rows(shownUpcoming)}
+        </>
+      ) : null}
+
+      {hidden > 0 ? (
+        <button
+          type="button"
+          onClick={() => setExpanded(true)}
+          className="block w-full border-t border-slate-100 px-3.5 py-3 text-left text-[14px] font-medium text-indigo-600 dark:border-slate-800 dark:text-indigo-400"
+        >
+          Show {hidden} more
+        </button>
+      ) : null}
     </Card>
+  );
+}
+
+/** A heading inside a list, saying what the rows under it have in common. */
+function SectionBar({ tone, children }) {
+  const tones = {
+    urgent: 'bg-red-50 text-red-800 dark:bg-red-950/60 dark:text-red-200',
+    calm: 'bg-slate-50 text-slate-600 dark:bg-slate-800/60 dark:text-slate-300',
+  };
+  return (
+    <h2
+      className={`border-y border-black/5 px-3.5 py-2 text-[13px] font-bold uppercase tracking-wide first:border-t-0 dark:border-white/5 ${tones[tone]}`}
+    >
+      {children}
+    </h2>
   );
 }
 

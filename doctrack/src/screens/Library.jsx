@@ -1,8 +1,9 @@
 import { useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db, deleteDocuments } from '../db.js';
 import { DOCUMENT_TYPES, documentLabel, documentType } from '../lib/constants.js';
-import { byUrgency } from '../lib/dates.js';
+import { byUrgency, standingFor } from '../lib/dates.js';
 import Screen from '../components/Screen.jsx';
 import DocumentRow from '../components/DocumentRow.jsx';
 import { Banner, Button, Card, EmptyState, Input, Spinner } from '../components/ui.jsx';
@@ -11,7 +12,24 @@ import { Banner, Button, Card, EmptyState, Input, Spinner } from '../components/
  * Every document in one place — the filing cabinet. The dashboard answers "what
  * needs doing"; this answers "where is my passport".
  */
+/**
+ * The three states a document can be in, as far as anybody cares. Kept here
+ * rather than in the dashboard so the tiles that link in and the list they
+ * land on cannot drift apart.
+ */
+const WHEN = {
+  overdue: { label: 'Out of date' },
+  soon: { label: 'Due within 60 days' },
+  fine: { label: 'Nothing to do yet' },
+};
+
 export default function Library() {
+  // Arrived at from a dashboard tile, so the state lives in the URL — the back
+  // button then means what it looks like it means.
+  const [params, setParams] = useSearchParams();
+  const when = WHEN[params.get('when')] ? params.get('when') : 'all';
+  const setWhen = (next) => setParams(next === 'all' ? {} : { when: next }, { replace: true });
+
   const [query, setQuery] = useState('');
   const [type, setType] = useState('all');
   const [person, setPerson] = useState('all');
@@ -35,6 +53,7 @@ export default function Library() {
       .filter((d) => (includeArchived ? true : d.status === 'active'))
       .filter((d) => (type === 'all' ? true : d.type === type))
       .filter((d) => (person === 'all' ? true : d.member_id === Number(person)))
+      .filter((d) => (when === 'all' ? true : standingFor(d) === when))
       .filter((d) => {
         if (!needle) return true;
         const haystack = [
@@ -49,7 +68,7 @@ export default function Library() {
       })
       .sort(byUrgency)
       .map((d) => ({ doc: d, holder: names.get(d.member_id) ?? 'Unknown' }));
-  }, [documents, members, query, type, person, includeArchived]);
+  }, [documents, members, query, type, person, includeArchived, when]);
 
   const typesPresent = useMemo(() => {
     const present = new Set((documents ?? []).map((d) => d.type));
@@ -64,7 +83,9 @@ export default function Library() {
           ? 'Loading…'
           : picking
             ? `${chosen.size} selected`
-            : `${rows.length} shown`
+            // Arriving from a dashboard tile, the count on its own is a
+            // mystery — it has to say what it counted.
+            : `${rows.length} ${when === 'all' ? 'shown' : WHEN[when].label.toLowerCase()}`
       }
       back="/"
       actions={
@@ -128,6 +149,16 @@ export default function Library() {
           placeholder="Search by name, number or type"
           aria-label="Search documents"
           dir="auto"
+        />
+
+        <FilterRow
+          label="When"
+          value={when}
+          onChange={setWhen}
+          options={[
+            { id: 'all', label: 'Any time' },
+            ...Object.entries(WHEN).map(([id, w]) => ({ id, label: w.label })),
+          ]}
         />
 
         <FilterRow

@@ -16,7 +16,9 @@ import {
 } from '../shared/extraction-spec.js';
 import { normaliseExtraction } from '../src/lib/extract.js';
 import { handleExtract } from '../api/_handler.js';
-import { parseLooseDate, urgencyFor, shortRemaining, daysUntil } from '../src/lib/dates.js';
+import {
+  parseLooseDate, urgencyFor, shortRemaining, standingFor, daysUntil,
+} from '../src/lib/dates.js';
 
 const CLEAN_READ = {
   document_type: 'emirates_id',
@@ -163,4 +165,30 @@ test('the handler rejects bad input before it costs an API call', async () => {
     400,
   );
   assert.equal((await handleExtract({ imageBase64: 'A', mediaType: 'image/png' }, {})).status, 500);
+});
+
+// ------------------------------------- the three states the dashboard counts
+
+test('out of date means out of date, not nearly', () => {
+  const today = new Date('2026-08-22T09:00:00Z');
+  const at = (date) => standingFor({ expiry_date: date }, { today });
+  assert.equal(at('2026-08-21'), 'overdue');
+  assert.equal(at('2026-08-22'), 'soon', 'today is the last day, not a day late');
+  assert.equal(at('2026-08-23'), 'soon', 'tomorrow is urgent but it has not run out');
+  assert.equal(at('2026-10-21'), 'soon', 'sixty days is the edge of "coming up"');
+  assert.equal(at('2026-10-22'), 'fine');
+});
+
+test('a document that never expires is not something to do', () => {
+  const today = new Date('2026-08-22T09:00:00Z');
+  assert.equal(standingFor({ no_expiry: 1, expiry_date: '' }, { today }), 'fine');
+  assert.equal(standingFor({ expiry_date: '' }, { today }), 'fine');
+});
+
+test('an overdue chip says how overdue', () => {
+  const today = new Date('2026-08-22T09:00:00Z');
+  assert.equal(shortRemaining('2026-08-19', { today }), '3d ago');
+  assert.equal(shortRemaining('2026-02-22', { today }), '6mo ago');
+  assert.equal(shortRemaining('2023-08-22', { today }), '3y ago');
+  assert.equal(shortRemaining('2026-08-25', { today }), '3d');
 });

@@ -172,6 +172,24 @@ export function urgencyFor(isoDate, options) {
 }
 
 /**
+ * The three states the dashboard counts in, and the library filters by.
+ *
+ * Separate from the urgency ranks on purpose. "Red" means expired *or* inside a
+ * week, which is the right thing to colour a bar with and the wrong thing to
+ * label "out of date" — a passport that runs out on Friday has not run out. The
+ * words on screen and the filter behind them have to mean the same thing.
+ */
+export const STANDINGS = ['overdue', 'soon', 'fine'];
+
+export function standingFor(doc, options) {
+  if (doc?.no_expiry) return 'fine';
+  const days = daysUntil(doc?.expiry_date, options);
+  if (days === null) return 'fine';
+  if (days < 0) return 'overdue';
+  return days <= 60 ? 'soon' : 'fine';
+}
+
+/**
  * "Expired 3 days ago", "Expires today", "42 days left", "about 5 years left".
  * Exact days stay exact while they matter; past a few months the precision is
  * noise, and "1846 days left" is harder to read than "about 5 years left".
@@ -193,12 +211,24 @@ export function expiryPhrase(isoDate, options) {
 
 const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
 
-/** Compact form for the list chips: exact while it matters, rounded when it doesn't. */
+/**
+ * Compact form for the list chips: exact while it matters, rounded when it
+ * doesn't.
+ *
+ * Overdue documents say how overdue. A column of ten identical "Expired" pills
+ * says only that something is wrong somewhere; "3d ago" beside "2y ago" says
+ * which one to deal with first, which is the entire job of the chip.
+ */
 export function shortRemaining(isoDate, options) {
   const days = daysUntil(isoDate, options);
   if (days === null) return 'Set date';
-  if (days < 0) return 'Expired';
   if (days === 0) return 'Today';
+  if (days < 0) {
+    const over = Math.abs(days);
+    if (over <= 90) return `${over}d ago`;
+    if (over < 365) return `${Math.round(over / 30)}mo ago`;
+    return `${Math.floor(over / 365)}y ago`;
+  }
   if (days <= 90) return `${days}d`;
   if (days < 365) return `${Math.round(days / 30)}mo`;
   return `${Math.floor(days / 365)}y+`;
