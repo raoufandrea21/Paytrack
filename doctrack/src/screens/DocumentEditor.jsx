@@ -159,6 +159,8 @@ export default function DocumentEditor({ mode }) {
         issue_date: form.issue_date || '',
         expiry_date: form.expiry_date || '',
         notes: form.notes.trim(),
+        // Any pass through this form counts as the human having looked at it.
+        review_needed: 0,
         extraction: extraction
           ? {
               confidence: extraction.confidence,
@@ -173,9 +175,11 @@ export default function DocumentEditor({ mode }) {
       if (photo) {
         payload.photo = photo.blob;
         payload.photo_type = photo.mediaType;
+        payload.file_kind = photo.kind;
       } else if (mode === 'edit') {
         payload.photo = existing?.photo ?? null;
         payload.photo_type = existing?.photo_type ?? null;
+        payload.file_kind = existing?.file_kind ?? null;
       }
 
       let targetId = documentId;

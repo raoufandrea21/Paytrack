@@ -18,6 +18,27 @@ db.version(1).stores({
   settings: '&key',
 });
 
+// v2 adds automatic filing: documents save themselves, and anything the reader
+// was unsure about is indexed so the dashboard can surface it in one query.
+db.version(2)
+  .stores({
+    members: '++id, name, relation, created_at, auto_created',
+    documents:
+      '++id, member_id, type, expiry_date, status, created_at, renewed_from, review_needed',
+    reminders: '&key, document_id, threshold, notified_at',
+    settings: '&key',
+  })
+  .upgrade((tx) =>
+    tx
+      .table('documents')
+      .toCollection()
+      .modify((doc) => {
+        // Existing rows were all confirmed by hand, so none of them need review.
+        doc.review_needed = 0;
+        doc.file_kind = doc.photo ? 'image' : null;
+      }),
+  );
+
 // ---------------------------------------------------------------- members
 
 export function listMembers() {
@@ -36,6 +57,52 @@ export function updateMember(id, changes) {
   return db.members.update(id, changes);
 }
 
+/**
+ * Used by automatic filing. Returns the existing member when the name clearly
+ * belongs to someone already on file, otherwise creates them.
+ *
+ * Matching is deliberately strict — see matchMemberByName. Filing a document
+ * under the wrong person is worse than creating a duplicate the user can merge
+ * by renaming.
+ */
+export async function findOrCreateMember(name, { relation = 'Other' } = {}) {
+  const members = await db.members.toArray();
+  const existing = matchMemberByName(name, members);
+  if (existing) return { member: existing, created: false };
+
+  const id = await db.members.add({
+    name: name.trim(),
+    relation,
+    auto_created: 1,
+    created_at: new Date().toISOString(),
+  });
+  return { member: await db.members.get(id), created: true };
+}
+
+const normaliseName = (s) =>
+  String(s ?? '')
+    .toLowerCase()
+    .replace(/[^a-z\u0600-\u06ff\s]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+/**
+ * An exact normalised match, or a unique first-name match. Anything looser and
+ * "Mohammed Ali" would swallow "Mohammed Hassan".
+ */
+export function matchMemberByName(name, members) {
+  const target = normaliseName(name);
+  if (!target) return null;
+
+  const exact = members.filter((m) => normaliseName(m.name) === target);
+  if (exact.length === 1) return exact[0];
+  if (exact.length > 1) return null;
+
+  const first = target.split(' ')[0];
+  const byFirst = members.filter((m) => normaliseName(m.name).split(' ')[0] === first);
+  return byFirst.length === 1 ? byFirst[0] : null;
+}
+
 /** Removing a member takes their documents with them — nothing is left orphaned. */
 export function deleteMember(id) {
   return db.transaction('rw', db.members, db.documents, db.reminders, async () => {
@@ -52,6 +119,19 @@ export function listDocuments({ includeArchived = false } = {}) {
   return includeArchived
     ? db.documents.toArray()
     : db.documents.where('status').equals('active').toArray();
+}
+
+/** Everything automatic filing could not read confidently. */
+export function documentsNeedingReview() {
+  return db.documents
+    .where('review_needed')
+    .equals(1)
+    .filter((d) => d.status === 'active')
+    .toArray();
+}
+
+export function clearReviewFlag(id) {
+  return db.documents.update(id, { review_needed: 0, updated_at: new Date().toISOString() });
 }
 
 export function getDocument(id) {
@@ -74,8 +154,11 @@ const BLANK_DOCUMENT = {
   notes: '',
   photo: null,
   photo_type: null,
+  file_kind: null,
   extraction: null,
   renewed_from: null,
+  // Dexie cannot index booleans, so this is 0/1 rather than false/true.
+  review_needed: 0,
 };
 
 export async function addDocument(doc) {

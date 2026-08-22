@@ -116,15 +116,37 @@ Rules:
 
 5. document_type must be one of the allowed enum values, or "" if you cannot tell which it is.
 
-6. warnings should be short and actionable, aimed at someone about to confirm a form. Return an empty array if the read was clean.
+6. Multi-page PDFs. Read every page. A policy document often prints the expiry as "Period of Insurance: from X to Y" — the later date is the expiry. If several documents appear in one file, describe the primary one and add a warning that the file holds more than one.
+
+7. warnings should be short and actionable, aimed at someone about to file this automatically without looking at it. Return an empty array if the read was clean.
 
 Return only the structured object.`;
 
 export const EXTRACTION_USER_PROMPT =
   'Extract the document fields from this photo. Follow the rules exactly — an empty string over a guess.';
 
-/** The request body shared by every transport (browser SDK, edge function, dev middleware). */
+export const PDF_MEDIA_TYPE = 'application/pdf';
+
+export const SUPPORTED_MEDIA_TYPES = [
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'image/gif',
+  PDF_MEDIA_TYPE,
+];
+
+/**
+ * The request body shared by every transport (browser SDK, edge function, dev
+ * middleware). Photos go in as an `image` block; PDFs — which is how insurance
+ * policies and visa pages usually arrive by email — go in as a `document` block.
+ */
 export function buildExtractionRequest({ imageBase64, mediaType }) {
+  const source = { type: 'base64', media_type: mediaType, data: imageBase64 };
+  const fileBlock =
+    mediaType === PDF_MEDIA_TYPE
+      ? { type: 'document', source }
+      : { type: 'image', source };
+
   return {
     model: EXTRACTION_MODEL,
     max_tokens: 2048,
@@ -132,10 +154,7 @@ export function buildExtractionRequest({ imageBase64, mediaType }) {
     messages: [
       {
         role: 'user',
-        content: [
-          { type: 'image', source: { type: 'base64', media_type: mediaType, data: imageBase64 } },
-          { type: 'text', text: EXTRACTION_USER_PROMPT },
-        ],
+        content: [fileBlock, { type: 'text', text: EXTRACTION_USER_PROMPT }],
       },
     ],
     output_config: {

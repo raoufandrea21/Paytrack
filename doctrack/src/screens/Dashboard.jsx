@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { db } from '../db.js';
+import { db, documentsNeedingReview } from '../db.js';
 import { byUrgency, urgencyFor } from '../lib/dates.js';
 import Screen from '../components/Screen.jsx';
 import DocumentRow from '../components/DocumentRow.jsx';
@@ -19,6 +19,7 @@ export default function Dashboard() {
     [],
     null,
   );
+  const reviewCount = useLiveQuery(async () => (await documentsNeedingReview()).length, [], 0);
 
   const grouped = useMemo(() => {
     if (!members || !documents) return null;
@@ -69,12 +70,20 @@ export default function Dashboard() {
       }
       footer={
         grouped?.length ? (
-          <Button as="link" to="/documents/new" className="w-full">
-            <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
-              <path d="M12 5v14M5 12h14" />
-            </svg>
-            Add document
-          </Button>
+          <div className="flex gap-2">
+            <Button as="link" to="/upload" className="flex-1">
+              <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 16V4m0 0L8 8m4-4l4 4" />
+                <path d="M4 15v3a2 2 0 002 2h12a2 2 0 002-2v-3" />
+              </svg>
+              Upload documents
+            </Button>
+            <Button as="link" to="/library" variant="secondary" className="px-4" aria-label="All documents">
+              <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
+              </svg>
+            </Button>
+          </div>
         ) : null
       }
     >
@@ -83,14 +92,42 @@ export default function Dashboard() {
           <Spinner className="size-7" />
         </div>
       ) : grouped.length === 0 ? (
-        <EmptyState icon="👨‍👩‍👧" title="No family members yet">
-          <p>Add the first person, then start photographing their documents.</p>
-          <Button as="link" to="/members/new" className="mt-4">
-            Add family member
+        <EmptyState icon="📄" title="Nothing on file yet">
+          <p>
+            Upload photos or PDFs of your documents and DocTrack will read them, sort them by
+            person and set the reminders for you.
+          </p>
+          <Button as="link" to="/upload" className="mt-4">
+            Upload documents
           </Button>
+          <Link
+            to="/members/new"
+            className="mt-3 block text-[14px] font-medium text-slate-500 underline-offset-4 hover:underline dark:text-slate-400"
+          >
+            Or add a person by hand
+          </Link>
         </EmptyState>
       ) : (
         <div className="space-y-3">
+          {reviewCount > 0 ? (
+            <Link
+              to="/review"
+              className="flex items-center gap-3 rounded-2xl bg-amber-100 px-3.5 py-3 ring-1 ring-amber-200 dark:bg-amber-950/60 dark:ring-amber-900"
+            >
+              <span className="text-xl" aria-hidden="true">⚠️</span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-[15px] font-bold text-amber-900 dark:text-amber-200">
+                  {reviewCount} document{reviewCount === 1 ? '' : 's'} need
+                  {reviewCount === 1 ? 's' : ''} checking
+                </span>
+                <span className="block text-[13px] text-amber-800 dark:text-amber-300">
+                  Filed automatically, but something was hard to read.
+                </span>
+              </span>
+              <span className="text-amber-700 dark:text-amber-300" aria-hidden="true">›</span>
+            </Link>
+          ) : null}
+
           {grouped.map(({ member, docs }) => (
             <MemberCard key={member.id} member={member} docs={docs} />
           ))}
@@ -105,9 +142,12 @@ export default function Dashboard() {
             Add family member
           </Link>
 
-          <div className="pb-2 text-center">
-            <Link to="/archive" className="text-[14px] font-medium text-slate-500 underline-offset-4 hover:underline dark:text-slate-400">
-              View archived documents
+          <div className="flex justify-center gap-4 pb-2 text-[14px] font-medium text-slate-500 dark:text-slate-400">
+            <Link to="/library" className="underline-offset-4 hover:underline">
+              All documents
+            </Link>
+            <Link to="/archive" className="underline-offset-4 hover:underline">
+              Archive
             </Link>
           </div>
         </div>
@@ -126,7 +166,10 @@ function MemberCard({ member, docs }) {
         <div className="min-w-0 flex-1">
           <p className="truncate text-[15px] font-bold">{member.name}</p>
           <p className="truncate text-[13px] text-slate-500 dark:text-slate-400">
-            {member.relation} · {docs.length} document{docs.length === 1 ? '' : 's'}
+            {/* Auto-created people have no real relation yet, so "Other ·" is
+                noise until the user sets one. */}
+            {member.auto_created && member.relation === 'Other' ? '' : `${member.relation} · `}
+            {docs.length} document{docs.length === 1 ? '' : 's'}
           </p>
         </div>
         <Link
@@ -143,7 +186,7 @@ function MemberCard({ member, docs }) {
             to={`/documents/new?member=${member.id}`}
             className="block px-3.5 py-4 text-[14px] font-medium text-indigo-600 dark:text-indigo-400"
           >
-            + Add the first document for {member.name.split(' ')[0]}
+            + Add a document for {member.name.split(' ')[0]}
           </Link>
         ) : (
           <>

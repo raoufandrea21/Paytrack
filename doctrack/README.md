@@ -4,10 +4,12 @@ A private, local-first PWA for keeping track of when your family's documents
 expire — Emirates IDs, driving licences, passports, residency visas, vehicle
 registrations, car insurance, health insurance.
 
-Photograph a document, Claude reads the fields off it, you confirm, and DocTrack
-reminds you at 60, 30 and 7 days before it runs out. Everything — records,
-photos, history — is stored in IndexedDB on the device. No account, no backend,
-no sync.
+Upload a pile of photos or PDFs and walk away. Each one is read, classified,
+filed under the right person — creating that person if they are new — and its
+reminders set at 60, 30 and 7 days before expiry. No form in between.
+
+Everything — records, photos, history — is stored in IndexedDB on the device.
+No account, no backend, no sync.
 
 ---
 
@@ -121,13 +123,54 @@ stay in IndexedDB.
 
 ---
 
+## How automatic filing works
+
+Drop several files into **Upload documents** and each one goes through:
+
+1. **Read** — one call to Claude with the photo or PDF
+2. **Classify** — which of the eight document types this is
+3. **Identify the holder** — matched against people already on file by exact name
+   or a *unique* first name. A confident name that matches nobody creates a new
+   family member; an unreadable name on a single-person setup goes to that
+   person, and otherwise to a holding record called "Unknown holder"
+4. **De-duplicate** — same person, same type, and the same number *or* the same
+   expiry date means it is already on file, so it is skipped. A genuine renewal
+   changes both, so this never swallows one
+5. **Save** and set the reminders
+
+### The one thing it will not do silently
+
+A document whose **expiry date** could not be read confidently is still saved —
+losing an upload would be worse — but flagged, and the dashboard shows a
+"needs checking" banner linking to the review queue. Same for an unrecognised
+document type, an unidentifiable holder, or a shaky document number.
+
+Everything that reads cleanly never asks you anything. This app exists to get
+one date right; a plausible-looking wrong date is the single failure that
+matters, so that is the one case where it interrupts.
+
+Files are processed one at a time, not in parallel — eight photos uploading at
+once over bad wifi is how you get rate-limited halfway through and lose track of
+what saved.
+
+## Where documents live
+
+- **Dashboard** — what needs doing. Grouped by person, sorted by urgency.
+- **All documents** — the filing cabinet. Every record, searchable by name,
+  number or type, filterable by person and type, with archived ones toggleable.
+- **Needs checking** — only what filed itself with a doubt. Empty when scans
+  are clean.
+- **Archive** — renewed and archived records, kept as history.
+
 ## How the extraction works
 
 `shared/extraction-spec.js` holds the prompt and the JSON schema, and is
 imported by both the browser and the server so the two can never drift.
 
-One call to `claude-sonnet-4-6` with the photo and a JSON-schema structured
-output (`output_config.format`), returning:
+One call to `claude-sonnet-4-6` with the file and a JSON-schema structured
+output (`output_config.format`). Photos go in as an `image` block; PDFs — how
+insurance policies and visa pages usually arrive — as a `document` block, so
+multi-page files are read in full. The response:
 
 ```json
 {
@@ -143,7 +186,8 @@ output (`output_config.format`), returning:
 ```
 
 Photos are downscaled to a 1600px long edge and re-encoded as JPEG before
-upload, so a 12 MP camera shot becomes a few hundred KB.
+upload, so a 12 MP camera shot becomes a few hundred KB. PDFs pass through
+untouched — re-encoding would lose the text layer that makes them easy to read.
 
 ### Arabic and awkward scans
 
@@ -172,11 +216,12 @@ touch the field. Nothing blocks you from saving.
 ### Data model
 
 ```
-FamilyMember  id · name · relation · created_at
+FamilyMember  id · name · relation · auto_created · created_at
 
 Document      id · member_id · type · number · issue_date · expiry_date
-              photo (Blob) · photo_type · notes · status (active|archived)
-              renewed_from · extraction · created_at · updated_at
+              photo (Blob) · photo_type · file_kind (image|pdf) · notes
+              status (active|archived) · review_needed · renewed_from
+              extraction · created_at · updated_at
 
 reminders     one row per (document, milestone) already notified about
 settings      key/value: API mode, key, endpoint
@@ -219,15 +264,19 @@ doctrack/
 │   ├── db.js                   Dexie schema and every query
 │   ├── lib/
 │   │   ├── extract.js          proxy / direct transports, response normalising
+│   │   ├── autofile.js         holder resolution, de-duplication, review rules
 │   │   ├── dates.js            Arabic digits, loose date parsing, urgency
-│   │   ├── image.js            downscale + JPEG re-encode + base64
+│   │   ├── files.js            photo downscale, PDF passthrough, base64
 │   │   ├── reminders.js        the reminder engine (runs on page AND in the SW)
 │   │   └── notifications.js    permission, on-load check, background sync
-│   ├── screens/                Dashboard, DocumentEditor, DocumentDetail,
-│   │                           MemberForm, Archive, Settings
+│   ├── screens/                Dashboard, BulkAdd, Library, Review,
+│   │                           DocumentEditor, DocumentDetail, MemberForm,
+│   │                           Archive, Settings
 │   ├── components/             Screen, DocumentForm, PhotoInput, ui primitives
 │   └── sw.js                   service worker (precache + periodic sync)
-└── test/extraction.test.mjs
+└── test/
+    ├── extraction.test.mjs
+    └── autofile.test.mjs
 ```
 
 ---

@@ -4,7 +4,7 @@ import {
   EXTRACTION_MODEL,
 } from '../../shared/extraction-spec.js';
 import { DOCUMENT_TYPE_IDS, EXTRACTION_MODES, LOW_CONFIDENCE } from './constants.js';
-import { blobToBase64 } from './image.js';
+import { blobToBase64, mediaTypeSupported } from './files.js';
 import { isValidISODate, normaliseDigits, parseLooseDate } from './dates.js';
 
 /**
@@ -45,8 +45,11 @@ export async function extractDocument(blob, settings = {}) {
     throw new ExtractionError('Auto-fill is switched off in Settings.');
   }
 
-  const imageBase64 = await blobToBase64(blob);
   const mediaType = blob.type || 'image/jpeg';
+  if (!mediaTypeSupported(mediaType)) {
+    throw new ExtractionError(`${mediaType} files cannot be read automatically.`);
+  }
+  const imageBase64 = await blobToBase64(blob);
 
   const raw =
     mode === EXTRACTION_MODES.DIRECT
