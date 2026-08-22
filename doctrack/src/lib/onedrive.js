@@ -39,10 +39,21 @@ export class OneDriveError extends Error {
  *                 Microsoft rejects /common outright for a personal-only app
  *                 (AADSTS50194), so it cannot simply be the default.
  *
- * Rather than making the user understand any of that, sign-in tries each in
- * turn and remembers the one that worked.
+ * This used to try each in turn and keep the one that worked. That cannot work
+ * with a redirect: the wrong endpoint is rejected by Microsoft's own /authorize
+ * page, which never sends the browser back here, so there is no rejection for
+ * the app to catch and nothing to fall through to. Worse, an authorization code
+ * is single-use and tied to the endpoint that issued it, so retrying the same
+ * answer elsewhere is meaningless even in principle.
+ *
+ * So it is a question with three answers, and the user is simply asked.
  */
-export const AUTHORITIES = ['consumers', 'common', 'organizations'];
+export const ACCOUNT_KINDS = [
+  { id: 'consumers', label: 'Personal Microsoft account', hint: 'outlook.com, hotmail.com, or a personal account on any address' },
+  { id: 'organizations', label: 'Work or school account', hint: 'an account your employer or school gave you' },
+  { id: 'common', label: 'Either — registered as multitenant', hint: 'only if the Azure registration allows both' },
+];
+export const DEFAULT_ACCOUNT_KIND = 'consumers';
 
 const authorityUrl = (name) => `https://login.microsoftonline.com/${name}`;
 
@@ -70,10 +81,10 @@ async function getClient(clientId, authority = 'consumers') {
     auth: {
       clientId,
       authority: authorityUrl(authority),
+      // No trailing slash and no path, which is what has to be registered in
+      // Azure under "Single-page application" — it is matched as an exact
+      // string, and "Web" instead of SPA fails later and less legibly.
       redirectUri: window.location.origin,
-      // MSAL otherwise restores whatever URL sign-in started from, which fights
-      // this app for control of the fragment — and the fragment is the route.
-      navigateToLoginRequestUrl: false,
     },
     cache: { cacheLocation: 'localStorage' },
   });
@@ -82,33 +93,39 @@ async function getClient(clientId, authority = 'consumers') {
   return app;
 }
 
-/** The endpoint a previous sign-in settled on, so later calls skip the search. */
-function rememberedAuthority(clientId) {
+/**
+ * The kind of account, mirrored out of IndexedDB into localStorage.
+ *
+ * Sign-in has to know it in places that run before the database is open — the
+ * redirect coming back is one — and reading it synchronously here keeps that
+ * path from depending on anything else being ready. Settings is what writes it.
+ */
+const KIND_KEY = 'doctrack.accountKind';
+
+export function accountKind() {
   try {
-    return window.localStorage.getItem(`doctrack.authority.${clientId}`);
+    const saved = window.localStorage.getItem(KIND_KEY);
+    return ACCOUNT_KINDS.some((k) => k.id === saved) ? saved : DEFAULT_ACCOUNT_KIND;
   } catch {
-    return null;
+    return DEFAULT_ACCOUNT_KIND;
   }
 }
 
-function rememberAuthority(clientId, authority) {
+export function setAccountKind(kind) {
   try {
-    window.localStorage.setItem(`doctrack.authority.${clientId}`, authority);
+    window.localStorage.setItem(KIND_KEY, kind);
   } catch {
-    /* private browsing; the search just runs again next time */
+    /* private browsing; the default applies */
   }
+  clients.clear(); // the authority is baked into a client at construction
 }
 
 /**
  * MSAL records "an interaction is in progress" in browser storage and refuses
- * to start another until it clears. A popup that times out — or a page reloaded
- * while one was open — leaves that flag set, and every later attempt fails with
+ * to start another until it clears. A sign-in abandoned halfway — the back
+ * button, a closed tab, a phone that went to sleep on the Microsoft page —
+ * leaves that flag set, and every later attempt fails with
  * interaction_in_progress until storage is cleaned.
- *
- * The endpoint search makes it worse: each authority gets its own MSAL instance
- * but they all share one set of storage keys, so the second attempt trips over
- * the first. Clearing before each attempt is what makes the search usable at
- * all.
  */
 function clearStaleInteraction() {
   for (const store of [window.localStorage, window.sessionStorage]) {
@@ -135,6 +152,9 @@ export function resetConnection(clientId) {
   for (const store of [window.localStorage, window.sessionStorage]) {
     try {
       for (const key of Object.keys(store)) {
+        // The chosen account kind is a setting, not connection state, so it
+        // survives a reset — resetting should not silently change what the
+        // next attempt asks Microsoft for.
         if (key.startsWith('msal.') || key.includes(clientId) || key.startsWith('doctrack.authority.')) {
           store.removeItem(key);
         }
@@ -145,31 +165,13 @@ export function resetConnection(clientId) {
   }
 }
 
-/** Authorities to try, best guess first. */
-function candidateAuthorities(clientId) {
-  const known = rememberedAuthority(clientId);
-  return known ? [known, ...AUTHORITIES.filter((a) => a !== known)] : AUTHORITIES;
-}
-
 export async function currentAccount(clientId) {
-  for (const authority of candidateAuthorities(clientId)) {
-    try {
-      const client = await getClient(clientId, authority);
-      const account = client.getAllAccounts()[0];
-      if (account) return account;
-    } catch {
-      /* try the next endpoint */
-    }
+  try {
+    const client = await getClient(clientId, accountKind());
+    return client.getAllAccounts()[0] ?? null;
+  } catch {
+    return null;
   }
-  return null;
-}
-
-/** A rejection that means "wrong endpoint for this registration", not "no". */
-function isWrongAuthority(error) {
-  const text = `${error?.errorCode ?? ''} ${error?.errorMessage ?? ''} ${error?.message ?? ''}`;
-  return /AADSTS50194|AADSTS500011|AADSTS700016|AADSTS90002|not configured as a multi-tenant|unauthorized_client/i.test(
-    text,
-  );
 }
 
 /** True when this load is Microsoft handing back a sign-in result. */
@@ -178,28 +180,125 @@ export function hasRedirectResult() {
 }
 
 /**
+ * A sign-in that left the page and has not come back yet.
+ *
+ * Every way this can fail — the wrong account kind, an unregistered redirect
+ * address, a phone that lost the tab — ends with Microsoft showing its own
+ * error page and never returning here. There is no callback to catch, so the
+ * only trace is one of these left behind before leaving.
+ */
+const STARTED_KEY = 'doctrack.signin.started';
+const PROBLEM_KEY = 'doctrack.signin.problem';
+/** After this long, an unfinished sign-in is stale rather than in progress. */
+const ATTEMPT_WINDOW = 15 * 60 * 1000;
+
+const write = (key, value) => {
+  try {
+    if (value === null) window.localStorage.removeItem(key);
+    else window.localStorage.setItem(key, JSON.stringify(value));
+  } catch {
+    /* private browsing; the app just cannot explain itself later */
+  }
+};
+
+const read = (key) => {
+  try {
+    return JSON.parse(window.localStorage.getItem(key) ?? 'null');
+  } catch {
+    return null;
+  }
+};
+
+/**
+ * What to tell someone whose sign-in did not work, or null when there is
+ * nothing to say. Settings shows this instead of leaving the Connect button
+ * looking exactly as they left it.
+ */
+export function signInProblem({ signedIn = false } = {}) {
+  const problem = read(PROBLEM_KEY);
+  if (problem) return problem;
+
+  const started = read(STARTED_KEY);
+  if (!started || signedIn) return null;
+  if (Date.now() - started.at > ATTEMPT_WINDOW) {
+    write(STARTED_KEY, null);
+    return null;
+  }
+  return {
+    kind: 'never-came-back',
+    message:
+      'Microsoft did not send you back. If you saw an error page with a code on it, '
+      + 'the account type below probably does not match how the app is registered — or the '
+      + 'address of this app is not the one registered in Azure.',
+  };
+}
+
+export function clearSignInProblem() {
+  write(PROBLEM_KEY, null);
+  write(STARTED_KEY, null);
+}
+
+/**
  * Consumes a sign-in result sitting in the URL. Must run before anything else
  * touches the fragment — HashRouter would rewrite it away.
+ *
+ * `client` exists so the shape of the call below can be checked without a
+ * Microsoft account. It is worth the seam: handing MSAL the fragment as a bare
+ * string instead of `{ hash }` broke every sign-in there has ever been, and the
+ * only symptom was a null nobody could account for.
  */
-export async function completeRedirectSignIn(clientId, authFragment = null) {
+export async function completeRedirectSignIn(clientId, authFragment = null, { client: given } = {}) {
   // The caller takes the fragment out of the address bar before loading MSAL,
   // so it has to be handed over rather than read from the URL.
   const fragment = authFragment ?? window.location.hash;
   if (!clientId || !/[#?&](code|error)=/.test(fragment)) return null;
 
-  for (const authority of candidateAuthorities(clientId)) {
-    try {
-      const client = await getClient(clientId, authority);
-      const result = await client.handleRedirectPromise(fragment);
-      if (result?.account) {
-        rememberAuthority(clientId, authority);
-        return result.account;
-      }
-    } catch (error) {
-      if (!isWrongAuthority(error)) break;
+  try {
+    const client = given ?? (await getClient(clientId, accountKind()));
+    // An object, not the string: MSAL v5 reads `options.hash`, and handed a
+    // bare string it silently falls back to window.location.hash — which the
+    // caller has already replaced with the route. The whole sign-in then ends
+    // in a null nobody can explain. navigateToLoginRequestUrl belongs here too;
+    // it is no longer a config option and defaults to true, which sends the app
+    // back to where sign-in started with the answer still in its pocket.
+    const result = await client.handleRedirectPromise({
+      hash: fragment,
+      navigateToLoginRequestUrl: false,
+    });
+    if (result?.account) {
+      clearSignInProblem();
+      return result.account;
     }
+    write(PROBLEM_KEY, {
+      kind: 'no-result',
+      message: 'Microsoft sent an answer back but it could not be read. Try connecting again.',
+    });
+  } catch (error) {
+    write(PROBLEM_KEY, {
+      kind: 'rejected',
+      message: describeSignInError(error),
+      detail: `${error?.errorCode ?? ''} ${error?.errorMessage ?? error?.message ?? ''}`.trim(),
+    });
   }
   return null;
+}
+
+/** Microsoft's codes, in words, for the handful that actually come up. */
+function describeSignInError(error) {
+  const text = `${error?.errorCode ?? ''} ${error?.errorMessage ?? ''} ${error?.message ?? ''}`;
+  if (/AADSTS50194|multi-?tenant/i.test(text)) {
+    return 'This app is registered for one kind of account only, so "Either" will not work. Pick Personal or Work below.';
+  }
+  if (/AADSTS50011|redirect.?uri/i.test(text)) {
+    return `The address of this app is not registered in Azure. Add ${window.location.origin} there as a Single-page application redirect.`;
+  }
+  if (/AADSTS700016|unauthorized_client|AADSTS90002/i.test(text)) {
+    return 'Microsoft did not recognise the app ID, or not for this kind of account. Check the app ID and the account type below.';
+  }
+  if (/interaction_in_progress/i.test(text)) {
+    return 'A previous sign-in was left half-finished. Use "Reset connection" and try again.';
+  }
+  return 'Microsoft turned the sign-in down. The details are below.';
 }
 
 /**
@@ -220,40 +319,44 @@ export async function completeRedirectSignIn(clientId, authFragment = null) {
  *
  * Returns nothing, because the page is on its way out.
  */
-export async function signIn(clientId) {
+export async function signIn(clientId, { client: given } = {}) {
   clearStaleInteraction();
-  const authority = candidateAuthorities(clientId)[0];
-  const client = await getClient(clientId, authority);
+  clearSignInProblem();
+  const client = given ?? (await getClient(clientId, accountKind()));
 
-  // Which endpoint suits this registration is only discoverable by trying, and
-  // a redirect cannot loop through candidates. Remember the attempt so the
-  // return trip can start from the same one, and completeRedirectSignIn() falls
-  // through the rest if it was wrong.
-  rememberAuthority(clientId, authority);
+  // Left behind deliberately. If Microsoft refuses at its own end the browser
+  // never comes back here, so this breadcrumb is the only evidence that an
+  // attempt happened at all.
+  write(STARTED_KEY, { at: Date.now(), kind: accountKind(), origin: window.location.origin });
 
   await client.loginRedirect({ scopes: SCOPES, prompt: 'select_account' });
   return null;
 }
 
 async function activeClient(clientId) {
-  for (const authority of candidateAuthorities(clientId)) {
-    try {
-      const client = await getClient(clientId, authority);
-      if (client.getAllAccounts()[0]) return client;
-    } catch {
-      /* try the next endpoint */
-    }
-  }
-  throw new OneDriveError('Not signed in to Microsoft.');
+  const client = await getClient(clientId, accountKind());
+  if (!client.getAllAccounts()[0]) throw new OneDriveError('Not signed in to Microsoft.');
+  return client;
 }
 
+/**
+ * Disconnects this device, and only this device.
+ *
+ * Signing out at Microsoft's end would mean opening their page, and this app
+ * has been bitten enough by windows that never come back. Nothing is left
+ * behind locally either way: the tokens are gone, and connecting again is two
+ * taps.
+ */
 export async function signOut(clientId) {
   try {
-    const client = await activeClient(clientId);
+    const client = await getClient(clientId, accountKind());
     const account = client.getAllAccounts()[0];
-    if (account) await client.logoutPopup({ account });
+    if (account) await client.clearCache({ account });
+  } catch {
+    /* nothing usable to clear; the wipe below is what matters */
   } finally {
     resetConnection(clientId);
+    clearSignInProblem();
   }
 }
 

@@ -362,7 +362,8 @@ free and takes about ten minutes, once, for all your devices.
 8. On the page that appears, copy **Application (client) ID** — a long string of
    letters, numbers and dashes
 9. In DocTrack: **Settings → Sync with OneDrive**, paste it into *Microsoft app
-   ID*, then **Connect OneDrive** and approve the prompt
+   ID*, pick the matching **kind of Microsoft account** (Personal, for a
+   personal registration), then **Connect OneDrive** and approve the prompt
 
 Repeat only step 9 on your other devices — the registration is shared.
 
@@ -376,8 +377,39 @@ warning: `consumers` for personal accounts, `organizations` for work or school
 accounts, and `common` for both — but `common` only works for an app registered
 as multitenant, and returns AADSTS50194 for a personal-only registration.
 
-Rather than making anyone understand that, sign-in tries each in turn and
-remembers the one that worked, so the registration can be made either way.
+This used to try each in turn and keep whichever worked. That cannot work with a
+redirect, and the reason is worth writing down: the wrong endpoint is refused by
+Microsoft's own `/authorize` page, which renders its error there and never sends
+the browser back. There is no rejected promise to catch and nothing to fall
+through to. An authorization code is also single-use and tied to the endpoint
+that issued it, so replaying one against a different endpoint is meaningless
+even in principle.
+
+So Settings simply asks — **Personal**, **Work or school**, or **Either** — with
+Personal as the default, and that choice is what sign-in uses. It survives
+"Reset connection", because resetting a connection should not quietly change
+what the next attempt asks for.
+
+### When sign-in does not come back
+
+Every way this fails ends the same way: Microsoft shows its own page and the
+browser never returns to the app. Nothing here can catch that, so `signIn`
+leaves a breadcrumb in localStorage before navigating away, and Settings reads
+it: if there is an unfinished attempt from the last quarter of an hour and still
+no account, it says so and names the two things that are usually wrong — the
+account kind, or an app address that is not the one registered in Azure.
+
+A refusal that *does* come back is translated rather than swallowed. AADSTS50194
+becomes "this app is registered for one kind of account only"; AADSTS50011 names
+the exact address to add in Azure. The raw code is kept underneath, because it
+is what a search engine wants.
+
+### Disconnecting
+
+**Disconnect** clears this device only — MSAL's cache, the tokens, the app's own
+keys. It deliberately does not sign out at Microsoft's end, because that means
+opening their page and this app has been bitten enough by windows that do not
+come back. Nothing is lost: reconnecting is two taps.
 
 ### A personal Microsoft account needs a directory
 
@@ -433,6 +465,34 @@ likely to be wrong. `runSync` takes an injectable `api`, so the whole run is
 exercised against a stand-in for OneDrive: two devices taking turns, photos both
 ways, an edit and a deletion crossing, a dropped connection, and a file dropped
 in the Inbox being read, filed and moved to `Filed`.
+
+## Knowing which build is running
+
+An installed web app is not a web page. The service worker serves the shell from
+cache, so opening the app shows whatever build it saved last, and nothing forces
+a reload — a phone can sit on a build from days ago, looking completely normal,
+with every bug fixed since still in it. There is no way to tell from the inside,
+which is exactly what makes it worth fixing.
+
+**Settings → This app** names the build: the commit it was built from and when it
+was installed on this device. `vite.config.js` substitutes those at build time,
+from `VERCEL_GIT_COMMIT_SHA` in a deployment or from git locally. When a fixed
+bug still looks broken, that line is the first thing to read — and if it does not
+match the newest commit, the app is the problem, not the fix.
+
+Picking up a new build is handled in `src/lib/version.js`:
+
+- The browser is asked again every time the app comes back to the foreground,
+  not only on a page load — an installed app rarely gets a page load at all.
+- When the new worker takes control, the page is being served by the new build
+  while still running the old one in memory. If the page has only just opened,
+  or is in the background, it reloads silently. If somebody is looking at it, it
+  says a new version is ready and waits to be told, because that page may have a
+  half-typed form on it.
+- **Check for updates** in Settings does the same thing on demand.
+
+A session flag stops any of this becoming a reload loop when the reload does not
+actually help.
 
 ## Backup and moving between devices
 

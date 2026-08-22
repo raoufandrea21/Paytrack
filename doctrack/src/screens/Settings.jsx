@@ -14,7 +14,17 @@ import {
   requestNotificationPermission,
 } from '../lib/notifications.js';
 import { dueReminders } from '../lib/reminders.js';
-import { currentAccount, resetConnection, signIn, signOut } from '../lib/onedrive.js';
+import {
+  ACCOUNT_KINDS,
+  accountKind,
+  clearSignInProblem,
+  currentAccount,
+  resetConnection,
+  setAccountKind,
+  signIn,
+  signInProblem,
+  signOut,
+} from '../lib/onedrive.js';
 import { runSync } from '../lib/cloudsync.js';
 import { BUILD_ID, BUILT_AT, checkForUpdate } from '../lib/version.js';
 import Screen from '../components/Screen.jsx';
@@ -35,6 +45,8 @@ export default function Settings() {
   const [syncing, setSyncing] = useState(false);
   const [busy, setBusy] = useState(false);
   const [appUpdate, setAppUpdate] = useState(null);
+  const [kind, setKind] = useState(accountKind);
+  const [problem, setProblem] = useState(null);
   const importRef = useRef(null);
   const [pending, setPending] = useState(null);
 
@@ -44,7 +56,13 @@ export default function Settings() {
       setApiKey(loaded.anthropic_api_key ?? '');
       setEndpoint(loaded.proxy_endpoint ?? '');
       setClientId(loaded.onedrive_client_id ?? '');
-      if (loaded.onedrive_client_id) currentAccount(loaded.onedrive_client_id).then(setAccount);
+      if (loaded.onedrive_client_id) {
+        currentAccount(loaded.onedrive_client_id).then((found) => {
+          setAccount(found);
+          // Only worth raising when they are not, in fact, connected.
+          setProblem(signInProblem({ signedIn: Boolean(found) }));
+        });
+      }
     });
     dueReminders().then((due) => setPending(due.length));
   }, []);
@@ -253,6 +271,39 @@ export default function Settings() {
             />
           </Field>
 
+          {problem ? (
+            <Banner tone="warn" className="mt-3">
+              <p>{problem.message}</p>
+              {problem.detail ? (
+                <p className="mt-1 font-mono text-[12px] break-all opacity-80">{problem.detail}</p>
+              ) : null}
+            </Banner>
+          ) : null}
+
+          {account ? null : (
+            <Field
+              label="What kind of Microsoft account?"
+              htmlFor="account-kind"
+              hint={ACCOUNT_KINDS.find((k) => k.id === kind)?.hint}
+            >
+              <Select
+                id="account-kind"
+                value={kind}
+                onChange={(e) => {
+                  setAccountKind(e.target.value);
+                  setKind(e.target.value);
+                  clearSignInProblem();
+                  setProblem(null);
+                  setSync(null);
+                }}
+              >
+                {ACCOUNT_KINDS.map((k) => (
+                  <option key={k.id} value={k.id}>{k.label}</option>
+                ))}
+              </Select>
+            </Field>
+          )}
+
           <div className="mt-3 flex flex-col gap-2">
             {account ? (
               <>
@@ -285,6 +336,7 @@ export default function Settings() {
                     await signOut(clientId.trim()).catch(() => {});
                     setAccount(null);
                     setSync(null);
+                    setProblem(null);
                   }}
                 >
                   Disconnect
@@ -312,13 +364,15 @@ export default function Settings() {
             ) : null}
 
             {/* Sign-in can wedge on a stuck "interaction in progress" flag left
-                by a popup that timed out. This is the way out. */}
+                by an attempt that was abandoned halfway. This is the way out. */}
             <button
               type="button"
               className="min-h-11 text-[13px] text-slate-500 underline underline-offset-4 dark:text-slate-400"
               onClick={() => {
                 resetConnection(clientId.trim());
+                clearSignInProblem();
                 setAccount(null);
+                setProblem(null);
                 setSync('Connection reset. Try Connect OneDrive again.');
               }}
             >
@@ -412,11 +466,17 @@ export default function Settings() {
         <Section title="This app">
           <p className="text-[14px] text-slate-600 dark:text-slate-400">
             Version <span className="font-mono text-[13px]">{BUILD_ID}</span>
-            {BUILT_AT ? ` · installed ${builtOn(BUILT_AT)}` : ''}
+            {BUILT_AT ? ` · built ${builtOn(BUILT_AT)}` : ''}
+          </p>
+          <p className="text-[14px] text-slate-600 dark:text-slate-400">
+            Served from <span className="font-mono text-[13px]">{window.location.host}</span>
           </p>
           <p className="mt-1 text-[13px] text-slate-500 dark:text-slate-400">
             Worth checking if something that was fixed still looks broken — an app added to the
             home screen keeps running the copy it saved until it is told to look for a newer one.
+            If the address above is not the one you normally use, this copy was saved from a
+            one-off preview link and will never update: open the usual address and add that to
+            your home screen instead.
           </p>
           <Button
             variant="secondary"
@@ -431,13 +491,16 @@ export default function Settings() {
             Check for updates
           </Button>
           {appUpdate && appUpdate !== 'checking' ? (
-            <p className="mt-2 text-[13px] text-slate-600 dark:text-slate-300">
-              {appUpdate === 'updating'
-                ? 'A newer version is ready — reload to use it.'
-                : appUpdate === 'current'
-                  ? 'This is the latest version.'
-                  : 'This browser cannot check by itself. Reload the page to pick up a new version.'}
-            </p>
+            <>
+              <p className="mt-2 text-[13px] text-slate-600 dark:text-slate-300">
+                {UPDATE_WORDING[appUpdate] ?? UPDATE_WORDING.unsupported}
+              </p>
+              {appUpdate === 'ready' ? (
+                <Button className="mt-2 w-full" onClick={() => window.location.reload()}>
+                  Reload now
+                </Button>
+              ) : null}
+            </>
           ) : null}
         </Section>
 
@@ -448,6 +511,14 @@ export default function Settings() {
     </Screen>
   );
 }
+
+const UPDATE_WORDING = {
+  current: 'You already have the newest version.',
+  ready: 'A newer version is ready.',
+  downloading: 'A newer version is downloading. It will be ready shortly.',
+  failed: 'A newer version could not be downloaded — check the connection and try again.',
+  unsupported: 'This browser cannot check by itself. Reloading the page picks up a new version.',
+};
 
 /** A build stamp is only useful if a person can compare it to "today". */
 function builtOn(iso) {

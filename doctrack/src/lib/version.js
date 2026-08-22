@@ -69,17 +69,50 @@ export function checkForUpdate() {
   if (!('serviceWorker' in navigator)) return Promise.resolve('unsupported');
   return navigator.serviceWorker
     .getRegistration()
-    .then((registration) => {
+    .then(async (registration) => {
       if (!registration) return 'unsupported';
-      return registration.update().then(() => {
-        // update() resolves as soon as the check is done, which can be a moment
-        // before the new worker takes over — so ask the registration what it is
-        // holding rather than waiting for the takeover to be announced.
-        if (registration.installing || registration.waiting) return 'updating';
-        return updateReady ? 'updating' : 'current';
-      });
+      await registration.update();
+
+      // update() resolves once the browser has compared sw.js and, if it
+      // differs, *started* installing — not when the new build is ready. Asking
+      // `updateReady` here would answer "you are up to date" at the precise
+      // moment a new version is downloading, and be contradicted seconds later
+      // by the banner. So follow the new worker to the end of its life.
+      const arriving = registration.installing ?? registration.waiting;
+      if (!arriving) return updateReady ? 'ready' : 'current';
+      return settle(arriving);
     })
     .catch(() => 'unsupported');
+}
+
+/**
+ * Wait for an arriving worker to either take over or die.
+ *
+ * A precache that fails — one asset missing, storage full, the connection lost
+ * partway through fifteen megabytes on a phone — leaves the worker `redundant`
+ * and fires no controllerchange at all. Reported as "up to date", that is a lie
+ * the user has no way to see through.
+ */
+function settle(worker) {
+  return new Promise((resolve) => {
+    const done = (answer) => {
+      worker.removeEventListener('statechange', onChange);
+      resolve(answer);
+    };
+    const onChange = () => {
+      if (worker.state === 'activated') done('ready');
+      if (worker.state === 'redundant') done('failed');
+    };
+    worker.addEventListener('statechange', onChange);
+    onChange();
+    // Not every browser reaches a final state promptly; do not hang the button.
+    setTimeout(() => done(updateReady ? 'ready' : 'downloading'), 20_000);
+  });
+}
+
+function announce() {
+  updateReady = true;
+  for (const listener of waiting) listener();
 }
 
 /** Notified when a newer build has taken over and the page is now the old one. */
@@ -118,11 +151,13 @@ export function watchForUpdates(registration) {
     // claiming is already the newest build.
     if (!hadControllerAtBoot) return;
 
-    if (document.hidden || Date.now() - bootedAt < QUIET_WINDOW) {
-      reloadOntoNewBuild('a newer build took over');
-      return;
-    }
-    updateReady = true;
-    for (const listener of waiting) listener();
+    // Only stay quiet if the reload really went ahead. A refused one — the
+    // loop guard, or private mode — would otherwise leave the page on the old
+    // build, with the new worker already in control and the old build's chunks
+    // already deleted, and nothing on screen to say so.
+    const quiet = document.hidden || Date.now() - bootedAt < QUIET_WINDOW;
+    if (quiet && reloadOntoNewBuild('a newer build took over')) return;
+
+    announce();
   });
 }

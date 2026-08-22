@@ -74,28 +74,41 @@ export default function App() {
     return () => document.removeEventListener('visibilitychange', onVisible);
   }, [database.state]);
 
+  // Rendered above every branch below, including the ones that report a
+  // failure — a database that will not open is exactly the sort of thing a
+  // newer build might have fixed, and that screen is where someone is stuck.
+  const banner = newBuild ? (
+    <>
+      <UpdateBanner />
+      {/* Holds the space the fixed banner covers, so nothing is hidden behind
+          it while the page is at the top. */}
+      <div className="h-12" aria-hidden="true" />
+    </>
+  ) : null;
+
   if (database.state === DATABASE_STATE.OPENING) {
     return (
-      <div className="flex min-h-full items-center justify-center p-8 text-slate-400">
-        <span className="text-[15px]">Opening your documents…</span>
-      </div>
+      <>
+        {banner}
+        <div className="flex min-h-full items-center justify-center p-8 text-slate-400">
+          <span className="text-[15px]">Opening your documents…</span>
+        </div>
+      </>
     );
   }
 
   if (database.state !== DATABASE_STATE.READY) {
-    return <DatabaseError state={database.state} error={database.error} />;
+    return (
+      <>
+        {banner}
+        <DatabaseError state={database.state} error={database.error} />
+      </>
+    );
   }
 
   return (
     <>
-      {newBuild ? (
-        <>
-          <UpdateBanner />
-          {/* Holds the space the fixed banner covers, so nothing is hidden
-              behind it while the page is at the top. */}
-          <div className="h-12" aria-hidden="true" />
-        </>
-      ) : null}
+      {banner}
       <Routes>
         <Route path="/" element={<Dashboard />} />
         <Route path="/members/new" element={<MemberForm mode="add" />} />

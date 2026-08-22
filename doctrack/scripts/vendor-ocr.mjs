@@ -65,6 +65,20 @@ for (const [from, to] of rootFiles) {
   bytes += statSync(target).size;
 }
 
-console.log(
-  `[vendor-ocr] ${copied}/${files.length + rootFiles.length} files → public (${(bytes / 1e6).toFixed(1)} MB)`,
-);
+const wanted = files.length + rootFiles.length;
+console.log(`[vendor-ocr] ${copied}/${wanted} files → public (${(bytes / 1e6).toFixed(1)} MB)`);
+
+/**
+ * A build that quietly lost the reader is worse than one that failed.
+ *
+ * Warnings scroll past in a deployment log, and the result is an app that
+ * still claims documents never leave the device while fetching the engine that
+ * reads them from someone else's CDN — or, for PDFs, does not work at all. Only
+ * the build knows; the browser finds out much later and cannot say why. So it
+ * stops here instead, but only during a build: a bare `npm install` on a
+ * half-installed tree should not be fatal.
+ */
+if (copied < wanted && process.env.npm_lifecycle_event === 'prebuild') {
+  console.error('[vendor-ocr] refusing to build without the on-device reader.');
+  process.exit(1);
+}

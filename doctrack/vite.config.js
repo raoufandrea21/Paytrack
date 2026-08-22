@@ -12,10 +12,7 @@ import { handleExtract } from './api/_handler.js';
  * development too and there is nothing extra to run alongside Vite.
  */
 function devExtractionApi(env) {
-  return {
-    name: 'doctrack-dev-extraction-api',
-    apply: 'serve',
-    configureServer(server) {
+  const middleware = (server) => {
       server.middlewares.use('/api/extract', async (req, res, next) => {
         if (req.method === 'OPTIONS') {
           res.statusCode = 204;
@@ -40,7 +37,14 @@ function devExtractionApi(env) {
           res.end(JSON.stringify({ error: error?.message ?? 'Bad request.' }));
         }
       });
-    },
+  };
+
+  return {
+    name: 'doctrack-dev-extraction-api',
+    configureServer: middleware,
+    // Preview too, or `npm run preview` 404s the endpoint and a rehearsal of
+    // proxy mode proves nothing either way.
+    configurePreviewServer: middleware,
   };
 }
 
@@ -84,10 +88,16 @@ export default defineConfig(({ mode }) => {
         strategies: 'injectManifest',
         srcDir: 'src',
         filename: 'sw.js',
-        registerType: 'autoUpdate',
-        injectRegister: null, // registered by hand in src/main.jsx
+        // No registerType here: it only configures registration code the plugin
+        // generates, and injectRegister:null switches that generation off — so
+        // the setting whose name promises auto-updating contributed nothing.
+        // Registration and updating are hand-written in src/main.jsx and
+        // src/lib/version.js, which is where the behaviour actually lives.
+        injectRegister: null,
         injectManifest: {
-          globPatterns: ['**/*.{js,css,html,svg,png,ico,webmanifest}'],
+          // mjs matters: pdf.worker.min.mjs is how a PDF gets read, and without
+          // it the app is only offline-capable for documents already filed.
+          globPatterns: ['**/*.{js,mjs,css,html,svg,png,ico,webmanifest}'],
           // The OCR engine is ~15 MB and only some users ever trigger it, so it
           // is fetched on first read and cached by the browser rather than
           // forced onto every install as part of the app shell.
