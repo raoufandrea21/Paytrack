@@ -17,6 +17,11 @@ export const DOCUMENT_TYPE_IDS = [
   'vehicle_registration',
   'car_insurance',
   'health_insurance',
+  'vaccination',
+  'birth_certificate',
+  'marriage_certificate',
+  'power_of_attorney',
+  'education_certificate',
   'other',
 ];
 
@@ -127,6 +132,8 @@ Rules:
 5. Numbers. For an Emirates ID use the 784-XXXX-XXXXXXX-X number. For a Cypriot identity card use the ID/ταυτότητα number printed on the front. For a passport use the passport number. For a driving licence use the licence number. For a vehicle registration use the traffic plate number. For an insurance card use the policy or member number. Keep the punctuation the document prints. Normalise any Arabic-Indic digits.
 
 6. document_type must be one of the allowed enum values, or "" if you cannot tell which it is.
+
+5b. Several of these kinds carry no expiry date at all — birth and marriage certificates, education certificates, and most powers of attorney. Return "" for expiry_date on those and do not treat it as a failure; it is not a field they have.
 
 6a. label_guess distinguishes two documents of the same kind belonging to the same person. One household commonly holds two passports per adult, or two cars. For a passport give the issuing country ("Cypriot", "Lebanese"). For a vehicle registration or motor policy give the plate number or model. For anything with nothing to distinguish it, return "".
 

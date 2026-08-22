@@ -51,7 +51,11 @@ export default function Review() {
                     <p className="truncate text-[15px] font-semibold">{documentLabel(doc)}</p>
                     <p className="truncate text-[13px] text-slate-500 dark:text-slate-400">
                       {holder} ·{' '}
-                      {doc.expiry_date ? `expires ${formatDate(doc.expiry_date)}` : 'no expiry date'}
+                      {doc.no_expiry
+                        ? 'no expiry'
+                        : doc.expiry_date
+                          ? `expires ${formatDate(doc.expiry_date)}`
+                          : 'no expiry date'}
                     </p>
                   </div>
                   <span className="text-[14px] font-semibold text-indigo-600 dark:text-indigo-400">
@@ -79,7 +83,9 @@ export default function Review() {
  */
 function reasonsFor(doc) {
   const reasons = [];
-  if (!doc.expiry_date) reasons.push('No expiry date — no reminders will fire.');
+  if (!doc.expiry_date && !doc.no_expiry) {
+    reasons.push('No expiry date — no reminders will fire.');
+  }
   if (doc.type === 'other' && !doc.label) {
     reasons.push('Document type was not recognised — say what it is.');
   }

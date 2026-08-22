@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db, documentsNeedingReview, duplicateMembers, mergeMembers } from '../db.js';
-import { byUrgency, urgencyFor } from '../lib/dates.js';
+import { byUrgency, urgencyForDocument } from '../lib/dates.js';
 import Screen from '../components/Screen.jsx';
 import DocumentRow from '../components/DocumentRow.jsx';
 import { Button, Card, EmptyState, Spinner } from '../components/ui.jsx';
@@ -31,7 +31,7 @@ export default function Dashboard() {
     return members
       .map((member) => {
         const docs = [...(byMember.get(member.id) ?? [])].sort(byUrgency);
-        const worst = docs.length ? urgencyFor(docs[0].expiry_date) : null;
+        const worst = docs.length ? urgencyForDocument(docs[0]) : null;
         return { member, docs, worst };
       })
       .sort((a, b) => {
@@ -43,7 +43,7 @@ export default function Dashboard() {
   }, [members, documents]);
 
   const attention = useMemo(
-    () => (documents ?? []).filter((d) => urgencyFor(d.expiry_date).rank <= 1).length,
+    () => (documents ?? []).filter((d) => urgencyForDocument(d).rank <= 1).length,
     [documents],
   );
 

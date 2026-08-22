@@ -11,6 +11,11 @@ export const DOCUMENT_TYPES = [
   { id: 'vehicle_registration', label: 'Vehicle Registration', icon: '🚙' },
   { id: 'car_insurance', label: 'Car Insurance', icon: '🛡️' },
   { id: 'health_insurance', label: 'Health Insurance', icon: '🏥' },
+  { id: 'vaccination', label: 'Vaccination Record', icon: '💉' },
+  { id: 'birth_certificate', label: 'Birth Certificate', icon: '👶', permanent: true },
+  { id: 'marriage_certificate', label: 'Marriage Certificate', icon: '💍', permanent: true },
+  { id: 'power_of_attorney', label: 'Power of Attorney', icon: '⚖️' },
+  { id: 'education_certificate', label: 'Education Certificate', icon: '🎓', permanent: true },
   { id: 'other', label: 'Other', icon: '📎' },
 ];
 
@@ -63,11 +68,22 @@ export const RELATIONS = [
   'Housemaid',
   'Nanny',
   'Driver',
+  // Vaccination records expire, and a boarding kennel will ask for them.
+  'Pet',
   'Other',
 ];
 
 /** Days before expiry at which a reminder fires. Ordered most urgent first. */
 export const REMINDER_THRESHOLDS = [7, 30, 60];
+
+/**
+ * Kinds of document that have no expiry date by nature. A birth certificate is
+ * filed, not tracked — treating its missing date as a problem would park it in
+ * the review queue forever, complaining about something that does not exist.
+ */
+export function typeIsPermanent(id) {
+  return Boolean(TYPE_INDEX[id]?.permanent);
+}
 
 /** Below this, a Claude-extracted field is shown as "check this" rather than accepted. */
 export const LOW_CONFIDENCE = 0.7;

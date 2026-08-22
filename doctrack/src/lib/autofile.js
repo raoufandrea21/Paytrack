@@ -10,7 +10,7 @@
  * Everything else in this app is decoration around getting that date right.
  */
 import { db, addDocument, findOrCreateMember, matchMemberByName, renewDocument } from '../db.js';
-import { LOW_CONFIDENCE, documentLabel } from './constants.js';
+import { LOW_CONFIDENCE, documentLabel, typeIsPermanent } from './constants.js';
 import { isValidISODate } from './dates.js';
 
 export const UNKNOWN_HOLDER = 'Unknown holder';
@@ -23,7 +23,16 @@ export const UNKNOWN_HOLDER = 'Unknown holder';
  *   - no readable name, and only one person on file → that person
  *   - no readable name, and several           → a holding record, flagged
  */
-export async function resolveMember(extraction) {
+export async function resolveMember(extraction, hints = {}) {
+  // A folder name beats a name read off a photograph every time: it was typed
+  // by a person who knew whose document it was, and it cannot be misread.
+  if (hints.person) {
+    const { member, created } = await findOrCreateMember(hints.person, {
+      relation: hints.relation ?? 'Other',
+    });
+    return { member, created, uncertain: false, fromFolder: true };
+  }
+
   const name = extraction.fields.holder_name.value;
   const confident = name && extraction.fields.holder_name.confidence >= LOW_CONFIDENCE;
   const members = await db.members.toArray();
@@ -59,14 +68,30 @@ export async function resolveMember(extraction) {
  * Plain-language reasons this document should be looked at. An empty list means
  * it filed itself cleanly and nobody needs to see it again.
  */
-export function reviewReasons(extraction, { holderUncertain = false } = {}) {
+export function reviewReasons(extraction, { holderUncertain = false, type, filenameYear } = {}) {
   const reasons = [];
   const f = extraction.fields;
+  const expiry = f.expiry_date.value;
+  const permanent = typeIsPermanent(type ?? f.type.value);
 
-  if (!isValidISODate(f.expiry_date.value)) {
-    reasons.push('No expiry date could be read — reminders will not fire until you add one.');
+  if (permanent) {
+    // A birth certificate has no expiry date. Asking for one forever is noise.
+  } else if (!isValidISODate(expiry)) {
+    if (filenameYear) {
+      reasons.push(
+        `No expiry date was found on the document, but the filename says ${filenameYear} — set the exact date so reminders can fire.`,
+      );
+    } else {
+      reasons.push('No expiry date could be read — reminders will not fire until you add one.');
+    }
   } else if (f.expiry_date.confidence < LOW_CONFIDENCE) {
     reasons.push('The expiry date was hard to read.');
+  } else if (filenameYear && Number(expiry.slice(0, 4)) !== filenameYear) {
+    // Two independent statements of the same fact disagreeing is worth more
+    // attention than either being merely unclear.
+    reasons.push(
+      `The document reads ${expiry.slice(0, 4)} but the filename says ${filenameYear} — one of them is wrong.`,
+    );
   }
 
   if (!f.type.value) reasons.push('The document type was not obvious.');
@@ -131,8 +156,8 @@ export async function findRenewalTarget({ memberId, type, label, expiryDate }) {
  * The whole automatic path for one file: decide the holder, check it is not
  * already on file, save it, and report what happened in words the user can read.
  */
-export async function fileDocument({ prepared, extraction }) {
-  const { member, created, uncertain } = await resolveMember(extraction);
+export async function fileDocument({ prepared, extraction, hints = {} }) {
+  const { member, created, uncertain } = await resolveMember(extraction, hints);
   const f = extraction.fields;
 
   const type = f.type.value ?? 'other';
@@ -159,7 +184,11 @@ export async function fileDocument({ prepared, extraction }) {
     };
   }
 
-  const reasons = reviewReasons(extraction, { holderUncertain: uncertain });
+  const reasons = reviewReasons(extraction, {
+    holderUncertain: uncertain,
+    type,
+    filenameYear: hints.year ?? null,
+  });
 
   const record = {
     member_id: member.id,
@@ -168,11 +197,15 @@ export async function fileDocument({ prepared, extraction }) {
     number,
     issue_date: isValidISODate(f.issue_date.value) ? f.issue_date.value : '',
     expiry_date: expiry,
+    no_expiry: typeIsPermanent(type) ? 1 : 0,
+    // A document filed under "Expired" is history the moment it arrives.
+    status: hints.archived ? 'archived' : 'active',
     notes: '',
     photo: prepared.blob,
+    photo_back: prepared.back ?? null,
     photo_type: prepared.mediaType,
     file_kind: prepared.kind,
-    review_needed: reasons.length > 0 ? 1 : 0,
+    review_needed: reasons.length > 0 && !hints.archived ? 1 : 0,
     extraction: {
       confidence: extraction.confidence,
       model: extraction.model,
@@ -203,7 +236,7 @@ export async function fileDocument({ prepared, extraction }) {
   const documentId = await addDocument(record);
 
   return {
-    outcome: reasons.length > 0 ? 'needs_review' : 'filed',
+    outcome: hints.archived ? 'archived' : reasons.length > 0 ? 'needs_review' : 'filed',
     member,
     memberCreated: created,
     documentId,
@@ -218,6 +251,10 @@ export function describeResult(result) {
   switch (result.outcome) {
     case 'filed':
       return `${label} filed under ${result.member.name}`;
+    case 'archived':
+      return `${label} filed as expired for ${result.member.name}`;
+    case 'portrait':
+      return `${result.filename} looks like a personal photo — skipped`;
     case 'needs_review':
       return `${label} saved for ${result.member.name} — needs checking`;
     case 'renewed':

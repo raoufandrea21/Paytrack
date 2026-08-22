@@ -222,7 +222,53 @@ stay in IndexedDB.
 
 ## How automatic filing works
 
-Drop several files into **Upload documents** and each one goes through:
+### Uploading a folder
+
+If documents are already filed per person — and most households do this long
+before any software is involved — **Choose a whole folder** is the better route.
+The folder name becomes the owner, which is far more reliable than reading a
+name off a photograph, and it is what the app gets wrong most often.
+
+A tree like this needs no correction at all:
+
+```
+Family Documents/
+├── Raouf Andrea/
+│   ├── Raouf Passport 2036.jpg     → Raouf Andrea, expiry cross-checked against 2036
+│   ├── EID 2032 Front.jpg  ┐
+│   ├── EID 2032 Back.jpg   ┘       → one record, both images
+│   ├── Raouf Personal Photo.jpg    → skipped, nothing about it expires
+│   └── Expired/
+│       └── Raouf Passport 2021.jpg → filed straight to the archive
+├── Maids/
+│   └── Maria Santos/               → a person, relation Housemaid
+└── Pets/
+    └── Bella/                      → a person, relation Pet
+```
+
+What the path and filename are read for, before a single pixel is recognised:
+
+- **The folder is the owner.** Category folders (`Cyprus ID's`, `Golden Visa
+  Files`) say what a document is, not whose it is, so they are skipped in favour
+  of the folder above — but never as far as the collection's own root, which is
+  nobody.
+- **`Maids/`, `Pets/`, `Drivers/`** name a group: the folder inside is a person,
+  and the group supplies their relation.
+- **`Expired/`** describes the documents, not their owner. They arrive archived,
+  and are not queued for review.
+- **A year in the filename** is taken as the expiry year. It fills the gap when
+  none could be read, and — more usefully — contradicts one that was: *"the
+  document reads 2031 but the filename says 2036, one of them is wrong"* is a
+  better prompt than either alone.
+- **Front and back** of one card become one record with two images. The back
+  carries no expiry date, so nothing downstream would recognise it as a second
+  view of a document already filed.
+- **Personal photos** (`IMG_1746`, `Sandy Personal Photo`) are recognised and
+  skipped. They are real files, but nothing about them expires.
+
+### Every document then goes through
+
+Each one goes through:
 
 1. **Read** — one call to Claude with the photo or PDF
 2. **Classify** — which of the eight document types this is
@@ -440,7 +486,14 @@ settings      key/value: API mode, key, endpoint
 
 `type` is one of `emirates_id`, `cyprus_id`, `driving_license`, `passport`,
 `residency_visa`, `vehicle_registration`, `car_insurance`, `health_insurance`,
-`other`.
+`vaccination`, `birth_certificate`, `marriage_certificate`,
+`power_of_attorney`, `education_certificate`, `other`.
+
+Some of those have no expiry date by nature — a birth certificate, a marriage
+certificate, a diploma. Picking one sets `no_expiry`, and the record is then
+*filed* rather than tracked: no reminders, no red chip, and no place in the
+review queue asking for a date it will never have. Any document can be marked
+the same way by hand.
 
 `label` does two jobs. On `other` it *is* the type — a tenancy contract, a trade
 licence, whatever the built-in list does not cover, with previously used labels
@@ -493,6 +546,7 @@ doctrack/
 │   │   ├── autofile.js         holder resolution, de-duplication, review rules
 │   │   ├── dates.js            Arabic digits, loose date parsing, urgency
 │   │   ├── files.js            photo downscale, PDF passthrough, base64
+│   │   ├── filename.js         what the folder and filename already tell us
 │   │   ├── reminders.js        the reminder engine (runs on page AND in the SW)
 │   │   └── notifications.js    permission, on-load check, background sync
 │   ├── screens/                Dashboard, BulkAdd, Library, Review,
@@ -505,6 +559,7 @@ doctrack/
     ├── extraction.test.mjs
     ├── autofile.test.mjs
     ├── mrz.test.mjs
+    ├── filename.test.mjs
     ├── sync.test.mjs
     └── cloudsync.test.mjs
 ```

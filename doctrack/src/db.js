@@ -264,6 +264,9 @@ const BLANK_DOCUMENT = {
   // Free text, only meaningful when type is 'other'. Not indexed — the whole
   // table is loaded for the library screen anyway.
   label: '',
+  // Set when a document has no expiry by nature — a birth certificate — or
+  // when the user says so. Filed, not tracked. 0/1 rather than a boolean.
+  no_expiry: 0,
   number: '',
   issue_date: '',
   expiry_date: '',
@@ -284,7 +287,9 @@ export async function addDocument(doc) {
     uid: newUid(),
     ...doc,
     member_id: Number(doc.member_id),
-    status: 'active',
+    // Usually active, but a document arriving from an "Expired" folder is
+    // history the moment it lands — so the caller's status wins if it set one.
+    status: doc.status ?? 'active',
     created_at: now,
     updated_at: now,
   });

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { DOCUMENT_TYPES, previousLabels } from '../lib/constants.js';
+import { DOCUMENT_TYPES, previousLabels, typeIsPermanent } from '../lib/constants.js';
 import { expiryPhrase, isValidISODate, urgencyFor } from '../lib/dates.js';
 import { Banner, Field, Input, Select, Textarea, UrgencyChip } from './ui.jsx';
 
@@ -31,7 +31,14 @@ export default function DocumentForm({
 
   function set(key, next) {
     setTouched((prev) => new Set(prev).add(key));
-    onChange({ ...value, [key]: next });
+    const updated = { ...value, [key]: next };
+    // Choosing a kind that has no expiry by nature answers the question for the
+    // user, rather than leaving them to notice the checkbox.
+    if (key === 'type' && typeIsPermanent(next)) {
+      updated.no_expiry = 1;
+      updated.expiry_date = '';
+    }
+    onChange(updated);
   }
 
   // A flagged field gets an amber outline plus a line of explanation under it.
@@ -39,7 +46,9 @@ export default function DocumentForm({
   // two-column date row from wrapping on a narrow phone.
   const reviewHint = 'Check this reading';
 
-  const expiryUrgency = isValidISODate(value.expiry_date) ? urgencyFor(value.expiry_date) : null;
+  const noExpiry = Boolean(value.no_expiry);
+  const expiryUrgency =
+    !noExpiry && isValidISODate(value.expiry_date) ? urgencyFor(value.expiry_date) : null;
   // Labels used before come back as suggestions, so the second tenancy contract
   // is one tap rather than typed out again.
   const labelSuggestions = previousLabels(knownDocuments);
@@ -153,7 +162,23 @@ export default function DocumentForm({
         />
       </Field>
 
-      <div className="grid grid-cols-2 gap-3">
+      <label className="flex items-start gap-2.5 rounded-xl bg-white px-3 py-3 ring-1 ring-slate-300 dark:bg-slate-800 dark:ring-slate-700">
+        <input
+          type="checkbox"
+          checked={noExpiry}
+          onChange={(e) => set('no_expiry', e.target.checked ? 1 : 0)}
+          className="mt-0.5 size-4 shrink-0 rounded"
+        />
+        <span className="min-w-0">
+          <span className="block text-[14px] font-semibold">This document does not expire</span>
+          <span className="block text-[13px] text-slate-500 dark:text-slate-400">
+            Birth and marriage certificates, diplomas. Kept on file, no reminders.
+          </span>
+        </span>
+      </label>
+
+      {noExpiry ? null : (
+        <div className="grid grid-cols-2 gap-3">
         <Field
           label="Issue date"
           htmlFor="issue_date"
@@ -185,7 +210,8 @@ export default function DocumentForm({
             tone={errors.expiry_date ? 'error' : flagged('expiry_date') ? 'review' : undefined}
           />
         </Field>
-      </div>
+        </div>
+      )}
 
       {expiryUrgency ? (
         <div className="flex items-center gap-2">
@@ -219,6 +245,7 @@ export function validateDocument(value, { requireMember = true } = {}) {
   if (value.type === 'other' && !String(value.label ?? '').trim()) {
     errors.label = 'Say what kind of document this is.';
   }
+  if (value.no_expiry) return errors; // nothing else to check on a filed document
   if (value.expiry_date && !isValidISODate(value.expiry_date)) {
     errors.expiry_date = 'That is not a valid date.';
   }

@@ -147,6 +147,12 @@ export const URGENCY = {
     chip: 'bg-yellow-100 text-yellow-900 dark:bg-yellow-950 dark:text-yellow-200',
     bar: 'bg-yellow-400',
   },
+  filed: {
+    id: 'filed', label: 'No expiry', rank: 4,
+    dot: 'bg-sky-400',
+    chip: 'bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-200',
+    bar: 'bg-sky-300 dark:bg-sky-800',
+  },
   green: {
     id: 'green', label: 'Valid', rank: 3,
     dot: 'bg-emerald-500',
@@ -213,10 +219,33 @@ export function todayISO() {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 
+/**
+ * Urgency for a whole record rather than a bare date.
+ *
+ * A birth certificate has no expiry and never will; showing it as "no date set"
+ * treats a fact about the document as an omission by the user.
+ */
+export function urgencyForDocument(doc, options) {
+  if (doc?.no_expiry) return { ...URGENCY.filed, days: null };
+  return urgencyFor(doc?.expiry_date, options);
+}
+
+/** Compact chip text for a whole record. */
+export function shortRemainingFor(doc, options) {
+  if (doc?.no_expiry) return 'Filed';
+  return shortRemaining(doc?.expiry_date, options);
+}
+
+/** "Kept on file" reads better than "No expiry date" for something permanent. */
+export function expiryPhraseFor(doc, options) {
+  if (doc?.no_expiry) return 'Kept on file — no expiry';
+  return expiryPhrase(doc?.expiry_date, options);
+}
+
 /** Sorts documents so the ones that need attention are first. */
 export function byUrgency(a, b) {
-  const ua = urgencyFor(a.expiry_date);
-  const ub = urgencyFor(b.expiry_date);
+  const ua = urgencyForDocument(a);
+  const ub = urgencyForDocument(b);
   if (ua.rank !== ub.rank) return ua.rank - ub.rank;
   if (ua.days === null) return 0;
   if (ub.days === null) return -1;

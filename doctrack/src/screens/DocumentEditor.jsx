@@ -20,6 +20,7 @@ const EMPTY = {
   member_id: '',
   type: 'other',
   label: '',
+  no_expiry: 0,
   number: '',
   issue_date: '',
   expiry_date: '',
@@ -88,6 +89,7 @@ export default function DocumentEditor({ mode }) {
       type: existing.type,
       // A renewal is the same document again, so its label carries over.
       label: existing.label ?? '',
+      no_expiry: existing.no_expiry ?? 0,
       number: mode === 'renew' ? '' : existing.number ?? '',
       issue_date: mode === 'renew' ? '' : existing.issue_date ?? '',
       expiry_date: mode === 'renew' ? '' : existing.expiry_date ?? '',
@@ -170,6 +172,7 @@ export default function DocumentEditor({ mode }) {
         member_id: Number(form.member_id),
         type: form.type,
         label: form.label.trim(),
+        no_expiry: form.no_expiry ? 1 : 0,
         number: form.number.trim(),
         issue_date: form.issue_date || '',
         expiry_date: form.expiry_date || '',

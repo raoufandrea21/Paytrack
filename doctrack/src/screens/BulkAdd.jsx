@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { getSettings } from '../db.js';
 import { ACCEPT_ATTRIBUTE, prepareFile } from '../lib/files.js';
+import { pairSides, readPath } from '../lib/filename.js';
 import { extractDocument, extractionAvailable, ExtractionError } from '../lib/extract.js';
 import { fileDocument, describeResult } from '../lib/autofile.js';
 import { documentType } from '../lib/constants.js';
@@ -19,6 +20,7 @@ import { Banner, Button, Card, Spinner } from '../components/ui.jsx';
  */
 export default function BulkAdd() {
   const inputRef = useRef(null);
+  const folderRef = useRef(null);
   const cameraRef = useRef(null);
   const [settings, setSettings] = useState(null);
   const [items, setItems] = useState([]);
@@ -53,13 +55,23 @@ export default function BulkAdd() {
   async function enqueue(chosen) {
     if (chosen.length === 0) return;
 
-    const queued = chosen.map((file, i) => ({
-      id: `${Date.now()}-${i}`,
-      name: file.name || `Document ${i + 1}`,
+    const read = chosen.map((file) => ({
       file,
-      status: 'queued',
-      message: 'Waiting…',
+      // webkitRelativePath is set when a whole folder was chosen; it is the path
+      // inside it, which is where the owner's name lives.
+      hints: readPath(file.webkitRelativePath || file.name),
     }));
+
+    const queued = pairSides(read).map((entry, i) => ({
+      id: `${Date.now()}-${i}`,
+      name: entry.hints.filename,
+      file: entry.file,
+      backFile: entry.backFile ?? null,
+      hints: entry.hints,
+      status: 'queued',
+      message: entry.hints.portrait ? 'Looks like a personal photo' : 'Waiting…',
+    }));
+
     setItems((prev) => [...prev, ...queued]);
     await runQueue(queued);
   }
@@ -74,11 +86,26 @@ export default function BulkAdd() {
   }
 
   async function processOne(item) {
+    // A passport photo is a real file but nothing about it expires. Filing one
+    // makes a record with no type, no number and no date, to be deleted by hand.
+    if (item.hints.portrait) {
+      update(item.id, {
+        status: 'portrait',
+        message: `${item.hints.baseName} looks like a personal photo — skipped`,
+      });
+      return;
+    }
+
     update(item.id, { status: 'reading', message: 'Reading the document…' });
 
     let prepared;
     try {
       prepared = await prepareFile(item.file);
+      if (item.backFile) {
+        // One card, two files. Keep the back image with the record rather than
+        // making a second, emptier one for the same document.
+        prepared.back = (await prepareFile(item.backFile)).blob;
+      }
     } catch (error) {
       update(item.id, { status: 'failed', message: error.message });
       return;
@@ -108,7 +135,7 @@ export default function BulkAdd() {
 
     update(item.id, { status: 'filing', message: 'Filing…' });
     try {
-      const result = await fileDocument({ prepared, extraction });
+      const result = await fileDocument({ prepared, extraction, hints: item.hints });
       update(item.id, {
         status: result.outcome,
         message: describeResult(result),
@@ -124,9 +151,11 @@ export default function BulkAdd() {
 
   // A duplicate is not a filing — counting it as one would tell the user four
   // documents were saved when three rows exist.
-  const saved = items.filter((i) => i.status === 'filed' || i.status === 'needs_review');
+  const saved = items.filter((i) =>
+    ['filed', 'needs_review', 'archived'].includes(i.status));
   const duplicates = items.filter((i) => i.status === 'duplicate');
   const failed = items.filter((i) => i.status === 'failed');
+  const skipped = items.filter((i) => i.status === 'portrait');
   const needsReview = items.filter((i) => i.status === 'needs_review');
   const anyNewPeople = items.some((i) => i.memberCreated);
 
@@ -152,6 +181,16 @@ export default function BulkAdd() {
         ref={inputRef}
         type="file"
         accept={ACCEPT_ATTRIBUTE}
+        multiple
+        onChange={handleFiles}
+        className="sr-only"
+        tabIndex={-1}
+      />
+      <input
+        ref={folderRef}
+        type="file"
+        webkitdirectory=""
+        directory=""
         multiple
         onChange={handleFiles}
         className="sr-only"
@@ -210,6 +249,13 @@ export default function BulkAdd() {
               </span>
             </button>
 
+            <Button variant="secondary" className="w-full" onClick={() => folderRef.current?.click()}>
+              <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
+              </svg>
+              Choose a whole folder
+            </Button>
+
             <Button variant="secondary" className="w-full" onClick={() => cameraRef.current?.click()}>
               <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M3 8.5A2.5 2.5 0 015.5 6h1.2a2 2 0 001.7-.95l.6-1A2 2 0 0110.7 3h2.6a2 2 0 011.7.95l.6 1A2 2 0 0017.3 6h1.2A2.5 2.5 0 0121 8.5v9A2.5 2.5 0 0118.5 20h-13A2.5 2.5 0 013 17.5z" />
@@ -221,6 +267,11 @@ export default function BulkAdd() {
             <p className="px-2 text-center text-[13px] text-slate-500 dark:text-slate-400">
               Each document is read, sorted by person and type, and its reminders set
               automatically. You only get asked about the ones that were hard to read.
+            </p>
+            <p className="px-2 text-center text-[13px] text-slate-500 dark:text-slate-400">
+              Choosing a folder is the better way if your documents are already filed per person —
+              the folder name is used as the owner, which is far more reliable than reading a name
+              off a photo.
             </p>
           </>
         ) : (
@@ -238,6 +289,7 @@ export default function BulkAdd() {
                 saved={saved.length}
                 review={needsReview.length}
                 duplicates={duplicates.length}
+                skipped={skipped.length}
                 failed={failed.length}
               />
             )}
@@ -261,8 +313,8 @@ export default function BulkAdd() {
   );
 }
 
-function Summary({ saved, review, duplicates, failed }) {
-  if (saved === 0 && failed === 0 && duplicates === 0) return null;
+function Summary({ saved, review, duplicates, skipped, failed }) {
+  if (saved === 0 && failed === 0 && duplicates === 0 && skipped === 0) return null;
   const tone = failed > 0 || review > 0 ? 'warn' : 'info';
   const title =
     saved === 0
@@ -286,6 +338,12 @@ function Summary({ saved, review, duplicates, failed }) {
           {duplicates === 1 ? 'was' : 'were'} skipped.
         </p>
       ) : null}
+      {skipped > 0 ? (
+        <p>
+          {skipped} personal {skipped === 1 ? 'photo' : 'photos'} skipped — nothing about them
+          expires.
+        </p>
+      ) : null}
       {failed > 0 ? <p>{failed} could not be read. You can add those by hand.</p> : null}
       {review === 0 && failed === 0 && saved > 0 ? (
         <p>Everything read cleanly. Nothing else to do.</p>
@@ -299,6 +357,8 @@ const STATUS_STYLE = {
   reading: { dot: 'bg-indigo-500 animate-pulse', text: 'text-slate-600 dark:text-slate-300' },
   filing: { dot: 'bg-indigo-500 animate-pulse', text: 'text-slate-600 dark:text-slate-300' },
   filed: { dot: 'bg-emerald-500', text: 'text-slate-700 dark:text-slate-200' },
+  archived: { dot: 'bg-slate-400', text: 'text-slate-600 dark:text-slate-300' },
+  portrait: { dot: 'bg-slate-300', text: 'text-slate-500 dark:text-slate-400' },
   needs_review: { dot: 'bg-amber-500', text: 'text-amber-800 dark:text-amber-300' },
   duplicate: { dot: 'bg-slate-400', text: 'text-slate-500 dark:text-slate-400' },
   failed: { dot: 'bg-red-500', text: 'text-red-700 dark:text-red-300' },

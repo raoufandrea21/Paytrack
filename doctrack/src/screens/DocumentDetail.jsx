@@ -9,7 +9,7 @@ import {
   unarchiveDocument,
 } from '../db.js';
 import { documentLabel, documentType } from '../lib/constants.js';
-import { expiryPhrase, formatDate, urgencyFor } from '../lib/dates.js';
+import { expiryPhraseFor, formatDate, urgencyForDocument } from '../lib/dates.js';
 import { previewUrl } from '../lib/files.js';
 import Screen from '../components/Screen.jsx';
 import { Banner, Button, Card, Spinner, UrgencyChip } from '../components/ui.jsx';
@@ -28,6 +28,7 @@ export default function DocumentDetail() {
   const history = useLiveQuery(() => renewalHistory(documentId), [documentId], []);
 
   const [photoUrl, setPhotoUrl] = useState(null);
+  const [backUrl, setBackUrl] = useState(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   useEffect(() => {
@@ -35,6 +36,12 @@ export default function DocumentDetail() {
     setPhotoUrl(url);
     return revoke;
   }, [doc?.photo]);
+
+  useEffect(() => {
+    const { url, revoke } = previewUrl(doc?.photo_back);
+    setBackUrl(url);
+    return revoke;
+  }, [doc?.photo_back]);
 
   if (doc === undefined) {
     return (
@@ -56,7 +63,7 @@ export default function DocumentDetail() {
   }
 
   const type = documentType(doc.type);
-  const urgency = urgencyFor(doc.expiry_date);
+  const urgency = urgencyForDocument(doc);
   const archived = doc.status === 'archived';
   const isPdf = doc.file_kind === 'pdf' || doc.photo_type === 'application/pdf';
 
@@ -101,7 +108,7 @@ export default function DocumentDetail() {
         {doc.review_needed ? (
           <Banner tone="warn" title="Filed automatically — worth checking">
             <p className="mb-3">
-              {doc.expiry_date
+              {doc.expiry_date || doc.no_expiry
                 ? 'Some of this was hard to read.'
                 : 'No expiry date was read, so no reminders will fire for it.'}
             </p>
@@ -119,11 +126,15 @@ export default function DocumentDetail() {
           <div className="flex items-start gap-3">
             <span className="text-3xl" aria-hidden="true">{type.icon}</span>
             <div className="min-w-0 flex-1">
-              <UrgencyChip urgency={urgency}>{expiryPhrase(doc.expiry_date)}</UrgencyChip>
+              <UrgencyChip urgency={urgency}>{expiryPhraseFor(doc)}</UrgencyChip>
               <p className="mt-2 text-[22px] font-bold tracking-tight">
-                {doc.expiry_date ? formatDate(doc.expiry_date) : 'No expiry date set'}
+                {doc.no_expiry
+                  ? 'This document does not expire'
+                  : doc.expiry_date
+                    ? formatDate(doc.expiry_date)
+                    : 'No expiry date set'}
               </p>
-              {doc.expiry_date ? (
+              {doc.expiry_date && !doc.no_expiry ? (
                 <p className="text-[13px] text-slate-500 dark:text-slate-400">Expiry date</p>
               ) : null}
             </div>
@@ -166,6 +177,14 @@ export default function DocumentDetail() {
         ) : photoUrl ? (
           <Card className="overflow-hidden">
             <img src={photoUrl} alt={`${documentLabel(doc)} scan`} className="w-full bg-slate-100 object-contain dark:bg-slate-800" />
+            {backUrl ? (
+              <>
+                <p className="border-t border-slate-100 px-3.5 py-2 text-[13px] font-semibold text-slate-500 dark:border-slate-800 dark:text-slate-400">
+                  Back
+                </p>
+                <img src={backUrl} alt={`${documentLabel(doc)} reverse`} className="w-full bg-slate-100 object-contain dark:bg-slate-800" />
+              </>
+            ) : null}
           </Card>
         ) : (
           <Card className="p-4 text-center text-[14px] text-slate-500 dark:text-slate-400">
