@@ -1,7 +1,14 @@
 import { useEffect, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { db, addDocument, getSettings, renewDocument, updateDocument } from '../db.js';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import {
+  db,
+  addDocument,
+  deleteDocument,
+  getSettings,
+  renewDocument,
+  updateDocument,
+} from '../db.js';
 import { documentLabel } from '../lib/constants.js';
 import { extractDocument, extractionAvailable, ExtractionError } from '../lib/extract.js';
 import Screen from '../components/Screen.jsx';
@@ -52,6 +59,7 @@ export default function DocumentEditor({ mode }) {
   const [notice, setNotice] = useState(null); // { tone, text }
   const [errors, setErrors] = useState({});
   const [seeded, setSeeded] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   useEffect(() => {
     getSettings().then(setSettings);
@@ -261,6 +269,15 @@ export default function DocumentEditor({ mode }) {
               <Button variant="ghost" onClick={() => setStep('confirm')} className="w-full">
                 Skip the photo, enter manually
               </Button>
+              {mode === 'add' ? (
+                <p className="text-center text-[13px] text-slate-500 dark:text-slate-400">
+                  Got several?{' '}
+                  <Link to="/upload" className="font-semibold text-indigo-600 underline underline-offset-2 dark:text-indigo-400">
+                    Upload them all at once
+                  </Link>
+                  .
+                </p>
+              ) : null}
             </>
           ) : null}
 
@@ -298,6 +315,33 @@ export default function DocumentEditor({ mode }) {
                 lockMember={mode === 'renew'}
                 knownDocuments={knownDocuments}
               />
+
+              {mode === 'edit' ? (
+                <div className="pt-4">
+                  <Button
+                    variant={confirmDelete ? 'danger' : 'secondary'}
+                    className="w-full"
+                    onClick={async () => {
+                      if (!confirmDelete) { setConfirmDelete(true); return; }
+                      await deleteDocument(documentId);
+                      navigate('/', { replace: true });
+                    }}
+                  >
+                    {confirmDelete
+                      ? 'Delete permanently — this cannot be undone'
+                      : 'Delete this document'}
+                  </Button>
+                  {confirmDelete ? (
+                    <button
+                      type="button"
+                      onClick={() => setConfirmDelete(false)}
+                      className="mt-2 min-h-11 w-full text-[14px] text-slate-500 underline underline-offset-4 dark:text-slate-400"
+                    >
+                      Cancel
+                    </button>
+                  ) : null}
+                </div>
+              ) : null}
             </>
           ) : null}
         </div>

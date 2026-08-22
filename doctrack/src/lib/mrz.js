@@ -242,6 +242,77 @@ export function parseMrz(found) {
   };
 }
 
+/**
+ * Levenshtein distance, capped — only small distances are interesting here and
+ * there is no reason to finish counting once a candidate is clearly unrelated.
+ */
+export function editDistance(a, b, cap = 4) {
+  if (a === b) return 0;
+  if (Math.abs(a.length - b.length) > cap) return cap + 1;
+  let previous = Array.from({ length: b.length + 1 }, (_, i) => i);
+  for (let i = 1; i <= a.length; i += 1) {
+    const current = [i];
+    let best = i;
+    for (let j = 1; j <= b.length; j += 1) {
+      current[j] = Math.min(
+        previous[j] + 1,
+        current[j - 1] + 1,
+        previous[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1),
+      );
+      best = Math.min(best, current[j]);
+    }
+    if (best > cap) return cap + 1;
+    previous = current;
+  }
+  return previous[b.length];
+}
+
+/**
+ * Cross-checks each part of an MRZ name against the words printed on the rest
+ * of the page.
+ *
+ * Unlike the number and the dates, the MRZ name field carries no check digit —
+ * nothing catches "RAOUF" coming back as "KRAOQUF". But the document prints the
+ * same name again in the visual zone, in far larger type, so there are two
+ * independent reads of it. Where a printed word is a near match, it wins: it
+ * came from the more legible half of the page.
+ *
+ * Returns the reconciled name and whether every part was corroborated, so an
+ * uncorroborated name can be flagged rather than quietly filed.
+ */
+export function reconcileName(name, pageWords) {
+  if (!name) return { name: null, corroborated: false };
+
+  const words = [...new Set((pageWords ?? []).filter((w) => w.length >= 3))];
+  let everyPartConfirmed = true;
+
+  const parts = name.split(' ').map((part) => {
+    const target = part.toUpperCase();
+    if (words.includes(target)) return part;
+
+    // Roughly one error per three characters. Tighter than that and a
+    // seven-letter misread like KRAOQUF cannot reach RAOUF, which is two edits
+    // away; looser and short names start rewriting each other. The candidates
+    // are only words printed on this same document, which keeps the risk low.
+    const tolerance = Math.max(1, Math.floor(target.length / 3));
+    let best = null;
+    let bestDistance = tolerance + 1;
+    for (const word of words) {
+      const distance = editDistance(target, word, tolerance);
+      if (distance < bestDistance) {
+        bestDistance = distance;
+        best = word;
+      }
+    }
+
+    if (best) return best.charAt(0) + best.slice(1).toLowerCase();
+    everyPartConfirmed = false;
+    return part;
+  });
+
+  return { name: parts.join(' '), corroborated: everyPartConfirmed };
+}
+
 /** Convenience: find and parse in one call. */
 export function readMrz(text) {
   return parseMrz(findMrzLines(text));

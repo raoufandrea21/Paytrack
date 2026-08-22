@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { getSettings, setSetting } from '../db.js';
+import { backupFilename, buildBackup, restoreBackup } from '../lib/backup.js';
 import {
   DEFAULT_EXTRACTION_MODE,
   EXTRACTION_MODES,
@@ -24,6 +25,9 @@ export default function Settings() {
   const [background, setBackground] = useState(null);
   const [checkResult, setCheckResult] = useState(null);
   const [savedAt, setSavedAt] = useState(null);
+  const [transfer, setTransfer] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const importRef = useRef(null);
   const [pending, setPending] = useState(null);
 
   useEffect(() => {
@@ -214,11 +218,79 @@ export default function Settings() {
           ) : null}
         </Section>
 
-        <Section title="Your data">
-          <p className="text-[14px] text-slate-600 dark:text-slate-400">
-            Members, documents and photos are stored in IndexedDB on this device only. There is no
-            account, no server copy and no sync. Clearing this site's browser data deletes
-            everything — and uninstalling the app can do that too, so keep the original documents.
+        <Section title="Backup and transfer">
+          <p className="mb-3 text-[14px] text-slate-600 dark:text-slate-400">
+            Everything lives on this device, so a phone and a laptop each keep their own copy.
+            Export a file here and import it on the other device to bring them together — and keep
+            a copy somewhere safe, because clearing this site's browser data erases the lot.
+          </p>
+
+          <div className="flex flex-col gap-2">
+            <Button
+              variant="secondary"
+              disabled={busy}
+              onClick={async () => {
+                setBusy(true);
+                setTransfer(null);
+                try {
+                  const backup = await buildBackup();
+                  const blob = new Blob([JSON.stringify(backup)], { type: 'application/json' });
+                  const url = URL.createObjectURL(blob);
+                  const link = document.createElement('a');
+                  link.href = url;
+                  link.download = backupFilename();
+                  link.click();
+                  URL.revokeObjectURL(url);
+                  setTransfer({
+                    tone: 'info',
+                    text: `Exported ${backup.documents.length} document${backup.documents.length === 1 ? '' : 's'} for ${backup.members.length} ${backup.members.length === 1 ? 'person' : 'people'}. Your API key is not included.`,
+                  });
+                } catch (error) {
+                  setTransfer({ tone: 'error', text: error?.message ?? 'Could not build the backup.' });
+                } finally {
+                  setBusy(false);
+                }
+              }}
+            >
+              {busy ? <Spinner /> : null}
+              Export a backup file
+            </Button>
+
+            <Button variant="secondary" disabled={busy} onClick={() => importRef.current?.click()}>
+              Import a backup file
+            </Button>
+            <input
+              ref={importRef}
+              type="file"
+              accept="application/json,.json"
+              className="sr-only"
+              tabIndex={-1}
+              onChange={async (event) => {
+                const file = event.target.files?.[0];
+                event.target.value = '';
+                if (!file) return;
+                setBusy(true);
+                setTransfer(null);
+                try {
+                  const result = await restoreBackup(JSON.parse(await file.text()));
+                  setTransfer({
+                    tone: 'info',
+                    text: `Added ${result.documentsAdded} document${result.documentsAdded === 1 ? '' : 's'} and ${result.membersAdded} ${result.membersAdded === 1 ? 'person' : 'people'}. ${result.skipped} already here.`,
+                  });
+                } catch (error) {
+                  setTransfer({ tone: 'error', text: error?.message ?? 'Could not read that file.' });
+                } finally {
+                  setBusy(false);
+                }
+              }}
+            />
+          </div>
+
+          {transfer ? <Banner tone={transfer.tone} className="mt-3">{transfer.text}</Banner> : null}
+
+          <p className="mt-3 text-[13px] text-slate-500 dark:text-slate-400">
+            Importing adds to what is already here rather than replacing it, and skips anything it
+            recognises — so running it twice is harmless.
           </p>
         </Section>
 

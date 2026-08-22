@@ -23,6 +23,7 @@ export default function BulkAdd() {
   const [settings, setSettings] = useState(null);
   const [items, setItems] = useState([]);
   const [running, setRunning] = useState(false);
+  const [dragging, setDragging] = useState(false);
   const cancelled = useRef(false);
 
   useEffect(() => {
@@ -39,6 +40,17 @@ export default function BulkAdd() {
   async function handleFiles(event) {
     const chosen = [...(event.target.files ?? [])];
     event.target.value = '';
+    await enqueue(chosen);
+  }
+
+  /** Dropping a selection onto the page is how this gets used on a laptop. */
+  async function handleDrop(event) {
+    event.preventDefault();
+    setDragging(false);
+    await enqueue([...(event.dataTransfer?.files ?? [])]);
+  }
+
+  async function enqueue(chosen) {
     if (chosen.length === 0) return;
 
     const queued = chosen.map((file, i) => ({
@@ -175,16 +187,26 @@ export default function BulkAdd() {
             <button
               type="button"
               onClick={() => inputRef.current?.click()}
+              onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+              onDragLeave={() => setDragging(false)}
+              onDrop={handleDrop}
               disabled={!settings}
-              className="flex min-h-40 w-full flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed border-slate-300 bg-white text-slate-600 transition-colors hover:border-indigo-400 hover:text-indigo-600 disabled:opacity-60 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300"
+              className={`flex min-h-44 w-full flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed transition-colors disabled:opacity-60 ${
+                dragging
+                  ? 'border-indigo-500 bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-200'
+                  : 'border-slate-300 bg-white text-slate-600 hover:border-indigo-400 hover:text-indigo-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300'
+              }`}
             >
               <svg viewBox="0 0 24 24" className="size-9" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M12 16V4m0 0L8 8m4-4l4 4" />
                 <path d="M4 15v3a2 2 0 002 2h12a2 2 0 002-2v-3" />
               </svg>
-              <span className="text-[16px] font-semibold">Choose files</span>
-              <span className="-mt-1.5 text-[13px] text-slate-500 dark:text-slate-400">
-                Photos or PDFs · select several at once
+              <span className="text-[16px] font-semibold">
+                {dragging ? 'Drop them here' : 'Choose files'}
+              </span>
+              <span className="-mt-1.5 max-w-[17rem] text-center text-[13px] text-slate-500 dark:text-slate-400">
+                Photos or PDFs. Pick as many as you like at once — hold Ctrl (or ⌘ on a Mac) to
+                select several, or drag them onto this box.
               </span>
             </button>
 

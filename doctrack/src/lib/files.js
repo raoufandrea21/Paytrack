@@ -15,6 +15,13 @@ const IMAGE_OUTPUT_TYPE = 'image/jpeg';
 /** Roughly the API's per-request ceiling once base64 expansion is accounted for. */
 export const MAX_UPLOAD_BYTES = 4.5 * 1024 * 1024;
 
+/**
+ * A PDF only has to fit in IndexedDB when it is read on the device, so the
+ * ceiling here is about storage and memory rather than an upload limit. The API
+ * path checks MAX_UPLOAD_BYTES separately, at the point it actually matters.
+ */
+export const MAX_PDF_BYTES = 25 * 1024 * 1024;
+
 export { PDF_MEDIA_TYPE };
 
 export const ACCEPT_ATTRIBUTE = 'image/*,application/pdf';
@@ -31,10 +38,13 @@ export async function prepareFile(file) {
   if (!file) throw new Error('No file selected.');
 
   if (isPdf(file)) {
-    if (file.size > MAX_UPLOAD_BYTES) {
-      throw new Error('That PDF is too big to read — try a single page instead.');
+    if (file.size > MAX_PDF_BYTES) {
+      throw new Error('That PDF is enormous — over 25 MB. Try exporting just the pages you need.');
     }
-    return { blob: file, mediaType: PDF_MEDIA_TYPE, kind: 'pdf', width: null, height: null };
+    return {
+      blob: file, mediaType: PDF_MEDIA_TYPE, kind: 'pdf',
+      width: null, height: null, source: file,
+    };
   }
 
   if (!file.type.startsWith('image/')) {
@@ -64,7 +74,10 @@ export async function prepareFile(file) {
       throw new Error('Photo is still too large after compression. Try a tighter crop.');
     }
 
-    return { blob, mediaType: IMAGE_OUTPUT_TYPE, kind: 'image', width, height };
+    // The original is kept for the on-device reader: it works from a larger
+    // render than the copy we store, because an MRZ line is 44 characters wide
+    // and loses legibility fast as the image shrinks.
+    return { blob, mediaType: IMAGE_OUTPUT_TYPE, kind: 'image', width, height, source: file };
   } finally {
     bitmap.close?.();
   }

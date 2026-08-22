@@ -1,4 +1,5 @@
 import Dexie from 'dexie';
+import { editDistance } from './lib/mrz.js';
 
 /**
  * Everything lives here, on the device. No backend, no sync, no auth.
@@ -87,8 +88,15 @@ const normaliseName = (s) =>
     .trim();
 
 /**
- * An exact normalised match, or a unique first-name match. Anything looser and
- * "Mohammed Ali" would swallow "Mohammed Hassan".
+ * An exact normalised match, a unique first-name match, or — for a long enough
+ * name — a unique near match.
+ *
+ * The near match exists because a reader that turns "Raouf" into "Raoquf"
+ * otherwise creates a second copy of a person who is already on file, and the
+ * user ends up with their household listed twice. Tolerance is one edit per six
+ * characters and only applies from eight characters up, so short names cannot
+ * absorb each other; "Mohammed Ali" and "Mohammed Hassan" stay four edits apart
+ * and separate.
  */
 export function matchMemberByName(name, members) {
   const target = normaliseName(name);
@@ -98,9 +106,64 @@ export function matchMemberByName(name, members) {
   if (exact.length === 1) return exact[0];
   if (exact.length > 1) return null;
 
-  const first = target.split(' ')[0];
-  const byFirst = members.filter((m) => normaliseName(m.name).split(' ')[0] === first);
-  return byFirst.length === 1 ? byFirst[0] : null;
+  // First-name matching is for when only a first name was read. Once both
+  // sides carry a surname, differing surnames mean different people —
+  // "Mohammed Hassan" must not land on "Mohammed Ali".
+  const words = target.split(' ');
+  const first = words[0];
+  const byFirst = members.filter((m) => {
+    const stored = normaliseName(m.name).split(' ');
+    if (stored[0] !== first) return false;
+    return words.length === 1 || stored.length === 1;
+  });
+  if (byFirst.length === 1) return byFirst[0];
+  if (byFirst.length > 1) return null;
+
+  if (target.length >= 8) {
+    const tolerance = Math.floor(target.length / 6);
+    const near = members.filter(
+      (m) => editDistance(target, normaliseName(m.name), tolerance) <= tolerance,
+    );
+    if (near.length === 1) return near[0];
+  }
+
+  return null;
+}
+
+/** Members whose names normalise to the same thing — the same person, twice. */
+export async function duplicateMembers() {
+  const members = await db.members.toArray();
+  const groups = new Map();
+  for (const member of members) {
+    const key = normaliseName(member.name);
+    if (!key) continue;
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(member);
+  }
+  return [...groups.values()].filter((group) => group.length > 1);
+}
+
+/**
+ * Folds several member records into one, moving every document across. Used
+ * when a rename makes two entries the same person — which is exactly what
+ * happens after correcting a misread name.
+ */
+export function mergeMembers(keepId, mergeIds) {
+  const others = mergeIds.filter((id) => id !== keepId);
+  if (others.length === 0) return Promise.resolve(0);
+
+  return db.transaction('rw', db.members, db.documents, async () => {
+    let moved = 0;
+    for (const id of others) {
+      const documents = await db.documents.where('member_id').equals(id).toArray();
+      for (const doc of documents) {
+        await db.documents.update(doc.id, { member_id: keepId });
+        moved += 1;
+      }
+      await db.members.delete(id);
+    }
+    return moved;
+  });
 }
 
 /** Removing a member takes their documents with them — nothing is left orphaned. */

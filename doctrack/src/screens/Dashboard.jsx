@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { db, documentsNeedingReview } from '../db.js';
+import { db, documentsNeedingReview, duplicateMembers, mergeMembers } from '../db.js';
 import { byUrgency, urgencyFor } from '../lib/dates.js';
 import Screen from '../components/Screen.jsx';
 import DocumentRow from '../components/DocumentRow.jsx';
@@ -20,6 +20,7 @@ export default function Dashboard() {
     null,
   );
   const reviewCount = useLiveQuery(async () => (await documentsNeedingReview()).length, [], 0);
+  const duplicates = useLiveQuery(() => duplicateMembers(), [], []);
 
   const grouped = useMemo(() => {
     if (!members || !documents) return null;
@@ -127,6 +128,29 @@ export default function Dashboard() {
               <span className="text-amber-700 dark:text-amber-300" aria-hidden="true">›</span>
             </Link>
           ) : null}
+
+          {duplicates.map((group) => (
+            <div
+              key={group[0].id}
+              className="flex items-center gap-3 rounded-2xl bg-indigo-50 px-3.5 py-3 ring-1 ring-indigo-200 dark:bg-indigo-950/60 dark:ring-indigo-900"
+            >
+              <span className="text-xl" aria-hidden="true">👥</span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-[15px] font-bold text-indigo-900 dark:text-indigo-200">
+                  {group.length} entries for {group[0].name}
+                </span>
+                <span className="block text-[13px] text-indigo-800 dark:text-indigo-300">
+                  Same person, listed twice. Merging moves all their documents together.
+                </span>
+              </span>
+              <Button
+                className="shrink-0 px-3"
+                onClick={() => mergeMembers(group[0].id, group.map((m) => m.id))}
+              >
+                Merge
+              </Button>
+            </div>
+          ))}
 
           {grouped.map(({ member, docs }) => (
             <MemberCard key={member.id} member={member} docs={docs} />

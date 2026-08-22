@@ -75,22 +75,9 @@ export default function DocumentDetail() {
       }
       footer={
         archived ? (
-          <div className="flex gap-2">
-            <Button variant="secondary" className="flex-1" onClick={() => unarchiveDocument(doc.id)}>
-              Restore
-            </Button>
-            <Button
-              variant={confirmDelete ? 'danger' : 'secondary'}
-              className="flex-1"
-              onClick={async () => {
-                if (!confirmDelete) { setConfirmDelete(true); return; }
-                await deleteDocument(doc.id);
-                navigate('/archive', { replace: true });
-              }}
-            >
-              {confirmDelete ? 'Delete for good?' : 'Delete'}
-            </Button>
-          </div>
+          <Button className="w-full" onClick={() => unarchiveDocument(doc.id)}>
+            Restore to the dashboard
+          </Button>
         ) : (
           <div className="flex gap-2">
             <Button as="link" to={`/documents/${doc.id}/renew`} className="flex-1">
@@ -185,6 +172,35 @@ export default function DocumentDetail() {
             No file saved for this document.
           </Card>
         )}
+
+        <div className="pt-2">
+          <Button
+            variant={confirmDelete ? 'danger' : 'secondary'}
+            className="w-full"
+            onClick={async () => {
+              if (!confirmDelete) { setConfirmDelete(true); return; }
+              await deleteDocument(doc.id);
+              navigate(archived ? '/archive' : '/', { replace: true });
+            }}
+          >
+            {confirmDelete ? 'Delete permanently — this cannot be undone' : 'Delete this document'}
+          </Button>
+          {confirmDelete ? (
+            <button
+              type="button"
+              onClick={() => setConfirmDelete(false)}
+              className="mt-2 min-h-11 w-full text-[14px] text-slate-500 underline underline-offset-4 dark:text-slate-400"
+            >
+              Cancel
+            </button>
+          ) : (
+            <p className="mt-2 px-1 text-center text-[13px] text-slate-500 dark:text-slate-400">
+              {archived
+                ? 'Removes the record and its photo from this device.'
+                : 'Archiving keeps it as history. Deleting removes it and its photo for good.'}
+            </p>
+          )}
+        </div>
 
         {history.length > 0 ? (
           <Card className="overflow-hidden">

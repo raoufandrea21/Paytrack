@@ -5,7 +5,7 @@
  */
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { checkDigit, findMrzLines, readMrz } from '../src/lib/mrz.js';
+import { checkDigit, editDistance, findMrzLines, readMrz, reconcileName } from '../src/lib/mrz.js';
 import { parseDocumentText } from '../src/lib/localread.js';
 
 const NAMES = 'P<CYPCHARALAMBOUS<<RAOUF<<<<<<<<<<<<<<<<<<<<';
@@ -80,6 +80,10 @@ test('the MRZ overrides what the decorated side of the page said', () => {
   const page = [
     'REPUBLIC OF CYPRUS',
     'PASSPORT',
+    'Surname (1)',
+    'CHARALAMBOUS',
+    'Given Names (2)',
+    'RAOUF',
     'Expires on (8)',
     '13/01/2026', // the issue date, in the position OCR often confuses
     NAMES,
@@ -113,4 +117,60 @@ test('OCR noise is not filed as a name or a document number', () => {
   const result = parseDocumentText(page, 55);
   assert.equal(result.holder_name_guess, '');
   assert.equal(result.id_number_guess, '');
+});
+
+// --- names, which have no check digit to catch them ------------------------
+
+test('a misread MRZ name is corrected from the printed name on the same page', () => {
+  // Exactly the failure seen on a real passport: RAOUF came back as KRAOQUF.
+  const printed = ['REPUBLIC', 'CYPRUS', 'PASSPORT', 'CHARALAMBOUS', 'RAOUF', 'CYPRIOT'];
+  const result = reconcileName('Kraoquf Charalambous', printed);
+  assert.equal(result.name, 'Raouf Charalambous');
+  assert.equal(result.corroborated, true);
+});
+
+test('a mangled surname is corrected the same way', () => {
+  const printed = ['CHARALAMBOUS', 'RAOUF'];
+  assert.equal(reconcileName('Raouf Charalamb0us', printed).name, 'Raouf Charalambous');
+});
+
+test('a name the page cannot corroborate is kept but reported as unconfirmed', () => {
+  const result = reconcileName('Zzzzzz Charalambous', ['CHARALAMBOUS', 'RAOUF']);
+  assert.equal(result.corroborated, false);
+  assert.match(result.name, /Charalambous/);
+});
+
+test('correction never reaches a word that is merely similar', () => {
+  // "Ali" and "Amr" are three letters apart in a two-letter-tolerance world;
+  // one edit each way must not turn one into the other.
+  assert.equal(reconcileName('Ali Hassan', ['AMR', 'HASSAN']).name, 'Ali Hassan');
+});
+
+test('an uncorroborated name is scored below the review threshold', () => {
+  const page = ['PASSPORT', NAMES.replace('RAOUF', 'QQQQQ'), DATA].join('\n');
+  const result = parseDocumentText(page, 60, readMrz(page));
+  assert.ok(result.field_confidence.holder_name_guess < 0.7);
+  assert.ok(result.warnings.some((w) => /spelling/.test(w)));
+});
+
+test('edit distance stops counting once a candidate is clearly unrelated', () => {
+  assert.equal(editDistance('RAOUF', 'RAOUF'), 0);
+  assert.equal(editDistance('KRAOQUF', 'RAOUF'), 2);
+  assert.ok(editDistance('RAOUF', 'CHARALAMBOUS', 4) > 4);
+});
+
+// --- confidence reflects how the characters arrived -------------------------
+
+test('an exact read scores a labelled number above the review threshold', () => {
+  // A PDF text layer gives the original characters, so only the layout is in
+  // question — not whether an O was a zero.
+  const page = 'RESIDENCE VISA\nPassport No: L00393196\nDate of Expiry: 22/11/2032';
+  const exact = parseDocumentText(page, 95);
+  assert.ok(exact.field_confidence.id_number_guess > 0.7);
+});
+
+test('the same field from a murky photo is flagged instead', () => {
+  const page = 'RESIDENCE VISA\nPassport No: L00393196\nDate of Expiry: 22/11/2032';
+  const blurry = parseDocumentText(page, 45);
+  assert.ok(blurry.field_confidence.id_number_guess < 0.7);
 });

@@ -10,7 +10,7 @@ import {
   LOW_CONFIDENCE,
 } from './constants.js';
 import { LocalReadError, readLocally } from './localread.js';
-import { blobToBase64, mediaTypeSupported } from './files.js';
+import { MAX_UPLOAD_BYTES, blobToBase64, mediaTypeSupported } from './files.js';
 import { isValidISODate, normaliseDigits, parseLooseDate } from './dates.js';
 
 /**
@@ -74,6 +74,11 @@ export async function extractDocument(blob, settings = {}, { onProgress } = {}) 
   const mediaType = blob.type || 'image/jpeg';
   if (!mediaTypeSupported(mediaType)) {
     throw new ExtractionError(`${mediaType} files cannot be read automatically.`);
+  }
+  if (blob.size > MAX_UPLOAD_BYTES) {
+    throw new ExtractionError(
+      'That file is too big to send to the API. Switch to on-device reading, or use a smaller copy.',
+    );
   }
   const imageBase64 = await blobToBase64(blob);
 

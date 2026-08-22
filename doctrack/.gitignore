@@ -9,3 +9,4 @@ dev-dist/
 
 # Vendored at build time by scripts/vendor-ocr.mjs — not source.
 public/tesseract/
+public/pdf.worker.min.mjs

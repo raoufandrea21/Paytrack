@@ -134,12 +134,28 @@ Settings → *Reading documents* → *How documents are read*:
 | **Claude, straight from this device** | ~1¢/doc | Key in this browser's IndexedDB. For a static host with no server. |
 | **Off** | Free | Nowhere. Type the fields in yourself. |
 
+### PDFs
+
+A PDF is tried three ways, cheapest and most accurate first:
+
+1. **Its text layer.** Most documents that arrive by email carry one — the
+   original characters, not a picture of them. Exact, instant, no OCR.
+2. **Rendered and OCR'd**, when the PDF is really a scan in a wrapper.
+3. Given up on, with a message saying so.
+
+Because nothing is uploaded in this mode, the size ceiling is about storage
+rather than a request limit: 25 MB, against the 4.5 MB the API path allows.
+
+Confidence distinguishes the two kinds of doubt. A text layer gives exact
+characters, so only the *layout* is uncertain — did we pick the right field? A
+photo puts the characters in question too. The same labelled number scores above
+the review threshold from a PDF and below it from a murky photo.
+
 ### What the free reader gives up
 
 It recognises printed English. That is enough for UAE and Cypriot documents —
 the English side of a bilingual card carries every field — but it means:
 
-- **No PDFs.** Photograph the page instead.
 - **No Arabic-script fields.** Which matches the app's rule anyway: leave them
   blank and flag them rather than transliterate.
 - **More review.** It is a text recogniser with a parser on top, not a model, so
@@ -210,10 +226,16 @@ Drop several files into **Upload documents** and each one goes through:
 
 1. **Read** — one call to Claude with the photo or PDF
 2. **Classify** — which of the eight document types this is
-3. **Identify the holder** — matched against people already on file by exact name
-   or a *unique* first name. A confident name that matches nobody creates a new
-   family member; an unreadable name on a single-person setup goes to that
-   person, and otherwise to a holding record called "Unknown holder"
+3. **Identify the holder** — matched against people already on file by exact
+   name, a *unique* first name, or a near match for a long enough name. A
+   confident name that matches nobody creates a new family member; an unreadable
+   name on a single-person setup goes to that person, and otherwise to a holding
+   record called "Unknown holder".
+
+   The near match exists because a reader that turns "Raouf" into "Raoquf"
+   otherwise lists the household twice. Where duplicates do appear — usually
+   after correcting a misread name by hand — the dashboard offers to fold them
+   together, and renaming into an existing name merges automatically
 4. **De-duplicate** — same person, same kind, and the same number *or* the same
    expiry date means it is already on file, so it is skipped
 5. **Detect a renewal** — same person, same kind, but running later than the
@@ -236,6 +258,22 @@ matters, so that is the one case where it interrupts.
 Files are processed one at a time, not in parallel — eight photos uploading at
 once over bad wifi is how you get rate-limited halfway through and lose track of
 what saved.
+
+## Backup and moving between devices
+
+Everything lives on the device, so a phone and a laptop each keep their own
+copy. **Settings → Backup and transfer** exports one JSON file with every
+record and photo in it; importing that file on the other device brings them
+together.
+
+Importing merges rather than replaces, and skips anything it recognises — people
+by name, documents by holder, type, label, number and expiry — so running it
+twice is harmless. The API key is deliberately left out of the file: a backup
+gets emailed around and dropped in cloud storage, and a spendable credential
+should not ride along inside it.
+
+This is also the answer to the more serious risk. Clearing the browser's site
+data wipes everything, and on some platforms uninstalling the app does too.
 
 ## Where documents live
 

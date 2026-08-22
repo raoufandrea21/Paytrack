@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useNavigate, useParams } from 'react-router-dom';
-import { addMember, db, deleteMember, updateMember } from '../db.js';
+import { addMember, db, deleteMember, mergeMembers, updateMember } from '../db.js';
 import { RELATIONS } from '../lib/constants.js';
 import Screen from '../components/Screen.jsx';
 import { Banner, Button, Field, Input, Select, Spinner } from '../components/ui.jsx';
@@ -44,6 +44,13 @@ export default function MemberForm({ mode }) {
     try {
       if (mode === 'edit') {
         await updateMember(memberId, { name: name.trim(), relation });
+        // Correcting a misread name usually means it now matches a record the
+        // reader created earlier for the same person. Fold them together rather
+        // than leaving the household listed twice.
+        const twin = (await db.members.toArray()).find(
+          (m) => m.id !== memberId && m.name.trim().toLowerCase() === name.trim().toLowerCase(),
+        );
+        if (twin) await mergeMembers(memberId, [twin.id]);
         navigate('/', { replace: true });
       } else {
         const newId = await addMember({ name, relation });

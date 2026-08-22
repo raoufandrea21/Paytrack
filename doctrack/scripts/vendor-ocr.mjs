@@ -34,6 +34,9 @@ const files = [
   ['@tesseract.js-data/eng/4.0.0_best_int/eng.traineddata.gz', 'eng.traineddata.gz'],
 ];
 
+// pdf.js needs its worker served from our own origin for the same reason.
+const rootFiles = [['pdfjs-dist/build/pdf.worker.min.mjs', 'pdf.worker.min.mjs']];
+
 mkdirSync(out, { recursive: true });
 
 let copied = 0;
@@ -50,4 +53,18 @@ for (const [from, to] of files) {
   bytes += statSync(target).size;
 }
 
-console.log(`[vendor-ocr] ${copied}/${files.length} files → public/tesseract (${(bytes / 1e6).toFixed(1)} MB)`);
+for (const [from, to] of rootFiles) {
+  const source = join(root, 'node_modules', from);
+  if (!existsSync(source)) {
+    console.warn(`[vendor-ocr] missing ${from} — PDF reading will not work`);
+    continue;
+  }
+  const target = join(root, 'public', to);
+  cpSync(source, target);
+  copied += 1;
+  bytes += statSync(target).size;
+}
+
+console.log(
+  `[vendor-ocr] ${copied}/${files.length + rootFiles.length} files → public (${(bytes / 1e6).toFixed(1)} MB)`,
+);

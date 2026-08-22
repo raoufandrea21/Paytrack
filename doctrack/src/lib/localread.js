@@ -16,7 +16,8 @@
  * blank and flag it — is the better answer.
  */
 import { normaliseDigits, isValidISODate } from './dates.js';
-import { readMrz } from './mrz.js';
+import { readMrz, reconcileName } from './mrz.js';
+import { extractPdfText, hasUsefulText, renderPdfPages } from './pdf.js';
 
 // import.meta.env only exists under Vite; this module is also loaded by the
 // Node test runner, where reading .BASE_URL off undefined would throw at import.
@@ -120,22 +121,70 @@ async function renderForOcr(blob, { maxEdge = 2400, cropTop = 0 } = {}) {
 
 const MRZ_WHITELIST = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789<';
 
-/** Reads one image and returns the raw extraction shape. */
+/**
+ * Reads one document — photo or PDF — and returns the raw extraction shape.
+ *
+ * A PDF is tried three ways, cheapest and most accurate first: its text layer,
+ * then its pages rendered and run through OCR, and only then given up on. Most
+ * documents that arrive by email have a text layer, which means the characters
+ * come out exactly as they were written rather than as a machine's best guess.
+ */
 export async function readLocally(blob, { onProgress } = {}) {
-  if (blob.type === 'application/pdf') {
-    throw new LocalReadError(
-      'On-device reading only handles photos, not PDFs. Photograph the page, or fill this one in by hand.',
-    );
+  if (blob.type === 'application/pdf') return readPdf(blob, { onProgress });
+  return readImage(blob, { onProgress });
+}
+
+async function readPdf(blob, { onProgress }) {
+  let text = '';
+  let pages = 1;
+  try {
+    ({ text, pages } = await extractPdfText(blob));
+  } catch (error) {
+    throw new LocalReadError(`Could not open that PDF: ${error?.message ?? 'unknown error'}`);
   }
 
-  let worker;
+  if (hasUsefulText(text)) {
+    // A real text layer: exact characters, so confidence is capped only by how
+    // well the parser understands the layout, not by character recognition.
+    const parsed = parseDocumentText(text, 95, readMrz(text));
+    if (pages > 5) {
+      parsed.warnings.push(`Only the first 5 of ${pages} pages were read.`);
+    }
+    return parsed;
+  }
+
+  // No text layer — it is a scan wrapped in a PDF, so treat the pages as photos.
+  let images;
   try {
-    worker = await getWorker(onProgress);
+    images = await renderPdfPages(blob, { pages: 2 });
+  } catch (error) {
+    throw new LocalReadError(`Could not render that PDF: ${error?.message ?? 'unknown error'}`);
+  }
+  if (images.length === 0) throw new LocalReadError('That PDF has no pages to read.');
+
+  const worker = await startWorker(onProgress);
+  const reads = [];
+  for (const image of images) {
+    const result = await worker.recognize(image);
+    reads.push(result.data);
+  }
+  const combined = reads.map((d) => d.text ?? '').join('\n');
+  const confidence = reads.reduce((sum, d) => sum + (d.confidence ?? 0), 0) / reads.length;
+  return parseDocumentText(combined, confidence, readMrz(combined));
+}
+
+async function startWorker(onProgress) {
+  try {
+    return await getWorker(onProgress);
   } catch (error) {
     throw new LocalReadError(
       `Could not start the on-device reader: ${error?.message ?? 'unknown error'}`,
     );
   }
+}
+
+async function readImage(blob, { onProgress }) {
+  const worker = await startWorker(onProgress);
 
   let text = '';
   let confidence = 0;
@@ -298,6 +347,12 @@ export function parseDocumentText(rawText, ocrConfidence = 0, mrz = null) {
   const lines = text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
   const lower = text.toLowerCase();
 
+  // Words from the laid-out side of the page, used to corroborate the MRZ name.
+  // MRZ lines are excluded so a misread cannot confirm itself.
+  const pageWords = lines
+    .filter((line) => !/[<«»]/.test(line) && !/^[A-Z0-9]{20,}$/.test(line.replace(/\s/g, '')))
+    .flatMap((line) => line.toUpperCase().match(/[A-Z]{3,}/g) ?? []);
+
   // A blurry scan drags every field's confidence down with it.
   const quality = Math.max(0, Math.min(1, ocrConfidence / 100));
   const scale = (n) => Math.round(Math.max(0, Math.min(1, n * (0.55 + quality * 0.45))) * 100) / 100;
@@ -406,7 +461,11 @@ export function parseDocumentText(rawText, ocrConfidence = 0, mrz = null) {
       const match = line.match(LABELLED_NUMBER);
       if (match && plausible(match[1].trim().toUpperCase())) {
         number = match[1].trim();
-        numberConfidence = scale(0.55);
+        // A number sitting immediately after its own printed label is a good
+        // structural match. scale() still knocks it below the review threshold
+        // when the characters themselves were read badly — which is the right
+        // split: trust the position, doubt the glyphs.
+        numberConfidence = scale(0.74);
         break;
       }
       // Label on one line, value on the next — the same column layout again.
@@ -414,7 +473,7 @@ export function parseDocumentText(rawText, ocrConfidence = 0, mrz = null) {
         const next = (lines[index + 1] ?? '').trim().toUpperCase();
         if (plausible(next)) {
           number = next;
-          numberConfidence = scale(0.5);
+          numberConfidence = scale(0.62);
           break;
         }
       }
@@ -469,8 +528,16 @@ export function parseDocumentText(rawText, ocrConfidence = 0, mrz = null) {
     }
     if (mrz.nationality) label = mrz.nationality;
     if (mrz.name) {
-      name = mrz.name;
-      nameConfidence = 0.9;
+      // The MRZ name is the one field down there with no check digit behind it.
+      // The visual zone prints the same name in much larger type, so use that
+      // second read to correct it — and when it cannot be corroborated, score it
+      // below the review threshold rather than filing a stranger.
+      const reconciled = reconcileName(mrz.name, pageWords);
+      name = reconciled.name;
+      nameConfidence = reconciled.corroborated ? 0.92 : 0.6;
+      if (!reconciled.corroborated) {
+        warnings.push(`Read the name as "${name}" — worth checking the spelling.`);
+      }
     }
     if (mrz.number) {
       number = mrz.number;
