@@ -11,7 +11,45 @@ import { SYNC_FORMAT } from './sync.js';
 
 const GRAPH = 'https://graph.microsoft.com/v1.0';
 const APP_ROOT = '/me/drive/special/approot';
-export const SCOPES = ['Files.ReadWrite.AppFolder', 'User.Read', 'offline_access'];
+const APP_FOLDER_SCOPES = ['Files.ReadWrite.AppFolder', 'User.Read', 'offline_access'];
+
+/**
+ * Reading the documents already in someone's OneDrive needs more than the app
+ * folder — it needs to see the rest of the drive. Files.Read is the smallest
+ * scope that allows that, and it is read-only: with it the app can list and
+ * download, and cannot create, change, move or delete anything, whatever this
+ * code does.
+ *
+ * It is asked for only when the user turns folder reading on, so anyone who
+ * only wants sync is never asked to hand over more than the app folder.
+ */
+export const READ_SCOPE = 'Files.Read';
+const READING_KEY = 'doctrack.readDrive';
+
+export function driveReadingAllowed() {
+  try {
+    return window.localStorage.getItem(READING_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+export function allowDriveReading(allowed) {
+  try {
+    if (allowed) window.localStorage.setItem(READING_KEY, '1');
+    else window.localStorage.removeItem(READING_KEY);
+  } catch {
+    /* private browsing; reading stays off */
+  }
+  clients.clear();
+}
+
+export const SCOPES = APP_FOLDER_SCOPES;
+
+/** What to ask Microsoft for, given what the user has turned on. */
+export function requestedScopes() {
+  return driveReadingAllowed() ? [READ_SCOPE, ...APP_FOLDER_SCOPES] : APP_FOLDER_SCOPES;
+}
 
 /** Graph rejects a plain PUT above this; anything larger needs a session. */
 const SIMPLE_UPLOAD_LIMIT = 4 * 1024 * 1024;
@@ -392,7 +430,7 @@ export async function signIn(clientId, { client: given } = {}) {
   // attempt happened at all.
   write(STARTED_KEY, { at: Date.now(), kind: accountKind(), origin: window.location.origin });
 
-  await client.loginRedirect({ scopes: SCOPES, prompt: 'select_account' });
+  await client.loginRedirect({ scopes: requestedScopes(), prompt: 'select_account' });
   return null;
 }
 
@@ -428,7 +466,7 @@ async function getToken(clientId) {
   const account = client.getAllAccounts()[0];
 
   try {
-    const result = await client.acquireTokenSilent({ scopes: SCOPES, account });
+    const result = await client.acquireTokenSilent({ scopes: requestedScopes(), account });
     return result.accessToken;
   } catch (error) {
     // Consent changed or the refresh token expired. Redirecting from inside a
@@ -559,6 +597,42 @@ export async function ensureFolder(clientId, name, options = {}) {
     }),
     ...options,
   });
+}
+
+/**
+ * Reading the rest of the drive. Every call here is a GET, and every one is
+ * outside the app folder, which is why they need Files.Read and why they are
+ * kept together and named for what they are.
+ */
+const DRIVE_FIELDS = 'id,name,size,folder,file,cTag,lastModifiedDateTime';
+
+/** One page at a time until Graph stops offering more. */
+async function pagedChildren(clientId, first, options) {
+  const items = [];
+  let next = first;
+  // A documents folder with hundreds of files arrives in pages; without this
+  // the import would quietly stop at the first two hundred.
+  while (next && items.length < 5000) {
+    const page = await graph(clientId, next, options);
+    items.push(...(page?.value ?? []));
+    next = page?.['@odata.nextLink'] ?? null;
+  }
+  return items;
+}
+
+/** What is inside a folder — the drive root when no id is given. */
+export function listDriveFolder(clientId, itemId = null, options = {}) {
+  const base = itemId ? `/me/drive/items/${itemId}/children` : '/me/drive/root/children';
+  return pagedChildren(clientId, `${base}?$top=200&$select=${DRIVE_FIELDS}`, options);
+}
+
+/** A file's bytes. Read-only: nothing here can change what is in the drive. */
+export async function downloadDriveItem(clientId, itemId, options = {}) {
+  const response = await graph(clientId, `/me/drive/items/${itemId}/content`, {
+    raw: true,
+    ...options,
+  });
+  return response ? response.blob() : null;
 }
 
 /** Moves a file into another folder in the app folder — Inbox to Filed. */

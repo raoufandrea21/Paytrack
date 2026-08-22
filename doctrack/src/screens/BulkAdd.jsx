@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
 import { getSettings } from '../db.js';
 import { ACCEPT_ATTRIBUTE, prepareFile } from '../lib/files.js';
 import { pairSides, readPath } from '../lib/filename.js';
@@ -7,7 +6,8 @@ import { extractDocument, extractionAvailable, ExtractionError } from '../lib/ex
 import { fileDocument, describeResult } from '../lib/autofile.js';
 import { documentType } from '../lib/constants.js';
 import Screen from '../components/Screen.jsx';
-import { Banner, Button, Card, Spinner } from '../components/ui.jsx';
+import { Banner, Button, Spinner } from '../components/ui.jsx';
+import { ImportQueue, ImportSummary } from '../components/ImportQueue.jsx';
 
 /**
  * Pick any number of photos or PDFs and walk away. Each one is read, classified,
@@ -264,6 +264,13 @@ export default function BulkAdd() {
               Take photos instead
             </Button>
 
+            <Button as="link" to="/onedrive" variant="secondary" className="w-full">
+              <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M6.5 19a4.5 4.5 0 01-.6-8.96 6 6 0 0111.4-1.6A3.999 3.999 0 0118 19z" />
+              </svg>
+              Read a folder in my OneDrive
+            </Button>
+
             <p className="px-2 text-center text-[13px] text-slate-500 dark:text-slate-400">
               Each document is read, sorted by person and type, and its reminders set
               automatically. You only get asked about the ones that were hard to read.
@@ -285,7 +292,7 @@ export default function BulkAdd() {
                 </span>
               </Banner>
             ) : (
-              <Summary
+              <ImportSummary
                 saved={saved.length}
                 review={needsReview.length}
                 duplicates={duplicates.length}
@@ -294,11 +301,7 @@ export default function BulkAdd() {
               />
             )}
 
-            <Card className="divide-y divide-slate-100 overflow-hidden dark:divide-slate-800">
-              {items.map((item) => (
-                <QueueRow key={item.id} item={item} />
-              ))}
-            </Card>
+            <ImportQueue items={items} />
 
             {anyNewPeople && !running ? (
               <p className="px-2 text-[13px] text-slate-500 dark:text-slate-400">
@@ -310,85 +313,5 @@ export default function BulkAdd() {
         )}
       </div>
     </Screen>
-  );
-}
-
-function Summary({ saved, review, duplicates, skipped, failed }) {
-  if (saved === 0 && failed === 0 && duplicates === 0 && skipped === 0) return null;
-  const tone = failed > 0 || review > 0 ? 'warn' : 'info';
-  const title =
-    saved === 0
-      ? 'Nothing new was filed'
-      : `${saved} document${saved === 1 ? '' : 's'} filed`;
-
-  return (
-    <Banner tone={tone} title={title}>
-      {review > 0 ? (
-        <p>
-          {review} need{review === 1 ? 's' : ''} checking —{' '}
-          <Link to="/review" className="font-semibold underline underline-offset-2">
-            review {review === 1 ? 'it' : 'them'} now
-          </Link>
-          .
-        </p>
-      ) : null}
-      {duplicates > 0 ? (
-        <p>
-          {duplicates} {duplicates === 1 ? 'was' : 'were'} already on file and{' '}
-          {duplicates === 1 ? 'was' : 'were'} skipped.
-        </p>
-      ) : null}
-      {skipped > 0 ? (
-        <p>
-          {skipped} personal {skipped === 1 ? 'photo' : 'photos'} skipped — nothing about them
-          expires.
-        </p>
-      ) : null}
-      {failed > 0 ? <p>{failed} could not be read. You can add those by hand.</p> : null}
-      {review === 0 && failed === 0 && saved > 0 ? (
-        <p>Everything read cleanly. Nothing else to do.</p>
-      ) : null}
-    </Banner>
-  );
-}
-
-const STATUS_STYLE = {
-  queued: { dot: 'bg-slate-300', text: 'text-slate-500 dark:text-slate-400' },
-  reading: { dot: 'bg-indigo-500 animate-pulse', text: 'text-slate-600 dark:text-slate-300' },
-  filing: { dot: 'bg-indigo-500 animate-pulse', text: 'text-slate-600 dark:text-slate-300' },
-  filed: { dot: 'bg-emerald-500', text: 'text-slate-700 dark:text-slate-200' },
-  archived: { dot: 'bg-slate-400', text: 'text-slate-600 dark:text-slate-300' },
-  portrait: { dot: 'bg-slate-300', text: 'text-slate-500 dark:text-slate-400' },
-  needs_review: { dot: 'bg-amber-500', text: 'text-amber-800 dark:text-amber-300' },
-  duplicate: { dot: 'bg-slate-400', text: 'text-slate-500 dark:text-slate-400' },
-  failed: { dot: 'bg-red-500', text: 'text-red-700 dark:text-red-300' },
-};
-
-function QueueRow({ item }) {
-  const style = STATUS_STYLE[item.status] ?? STATUS_STYLE.queued;
-  const body = (
-    <>
-      <span className={`mt-1.5 size-2 shrink-0 rounded-full ${style.dot}`} aria-hidden="true" />
-      <span className="min-w-0 flex-1">
-        <span className="flex items-start gap-1.5">
-          {item.typeIcon ? <span aria-hidden="true">{item.typeIcon}</span> : null}
-          <span className={`block text-[15px] font-semibold ${style.text}`}>{item.message}</span>
-        </span>
-        <span className="block truncate text-[12px] text-slate-400 dark:text-slate-500">
-          {item.name}
-        </span>
-      </span>
-    </>
-  );
-
-  return item.documentId ? (
-    <Link
-      to={`/documents/${item.documentId}`}
-      className="flex items-start gap-3 px-3.5 py-3 hover:bg-slate-50 dark:hover:bg-slate-800/60"
-    >
-      {body}
-    </Link>
-  ) : (
-    <div className="flex items-start gap-3 px-3.5 py-3">{body}</div>
   );
 }

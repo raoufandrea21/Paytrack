@@ -419,6 +419,18 @@ export default function Settings() {
             rest of your OneDrive. Your files stay in your Microsoft account; there is no server in
             between.
           </p>
+
+          {account ? (
+            <div className="mt-3 border-t border-slate-200 pt-3 dark:border-slate-800">
+              <p className="text-[14px] text-slate-600 dark:text-slate-400">
+                Already keep your documents in a OneDrive folder? DocTrack can read them where they
+                are and set the reminders, without moving or changing anything.
+              </p>
+              <Button as="link" to="/onedrive" variant="secondary" className="mt-2 w-full">
+                Read the documents already in my OneDrive
+              </Button>
+            </div>
+          ) : null}
         </Section>
 
         <Section title="Backup and transfer">

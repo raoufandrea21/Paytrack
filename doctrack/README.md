@@ -404,6 +404,36 @@ becomes "this app is registered for one kind of account only"; AADSTS50011 names
 the exact address to add in Azure. The raw code is kept underneath, because it
 is what a search engine wants.
 
+## Reading documents already in OneDrive
+
+Most people who need this app already have their documents somewhere — a folder
+tree built up over years, with a folder per person, "Expired" for the old ones,
+and filenames that say what each thing is. **Read my OneDrive** (from Settings,
+or from the upload screen) reads that tree where it stands.
+
+It is a separate permission, asked for only when the feature is turned on:
+`Files.Read`, the smallest scope that can see beyond the app folder, and a
+read-only one. With it DocTrack can list and download; it cannot create, change,
+move or delete anything in the drive, whatever this code does. Sync keeps using
+`Files.ReadWrite.AppFolder` and touches nothing else.
+
+Because it only ever reads, this keeps working when a drive is in the read-only
+state a full or frozen OneDrive ends up in — the sync cannot write its state
+file, but the documents can still be read and filed.
+
+The walk is breadth-first and bounded (400 files, six levels deep), so pointing
+it at too much stops honestly rather than running for ever; run it again and it
+carries on. Each file goes through the same pipeline as an upload —
+`prepareFile` → `extractDocument` → `fileDocument` — with the path handed to
+`readPath`, so the person, the kind, the year, "Expired", and a card split
+across Front and Back files are all read from the filing that already exists.
+
+Every file read is recorded by its drive item id and its `cTag`, which Microsoft
+changes when a file's contents change. A second run therefore reads nothing
+again, picks up anything new on its own, and re-reads a document that has been
+re-scanned. That is what makes "check my folder for new documents" a one-tap
+thing rather than a repeat of the first import.
+
 ### When OneDrive refuses
 
 Graph refusals arrive as JSON with the real reason buried in an `innerError`,

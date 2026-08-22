@@ -74,6 +74,51 @@ db.version(3)
     });
   });
 
+/**
+ * v4 remembers which files in someone's OneDrive have already been read.
+ *
+ * Without it, pointing the app at a folder of sixty documents a second time
+ * would read all sixty again — minutes of work, and sixty chances to file a
+ * duplicate. The cTag changes when the file's contents change, so a document
+ * that has been re-scanned is picked up again while everything else is skipped.
+ */
+db.version(4).stores({
+  members: '++id, uid, name, relation, created_at, auto_created',
+  documents:
+    '++id, uid, member_id, type, expiry_date, status, created_at, renewed_from, review_needed',
+  reminders: '&key, document_id, threshold, notified_at',
+  tombstones: '&uid, kind, deleted_at',
+  imports: '&item_id, path, imported_at',
+  settings: '&key',
+});
+
+/** Files already read out of OneDrive, by drive item id. */
+export async function alreadyImported(itemId) {
+  if (!itemId) return null;
+  return db.imports.get(itemId) ?? null;
+}
+
+export function recordImport({ itemId, cTag, name, path, documentId, outcome }) {
+  return db.imports.put({
+    item_id: itemId,
+    c_tag: cTag ?? '',
+    name,
+    path,
+    document_id: documentId ?? null,
+    outcome,
+    imported_at: new Date().toISOString(),
+  });
+}
+
+export function importedCount() {
+  return db.imports.count();
+}
+
+/** Forgets what has been read, so the next run reads the folder afresh. */
+export function forgetImports() {
+  return db.imports.clear();
+}
+
 /** Records a deletion so the other device does not resurrect it. */
 export function recordTombstone(uid, kind) {
   if (!uid) return Promise.resolve();
