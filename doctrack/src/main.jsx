@@ -2,6 +2,7 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { HashRouter } from 'react-router-dom';
 import App from './App.jsx';
+import { armReloadAgainLater, reloadOntoNewBuild, watchForUpdates } from './lib/version.js';
 import './index.css';
 
 /**
@@ -32,38 +33,15 @@ const isAuthPopup =
  * less: it activates immediately and clears the old precache out from under any
  * page still using it.
  *
- * The page cannot recover in place; the fix is to reload onto the new build. A
- * session flag keeps that from becoming a loop when the chunk is genuinely
- * missing rather than merely renamed.
+ * The page cannot recover in place; the fix is to reload onto the new build.
+ * See src/lib/version.js, which owns every reason this app reloads itself.
  */
-const RELOAD_FLAG = 'doctrack.reloadedForUpdate';
-
-function reloadOntoNewBuild(detail) {
-  try {
-    if (sessionStorage.getItem(RELOAD_FLAG)) return false;
-    sessionStorage.setItem(RELOAD_FLAG, '1');
-  } catch {
-    return false; // private mode: better a broken button than a reload loop
-  }
-  console.warn('[doctrack] reloading to pick up a new build', detail);
-  window.location.reload();
-  return true;
-}
-
 window.addEventListener('vite:preloadError', (event) => {
   if (isAuthPopup) return;
   if (reloadOntoNewBuild(event?.payload)) event.preventDefault();
 });
 
-// Cleared once a build has run for a moment without tripping over itself, so a
-// later update is free to reload again.
-window.setTimeout(() => {
-  try {
-    sessionStorage.removeItem(RELOAD_FLAG);
-  } catch {
-    /* nothing to clear */
-  }
-}, 10_000);
+armReloadAgainLater();
 
 /**
  * A redirect sign-in comes back to this page with the result in the fragment.
@@ -115,6 +93,10 @@ if ('serviceWorker' in navigator && !isAuthPopup) {
     const url = import.meta.env.DEV ? '/dev-sw.js?dev-sw' : '/sw.js';
     navigator.serviceWorker
       .register(url, { type: import.meta.env.DEV ? 'module' : 'classic', scope: '/' })
+      // Registering is not the same as staying current: an installed app can go
+      // for days without a page load, which is the only moment the browser
+      // would otherwise look for a new build.
+      .then(watchForUpdates)
       .catch((error) => {
         // Most common cause: an insecure origin (plain http:// over the LAN).
         // The app still works; only offline install and background sync don't.

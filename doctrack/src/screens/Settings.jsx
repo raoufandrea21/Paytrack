@@ -16,6 +16,7 @@ import {
 import { dueReminders } from '../lib/reminders.js';
 import { currentAccount, resetConnection, signIn, signOut } from '../lib/onedrive.js';
 import { runSync } from '../lib/cloudsync.js';
+import { BUILD_ID, BUILT_AT, checkForUpdate } from '../lib/version.js';
 import Screen from '../components/Screen.jsx';
 import { Banner, Button, Card, Field, Input, Select, Spinner } from '../components/ui.jsx';
 
@@ -33,6 +34,7 @@ export default function Settings() {
   const [sync, setSync] = useState(null);
   const [syncing, setSyncing] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [appUpdate, setAppUpdate] = useState(null);
   const importRef = useRef(null);
   const [pending, setPending] = useState(null);
 
@@ -407,12 +409,53 @@ export default function Settings() {
           </p>
         </Section>
 
+        <Section title="This app">
+          <p className="text-[14px] text-slate-600 dark:text-slate-400">
+            Version <span className="font-mono text-[13px]">{BUILD_ID}</span>
+            {BUILT_AT ? ` · installed ${builtOn(BUILT_AT)}` : ''}
+          </p>
+          <p className="mt-1 text-[13px] text-slate-500 dark:text-slate-400">
+            Worth checking if something that was fixed still looks broken — an app added to the
+            home screen keeps running the copy it saved until it is told to look for a newer one.
+          </p>
+          <Button
+            variant="secondary"
+            className="mt-3 w-full"
+            disabled={appUpdate === 'checking'}
+            onClick={async () => {
+              setAppUpdate('checking');
+              setAppUpdate(await checkForUpdate());
+            }}
+          >
+            {appUpdate === 'checking' ? <Spinner /> : null}
+            Check for updates
+          </Button>
+          {appUpdate && appUpdate !== 'checking' ? (
+            <p className="mt-2 text-[13px] text-slate-600 dark:text-slate-300">
+              {appUpdate === 'updating'
+                ? 'A newer version is ready — reload to use it.'
+                : appUpdate === 'current'
+                  ? 'This is the latest version.'
+                  : 'This browser cannot check by itself. Reload the page to pick up a new version.'}
+            </p>
+          ) : null}
+        </Section>
+
         {savedAt ? (
           <p className="text-center text-[13px] text-emerald-600 dark:text-emerald-400">Saved.</p>
         ) : null}
       </div>
     </Screen>
   );
+}
+
+/** A build stamp is only useful if a person can compare it to "today". */
+function builtOn(iso) {
+  const at = new Date(iso);
+  if (Number.isNaN(at.getTime())) return 'an unknown date';
+  return at.toLocaleString(undefined, {
+    day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit',
+  });
 }
 
 function Section({ title, children }) {

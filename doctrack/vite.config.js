@@ -1,3 +1,4 @@
+import { execSync } from 'node:child_process';
 import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
@@ -43,12 +44,34 @@ function devExtractionApi(env) {
   };
 }
 
+/**
+ * Which build this is, so the app can say so out loud.
+ *
+ * Running an old build is invisible from the inside — the app looks fine, it is
+ * simply the wrong one, and every question about a fixed bug gets answered by a
+ * version that never had the fix. Vercel sets VERCEL_GIT_COMMIT_SHA during a
+ * deployment; locally there is git; and neither is fatal if missing.
+ */
+function buildIdentity() {
+  const fromVercel = process.env.VERCEL_GIT_COMMIT_SHA;
+  if (fromVercel) return fromVercel.slice(0, 7);
+  try {
+    return execSync('git rev-parse --short HEAD', { encoding: 'utf8' }).trim();
+  } catch {
+    return 'local';
+  }
+}
+
 export default defineConfig(({ mode }) => {
   // Loaded without the VITE_ prefix filter, then used only inside the dev
   // middleware — the key never reaches the client bundle.
   const env = loadEnv(mode, process.cwd(), '');
 
   return {
+    define: {
+      __BUILD_ID__: JSON.stringify(buildIdentity()),
+      __BUILT_AT__: JSON.stringify(new Date().toISOString()),
+    },
     plugins: [
       react(),
       tailwindcss(),
