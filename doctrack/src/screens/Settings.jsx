@@ -265,11 +265,7 @@ export default function Settings() {
                         { ...settings, onedrive_client_id: clientId.trim() },
                         { onStatus: (text) => setSync(text ?? 'Finishing…') },
                       );
-                      setSync(
-                        `Up to date. ${result.pulled} record${result.pulled === 1 ? '' : 's'} came down, `
-                        + `${result.photos.downloaded} photo${result.photos.downloaded === 1 ? '' : 's'} fetched, `
-                        + `${result.inbox.filed} filed from the Inbox.`,
-                      );
+                      setSync(describeSync(result));
                     } catch (error) {
                       setSync(`Sync failed: ${error?.message ?? 'unknown error'}`);
                     } finally {
@@ -428,4 +424,29 @@ function Section({ title, children }) {
       {children}
     </Card>
   );
+}
+
+/**
+ * What the sync actually did, in a sentence. Quiet runs say so plainly rather
+ * than reciting four zeroes, and anything that did not transfer is named — a
+ * silent partial sync is how someone ends up trusting a phone that is behind.
+ */
+function describeSync(result) {
+  const count = (n, one, many = one + 's') => `${n} ${n === 1 ? one : many}`;
+  const parts = [];
+  if (result.pulled) parts.push(`${count(result.pulled, 'record')} came down`);
+  if (result.pushed) parts.push(`${count(result.pushed, 'record')} went up`);
+  if (result.photos.downloaded) parts.push(`${count(result.photos.downloaded, 'photo')} fetched`);
+  if (result.photos.uploaded) parts.push(`${count(result.photos.uploaded, 'photo')} uploaded`);
+  if (result.inbox.filed) parts.push(`${count(result.inbox.filed, 'document')} filed from the Inbox`);
+  if (result.inbox.skipped) parts.push(`${count(result.inbox.skipped, 'Inbox file')} skipped`);
+
+  const trouble = [];
+  if (result.photos.failed) {
+    trouble.push(`${count(result.photos.failed, 'photo')} would not transfer — the next sync tries again.`);
+  }
+  if (result.inbox.error) trouble.push(`The Inbox could not be read: ${result.inbox.error}`);
+
+  const summary = parts.length ? `Synced. ${parts.join(', ')}.` : 'Up to date — nothing to sync.';
+  return [summary, ...trouble].join(' ');
 }

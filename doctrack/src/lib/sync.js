@@ -20,10 +20,19 @@ export const SYNC_VERSION = 1;
 const later = (a, b) => (String(a ?? '') >= String(b ?? '') ? a : b);
 const stamp = (record) => String(record?.updated_at ?? record?.created_at ?? '');
 
-/** Photos live beside the state file, one per document. */
-export function photoPath(uid, mediaType, side = 'front') {
+/**
+ * Photos live beside the state file, one per document, and the filename carries
+ * the byte count.
+ *
+ * That last part is what makes a re-photographed document work. If the name were
+ * just the uid, a clearer scan taken on the phone would land on top of the old
+ * one — and the laptop, seeing a name it already knows, would never fetch it. A
+ * different picture is a different file, and the record says which one is
+ * current, so there is never a question of whose copy is newer.
+ */
+export function photoPath(uid, mediaType, side = 'front', bytes = 0) {
   const extension = mediaType === 'application/pdf' ? 'pdf' : mediaType === 'image/png' ? 'png' : 'jpg';
-  return `photos/${uid}${side === 'back' ? '-back' : ''}.${extension}`;
+  return `photos/${uid}${side === 'back' ? '-back' : ''}${bytes ? `-${bytes}` : ''}.${extension}`;
 }
 
 export function emptyState() {
@@ -59,6 +68,8 @@ export function packDocument(document, memberUidById) {
     no_expiry: document.no_expiry ?? 0,
     has_photo: Boolean(document.photo),
     has_back: Boolean(document.photo_back),
+    photo_bytes: document.photo?.size ?? 0,
+    photo_back_bytes: document.photo_back?.size ?? 0,
     extraction: document.extraction ?? null,
     created_at: document.created_at,
     updated_at: stamp(document),
@@ -102,15 +113,61 @@ export function mergeStates(local, remote) {
       // A record edited after it was deleted is a resurrection the user meant.
       if (grave && stamp(newest) <= grave.deleted_at) continue;
 
-      merged[kind].push(newest);
-      if (!pair.local || stamp(pair.local) < stamp(newest)) incoming[kind].push(newest);
-      if (!pair.remote || stamp(pair.remote) < stamp(newest)) remoteIsStale = true;
+      const record = kind === 'documents' ? withPhotoPresence(newest, pair) : newest;
+      merged[kind].push(record);
+      if (!pair.local || stamp(pair.local) < stamp(record)) incoming[kind].push(record);
+      if (!pair.remote || stamp(pair.remote) < stamp(record) || photoFactsDiffer(pair.remote, record)) {
+        remoteIsStale = true;
+      }
     }
   }
 
   if (remoteState.tombstones.length !== merged.tombstones.length) remoteIsStale = true;
 
   return { merged, incoming, remoteIsStale };
+}
+
+/**
+ * has_photo says whether the photo exists in the shared folder, not whether the
+ * device that happened to win the merge is holding it.
+ *
+ * Without this, a device that pulled a record but has not fetched its photo yet
+ * — or tried and failed — packs the record as having no photo, wins the merge on
+ * an equal timestamp, and tells every other device the photo is gone. The file
+ * is still sitting in OneDrive; nothing would ever ask for it again. Nothing in
+ * the app deletes a photo, so presence only ever goes one way.
+ */
+function withPhotoPresence(record, pair) {
+  // The newer record is asked first, so a photo replaced on that side wins; a
+  // side that simply has not fetched the picture yet answers for nothing.
+  const sides = [record, pair.local, pair.remote].filter(Boolean);
+  const front = sides.find((s) => s.has_photo);
+  const back = sides.find((s) => s.has_back);
+  const facts = {
+    has_photo: Boolean(front),
+    has_back: Boolean(back),
+    // The path a photo is stored under is built from its type, so the side that
+    // knows it has to win even when the other side is the newer record.
+    photo_type: front?.photo_type ?? record.photo_type ?? null,
+    photo_bytes: front?.photo_bytes ?? 0,
+    photo_back_bytes: back?.photo_back_bytes ?? 0,
+  };
+  return photoFactsDiffer(record, facts) ? { ...record, ...facts } : record;
+}
+
+const PHOTO_FACTS = ['has_photo', 'has_back', 'photo_type', 'photo_bytes', 'photo_back_bytes'];
+
+// Both sides are read the same way, so a record that simply omits a field and
+// one that spells out its empty value are not mistaken for a difference — that
+// would make every merge look like a change and rewrite the cloud file forever.
+const photoFact = (record, key) => {
+  if (key.startsWith('has_')) return Boolean(record?.[key]);
+  if (key === 'photo_type') return record?.[key] ?? null;
+  return record?.[key] ?? 0;
+};
+
+function photoFactsDiffer(a, b) {
+  return PHOTO_FACTS.some((key) => photoFact(a, key) !== photoFact(b, key));
 }
 
 function pick(a, b) {
@@ -127,16 +184,25 @@ function normalise(state) {
   };
 }
 
-/** Documents whose photo this device has but the remote copy does not. */
-export function photosToUpload(localDocuments, remotePhotoNames) {
-  const present = new Set(remotePhotoNames ?? []);
-  return localDocuments
-    .filter((d) => d.photo && d.uid)
-    .filter((d) => !present.has(photoPath(d.uid, d.photo_type).split('/').pop()));
+/**
+ * Which sides of a document this device is missing: one it has never had, or
+ * one that has been replaced elsewhere since — a different byte count is a
+ * different picture.
+ */
+export function photoNeeds(record, localRow) {
+  const stale = (mine, theirs) => Boolean(theirs) && Boolean(mine) && mine.size !== theirs;
+  return {
+    front: Boolean(record.has_photo) && (!localRow?.photo || stale(localRow.photo, record.photo_bytes)),
+    back: Boolean(record.has_back)
+      && (!localRow?.photo_back || stale(localRow.photo_back, record.photo_back_bytes)),
+  };
 }
 
-/** Documents this device knows about but has no photo for yet. */
+/** Documents with a side this device still needs. */
 export function photosToDownload(mergedDocuments, localDocuments) {
-  const haveLocally = new Set(localDocuments.filter((d) => d.photo).map((d) => d.uid));
-  return mergedDocuments.filter((d) => d.has_photo && !haveLocally.has(d.uid));
+  const byUid = new Map(localDocuments.map((d) => [d.uid, d]));
+  return mergedDocuments.filter((d) => {
+    const needs = photoNeeds(d, byUid.get(d.uid));
+    return needs.front || needs.back;
+  });
 }
