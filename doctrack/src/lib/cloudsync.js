@@ -77,7 +77,7 @@ export async function applyIncoming(incoming, { members, documents }) {
     const memberId = memberIdByUid.get(record.member_uid);
     if (!memberId) continue; // its owner was deleted; the tombstone will follow
 
-    const { member_uid: _ownerUid, has_photo: _hasPhoto, ...fields } = record;
+    const { member_uid: _ownerUid, has_photo: _hasPhoto, has_back: _hasBack, ...fields } = record;
     const existing = documentByUid.get(record.uid);
     if (existing) {
       await db.documents.update(existing.id, { ...fields, member_id: memberId });
@@ -145,11 +145,14 @@ async function syncPhotos(clientId, merged, { say }) {
   );
 
   for (const doc of uploads) {
-    const name = photoPath(doc.uid, doc.photo_type).split('/').pop();
-    if (remoteNames.has(name)) continue;
-    say(`Uploading photo ${uploaded + 1}…`);
-    await uploadFile(clientId, photoPath(doc.uid, doc.photo_type), doc.photo);
-    uploaded += 1;
+    for (const [side, blob] of [['front', doc.photo], ['back', doc.photo_back]]) {
+      if (!blob) continue;
+      const path = photoPath(doc.uid, doc.photo_type, side);
+      if (remoteNames.has(path.split('/').pop())) continue;
+      say(`Uploading photo ${uploaded + 1}…`);
+      await uploadFile(clientId, path, blob);
+      uploaded += 1;
+    }
   }
 
   const wanted = photosToDownload(merged.documents, local);
@@ -159,7 +162,10 @@ async function syncPhotos(clientId, merged, { say }) {
     if (!blob) continue;
     const row = await db.documents.where('uid').equals(record.uid).first();
     if (row) {
-      await db.documents.update(row.id, { photo: blob, photo_type: record.photo_type });
+      const back = record.has_back
+        ? await downloadFile(clientId, photoPath(record.uid, record.photo_type, 'back')).catch(() => null)
+        : null;
+      await db.documents.update(row.id, { photo: blob, photo_back: back, photo_type: record.photo_type });
       downloaded += 1;
     }
   }

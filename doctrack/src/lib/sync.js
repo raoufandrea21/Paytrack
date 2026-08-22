@@ -21,9 +21,9 @@ const later = (a, b) => (String(a ?? '') >= String(b ?? '') ? a : b);
 const stamp = (record) => String(record?.updated_at ?? record?.created_at ?? '');
 
 /** Photos live beside the state file, one per document. */
-export function photoPath(uid, mediaType) {
+export function photoPath(uid, mediaType, side = 'front') {
   const extension = mediaType === 'application/pdf' ? 'pdf' : mediaType === 'image/png' ? 'png' : 'jpg';
-  return `photos/${uid}.${extension}`;
+  return `photos/${uid}${side === 'back' ? '-back' : ''}.${extension}`;
 }
 
 export function emptyState() {
@@ -56,7 +56,9 @@ export function packDocument(document, memberUidById) {
     review_needed: document.review_needed ?? 0,
     file_kind: document.file_kind ?? null,
     photo_type: document.photo_type ?? null,
+    no_expiry: document.no_expiry ?? 0,
     has_photo: Boolean(document.photo),
+    has_back: Boolean(document.photo_back),
     extraction: document.extraction ?? null,
     created_at: document.created_at,
     updated_at: stamp(document),

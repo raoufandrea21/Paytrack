@@ -48,7 +48,10 @@ export async function buildBackup() {
   for (const doc of documents) {
     packed.push({
       ...doc,
+      // Both images, and both explicitly: a Blob left in the object becomes {}
+      // in JSON, which restores as an object the image viewer cannot open.
       photo: doc.photo ? await blobToDataUrl(doc.photo) : null,
+      photo_back: doc.photo_back ? await blobToDataUrl(doc.photo_back) : null,
     });
   }
 
@@ -104,7 +107,7 @@ export async function restoreBackup(payload, { onProgress } = {}) {
 
   const existingDocs = await db.documents.toArray();
   const signature = (d) =>
-    [d.member_id, d.type, norm(d.label), norm(d.number), d.expiry_date].join('|');
+    [d.member_id, d.type, norm(d.label), norm(d.number), d.expiry_date, d.no_expiry ? 1 : 0].join('|');
   const seen = new Set(existingDocs.map(signature));
 
   let documentsAdded = 0;
@@ -117,7 +120,7 @@ export async function restoreBackup(payload, { onProgress } = {}) {
     const memberId = memberIdMap.get(doc.member_id);
     if (!memberId) { skipped += 1; continue; }
 
-    const { id, photo, renewed_from: _renewedFrom, ...rest } = doc;
+    const { id, photo, photo_back: photoBack, renewed_from: _renewedFrom, ...rest } = doc;
     const candidate = { ...rest, member_id: memberId };
     if (seen.has(signature(candidate))) { skipped += 1; continue; }
 
@@ -128,6 +131,7 @@ export async function restoreBackup(payload, { onProgress } = {}) {
       ...candidate,
       renewed_from: null,
       photo: photo ? await dataUrlToBlob(photo) : null,
+      photo_back: photoBack ? await dataUrlToBlob(photoBack) : null,
     });
     seen.add(signature(candidate));
     documentsAdded += 1;
