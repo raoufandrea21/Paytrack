@@ -139,9 +139,6 @@ function clearStaleInteraction() {
   }
 }
 
-const isInteractionLocked = (error) =>
-  /interaction_in_progress/i.test(`${error?.errorCode ?? ''} ${error?.message ?? ''}`);
-
 /**
  * Wipes every trace of a previous connection: MSAL's caches, the remembered
  * endpoint, and any stuck interaction flag. The way out when sign-in wedges.
@@ -172,11 +169,6 @@ export async function currentAccount(clientId) {
   } catch {
     return null;
   }
-}
-
-/** True when this load is Microsoft handing back a sign-in result. */
-export function hasRedirectResult() {
-  return /[#?&](code|error)=/.test(window.location.href) && !window.opener;
 }
 
 /**
