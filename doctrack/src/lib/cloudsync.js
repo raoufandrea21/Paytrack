@@ -6,10 +6,12 @@
  * even if the photo transfer is interrupted, and the Inbox is processed last so
  * newly filed documents go up on the next run rather than racing this one.
  */
-import { db, newUid, recordTombstone } from '../db.js';
+import { db, newUid, putSettingRow, recordTombstone, settingRows } from '../db.js';
 import {
+  IMPORTS_EPOCH,
   mergeStates,
   packDocument,
+  packImport,
   packMember,
   photoNeeds,
   photoPath,
@@ -25,12 +27,15 @@ import { fileDocument } from './autofile.js';
 
 /** Reads this device's side of the world in the shape the merge expects. */
 export async function localState() {
-  const [members, documents, tombstones] = await Promise.all([
+  const [members, documents, tombstones, settings, imports] = await Promise.all([
     db.members.toArray(),
     db.documents.toArray(),
     db.tombstones.toArray(),
+    settingRows(),
+    db.imports.toArray(),
   ]);
   const memberUidById = new Map(members.map((m) => [m.id, m.uid]));
+  const documentUidById = new Map(documents.map((d) => [d.id, d.uid]));
 
   return {
     state: {
@@ -38,6 +43,8 @@ export async function localState() {
       members: members.map(packMember),
       documents: documents.map((d) => packDocument(d, memberUidById)),
       tombstones,
+      settings,
+      imports: imports.map((row) => packImport(row, documentUidById)),
     },
     members,
     documents,
@@ -86,6 +93,44 @@ export async function applyIncoming(incoming, { members, documents }) {
     } else {
       await db.documents.add({ ...fields, member_id: memberId, photo: null });
     }
+    applied += 1;
+  }
+
+  // The household's shared preferences — reminder rules, which folder to read.
+  // Nothing here is a secret: what travels is decided by an allow-list in
+  // sync.js, and the API key is not on it.
+  for (const row of incoming.settings ?? []) {
+    await putSettingRow(row);
+    applied += 1;
+  }
+
+  // "Start again" on the other device. The log has no tombstones — it merges as
+  // a union — so the reset travels as a stamp, and every device throws away
+  // what it read before that moment. Applied after the settings above, so the
+  // stamp that just arrived is the one in force.
+  const clearedAt = String((await db.settings.get(IMPORTS_EPOCH))?.value ?? '');
+  if (clearedAt) {
+    const stale = (await db.imports.toArray())
+      .filter((row) => String(row.imported_at ?? '') <= clearedAt)
+      .map((row) => row.item_id);
+    if (stale.length) await db.imports.bulkDelete(stale);
+  }
+
+  // The log of files already read out of OneDrive. Pointed back at this
+  // device's own row ids, and only for documents that actually exist here —
+  // a log entry aimed at nothing would make a real file look already-read.
+  const documentIdByUid = new Map((await db.documents.toArray()).map((d) => [d.uid, d.id]));
+  for (const row of incoming.imports ?? []) {
+    if (!row?.item_id) continue;
+    await db.imports.put({
+      item_id: row.item_id,
+      c_tag: row.c_tag ?? '',
+      name: row.name ?? '',
+      path: row.path ?? '',
+      document_id: row.document_uid ? documentIdByUid.get(row.document_uid) ?? null : null,
+      outcome: row.outcome ?? '',
+      imported_at: row.imported_at ?? '',
+    });
     applied += 1;
   }
 

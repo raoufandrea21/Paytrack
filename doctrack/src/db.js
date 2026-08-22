@@ -1,5 +1,6 @@
 import Dexie from 'dexie';
 import { editDistance } from './lib/mrz.js';
+import { IMPORTS_EPOCH } from './lib/sync.js';
 
 /**
  * Everything lives here, on the device. No backend, no sync, no auth.
@@ -132,7 +133,7 @@ export async function clearEverything() {
   const counts = { members: 0, documents: 0 };
   await db.transaction(
     'rw',
-    db.members, db.documents, db.reminders, db.tombstones, db.imports,
+    db.members, db.documents, db.reminders, db.tombstones, db.imports, db.settings,
     async () => {
       const [members, documents] = await Promise.all([
         db.members.toArray(),
@@ -154,6 +155,11 @@ export async function clearEverything() {
       // Forgotten too, so the next read of the OneDrive folder starts fresh
       // rather than skipping everything as "already read".
       await db.imports.clear();
+      // And stamped, so the emptying travels. The log merges as a union, so
+      // without a mark saying when it was thrown away the next sync would pull
+      // the whole thing back from the cloud and the folder would read as
+      // already-read — a reset that resets nothing.
+      await db.settings.put({ key: IMPORTS_EPOCH, value: at, updated_at: at });
     },
   );
   return counts;
@@ -588,7 +594,20 @@ export async function getSetting(key, fallback = null) {
 }
 
 export function setSetting(key, value) {
-  return db.settings.put({ key, value });
+  // Stamped so the shared ones can be merged between devices last-write-wins.
+  // Rows written before this existed simply have no stamp, which loses to any
+  // row that has one — the right answer, since anything stamped is newer.
+  return db.settings.put({ key, value, updated_at: new Date().toISOString() });
+}
+
+/** The settings rows themselves, stamps included, for the sync run. */
+export function settingRows() {
+  return db.settings.toArray();
+}
+
+/** Writes a setting that arrived from another device, keeping its stamp. */
+export function putSettingRow(row) {
+  return db.settings.put({ key: row.key, value: row.value, updated_at: row.updated_at });
 }
 
 export async function getSettings() {

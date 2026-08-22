@@ -36,8 +36,45 @@ export function photoPath(uid, mediaType, side = 'front', bytes = 0) {
 }
 
 export function emptyState() {
-  return { format: SYNC_FORMAT, version: SYNC_VERSION, members: [], documents: [], tombstones: [] };
+  return {
+    format: SYNC_FORMAT,
+    version: SYNC_VERSION,
+    members: [],
+    documents: [],
+    tombstones: [],
+    settings: [],
+    imports: [],
+  };
 }
+
+/**
+ * When the import log was last thrown away, so that throwing it away travels.
+ *
+ * The log merges as a union — there is nothing to tombstone, and 400 graves for
+ * one reset would be absurd. So "Start again" stamps the moment instead, and
+ * every device drops the entries older than it. Without this, clearing
+ * everything and syncing would pull the whole log back and the folder would
+ * re-read as "already read" — nothing at all.
+ */
+export const IMPORTS_EPOCH = 'imports_cleared_at';
+
+/**
+ * The settings worth carrying between devices.
+ *
+ * Deliberately a list rather than "everything except secrets". Reminder rules
+ * and which OneDrive folder to read are decisions about the household, and
+ * having to make them twice is the whole complaint. A Microsoft app ID, an API
+ * key or a chosen extraction mode are decisions about *this device* — and the
+ * key must never be written into a file in someone's cloud storage, which is
+ * the other reason this is an allow-list and not a deny-list.
+ */
+export const SHARED_SETTINGS = [
+  'reminder_rules',
+  'onedrive_import_filter',
+  'onedrive_import_folder',
+  'onedrive_watch_folder',
+  IMPORTS_EPOCH,
+];
 
 /** Strips a local row down to what travels: no blobs, no device-local ids. */
 export function packMember(member) {
@@ -48,6 +85,24 @@ export function packMember(member) {
     auto_created: member.auto_created ?? 0,
     created_at: member.created_at,
     updated_at: stamp(member),
+  };
+}
+
+/**
+ * One row of the "already read from OneDrive" log, in a form another device can
+ * use. The local document id is swapped for the document's uid, because the
+ * auto-increment ids are per-device and pointing at the wrong record is worse
+ * than pointing at none.
+ */
+export function packImport(row, documentUidById) {
+  return {
+    item_id: row.item_id,
+    c_tag: row.c_tag ?? '',
+    name: row.name ?? '',
+    path: row.path ?? '',
+    document_uid: row.document_id == null ? null : documentUidById.get(row.document_id) ?? null,
+    outcome: row.outcome ?? '',
+    imported_at: row.imported_at ?? '',
   };
 }
 
@@ -122,9 +177,66 @@ export function mergeStates(local, remote) {
     }
   }
 
+  // Settings the household shares, last write wins per key. Unstamped rows lose
+  // to stamped ones, so a device upgrading from before stamps existed adopts
+  // the other device's answer rather than overwriting it with an older one.
+  const settings = mergeByKey(
+    localState.settings.filter((row) => SHARED_SETTINGS.includes(row?.key)),
+    remoteState.settings.filter((row) => SHARED_SETTINGS.includes(row?.key)),
+    'key',
+    'updated_at',
+  );
+  merged.settings = settings.all;
+  incoming.settings = settings.newerRemotely;
+  if (settings.remoteIsStale) remoteIsStale = true;
+
+  // Which OneDrive files have already been read. Not state anyone can see —
+  // it exists so a second device does not spend an hour recognising sixty
+  // documents the first one has already filed.
+  const epoch = String(merged.settings.find((row) => row.key === IMPORTS_EPOCH)?.value ?? '');
+  const live = (rows) => (epoch ? rows.filter((row) => String(row?.imported_at ?? '') > epoch) : rows);
+  const imports = mergeByKey(live(localState.imports), live(remoteState.imports), 'item_id', 'imported_at');
+  // A cleared log is only reflected upward if the cloud still holds the old one.
+  if (remoteState.imports.length !== imports.all.length) remoteIsStale = true;
+  merged.imports = imports.all;
+  incoming.imports = imports.newerRemotely;
+  if (imports.remoteIsStale) remoteIsStale = true;
+
   if (remoteState.tombstones.length !== merged.tombstones.length) remoteIsStale = true;
 
   return { merged, incoming, remoteIsStale };
+}
+
+/**
+ * Last-write-wins over a flat list of rows identified by one field.
+ *
+ * Reports both directions: what this device has not got yet, and whether the
+ * copy in the cloud is missing anything — the sync run only rewrites the remote
+ * file when something there is out of date.
+ */
+function mergeByKey(local, remote, idField, stampField) {
+  const byId = new Map();
+  for (const row of local) if (row?.[idField]) byId.set(row[idField], { local: row });
+  for (const row of remote) {
+    if (!row?.[idField]) continue;
+    byId.set(row[idField], { ...(byId.get(row[idField]) ?? {}), remote: row });
+  }
+
+  const all = [];
+  const newerRemotely = [];
+  let remoteIsStale = false;
+
+  for (const pair of byId.values()) {
+    const at = (row) => String(row?.[stampField] ?? '');
+    const winner =
+      pair.local && (!pair.remote || at(pair.local) >= at(pair.remote)) ? pair.local : pair.remote;
+    if (!winner) continue;
+    all.push(winner);
+    if (!pair.local || at(pair.local) < at(winner)) newerRemotely.push(winner);
+    if (!pair.remote || at(pair.remote) < at(winner)) remoteIsStale = true;
+  }
+
+  return { all, newerRemotely, remoteIsStale };
 }
 
 /**
@@ -181,6 +293,8 @@ function normalise(state) {
     members: Array.isArray(state?.members) ? state.members : [],
     documents: Array.isArray(state?.documents) ? state.documents : [],
     tombstones: Array.isArray(state?.tombstones) ? state.tombstones : [],
+    settings: Array.isArray(state?.settings) ? state.settings : [],
+    imports: Array.isArray(state?.imports) ? state.imports : [],
   };
 }
 

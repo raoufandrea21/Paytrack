@@ -4,7 +4,10 @@
  */
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { emptyState, mergeStates, photoNeeds, photoPath, photosToDownload } from '../src/lib/sync.js';
+import {
+  IMPORTS_EPOCH, SHARED_SETTINGS, emptyState, mergeStates, packImport,
+  photoNeeds, photoPath, photosToDownload,
+} from '../src/lib/sync.js';
 
 const doc = (uid, updated, extra = {}) => ({
   uid, member_uid: 'm1', type: 'passport', expiry_date: '2036-01-13',
@@ -153,4 +156,104 @@ test('the newer record decides which picture is the current one', () => {
   const { merged } = mergeStates(state([laptop]), state([phone]));
   assert.equal(merged.documents[0].photo_bytes, 5000);
   assert.deepEqual(photoNeeds(merged.documents[0], { photo: { size: 900 } }), { front: true, back: false });
+});
+
+// ----------------------------------------------- the settings the household shares
+
+const withSettings = (rows) => ({ ...emptyState(), settings: rows });
+const setting = (key, value, at) => ({ key, value, updated_at: at });
+
+test('a reminder rule set on the phone reaches the laptop', () => {
+  const phone = withSettings([setting('reminder_rules', { overdueRepeat: 30 }, '2026-08-02T00:00:00Z')]);
+  const laptop = withSettings([setting('reminder_rules', { overdueRepeat: 7 }, '2026-08-01T00:00:00Z')]);
+  const { merged, incoming } = mergeStates(laptop, phone);
+  assert.deepEqual(merged.settings[0].value, { overdueRepeat: 30 });
+  assert.equal(incoming.settings.length, 1, 'the laptop has something to apply');
+});
+
+test('the newer answer wins whichever device holds it', () => {
+  const older = withSettings([setting('reminder_rules', 'old', '2026-08-01T00:00:00Z')]);
+  const newer = withSettings([setting('reminder_rules', 'new', '2026-08-09T00:00:00Z')]);
+  assert.equal(mergeStates(newer, older).merged.settings[0].value, 'new');
+  assert.equal(mergeStates(older, newer).merged.settings[0].value, 'new');
+});
+
+test('a setting written before stamps existed loses to one that has a stamp', () => {
+  const unstamped = withSettings([{ key: 'reminder_rules', value: 'ancient' }]);
+  const stamped = withSettings([setting('reminder_rules', 'current', '2026-08-09T00:00:00Z')]);
+  assert.equal(mergeStates(unstamped, stamped).merged.settings[0].value, 'current');
+});
+
+test('the API key is never carried into the cloud file', () => {
+  assert.ok(!SHARED_SETTINGS.includes('anthropic_api_key'));
+  assert.ok(!SHARED_SETTINGS.includes('onedrive_client_id'));
+  const local = withSettings([
+    setting('anthropic_api_key', 'sk-ant-secret', '2026-08-09T00:00:00Z'),
+    setting('reminder_rules', 'fine', '2026-08-09T00:00:00Z'),
+  ]);
+  const { merged } = mergeStates(local, emptyState());
+  assert.deepEqual(merged.settings.map((r) => r.key), ['reminder_rules']);
+  assert.ok(!JSON.stringify(merged).includes('sk-ant-secret'));
+});
+
+test('an unknown setting is not carried either, even from the cloud', () => {
+  const remote = withSettings([setting('something_new', 'value', '2026-08-09T00:00:00Z')]);
+  assert.deepEqual(mergeStates(emptyState(), remote).merged.settings, []);
+});
+
+// ---------------------------------------- the log of what has been read already
+
+const entry = (id, at, extra = {}) => ({
+  item_id: id, c_tag: 'c-' + id, name: id + '.jpg', path: '/' + id + '.jpg',
+  document_uid: 'd-' + id, outcome: 'filed', imported_at: at, ...extra,
+});
+const withImports = (rows, settings = []) => ({ ...emptyState(), imports: rows, settings });
+
+test('the second device is told which files have already been read', () => {
+  const laptop = withImports([entry('f1', '2026-08-01T00:00:00Z')]);
+  const phone = withImports([entry('f2', '2026-08-02T00:00:00Z')]);
+  const { merged, incoming } = mergeStates(laptop, phone);
+  assert.deepEqual(merged.imports.map((r) => r.item_id).sort(), ['f1', 'f2']);
+  assert.deepEqual(incoming.imports.map((r) => r.item_id), ['f2']);
+});
+
+test('a file re-read after being replaced carries the newer cTag', () => {
+  const laptop = withImports([entry('f1', '2026-08-01T00:00:00Z', { c_tag: 'old' })]);
+  const phone = withImports([entry('f1', '2026-08-05T00:00:00Z', { c_tag: 'new' })]);
+  assert.equal(mergeStates(laptop, phone).merged.imports[0].c_tag, 'new');
+});
+
+test('clearing everything really clears the log, on both devices', () => {
+  // The phone still holds the whole log; the laptop cleared it a moment ago.
+  const cleared = '2026-08-10T00:00:00Z';
+  const laptop = withImports([], [setting(IMPORTS_EPOCH, cleared, cleared)]);
+  const phone = withImports([entry('f1', '2026-08-01T00:00:00Z'), entry('f2', '2026-08-02T00:00:00Z')]);
+  const { merged, incoming, remoteIsStale } = mergeStates(laptop, phone);
+  assert.deepEqual(merged.imports, [], 'nothing older than the reset survives');
+  assert.deepEqual(incoming.imports, [], 'and nothing is handed back to the laptop');
+  assert.ok(remoteIsStale, 'the cloud copy has to be rewritten without them');
+});
+
+test('a file read after the reset is kept', () => {
+  const cleared = '2026-08-10T00:00:00Z';
+  const laptop = withImports(
+    [entry('f3', '2026-08-11T00:00:00Z')],
+    [setting(IMPORTS_EPOCH, cleared, cleared)],
+  );
+  const phone = withImports([entry('f1', '2026-08-01T00:00:00Z')]);
+  assert.deepEqual(mergeStates(laptop, phone).merged.imports.map((r) => r.item_id), ['f3']);
+});
+
+test('the log points at documents by uid, never by a local row id', () => {
+  const packed = packImport(
+    { item_id: 'f1', c_tag: 'c1', name: 'a.jpg', path: '/a.jpg', document_id: 7, outcome: 'filed', imported_at: 'x' },
+    new Map([[7, 'doc-uid-7']]),
+  );
+  assert.equal(packed.document_uid, 'doc-uid-7');
+  assert.ok(!('document_id' in packed), 'a local id means nothing on the other device');
+});
+
+test('a log entry for a document this device never had points at nothing', () => {
+  const packed = packImport({ item_id: 'f1', document_id: 99, imported_at: 'x' }, new Map());
+  assert.equal(packed.document_uid, null);
 });
