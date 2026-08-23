@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from 'react';
-import { ACCEPT_ATTRIBUTE, prepareFile, previewUrl } from '../lib/files.js';
+import { useRef, useState } from 'react';
+import { ACCEPT_ATTRIBUTE, prepareFile } from '../lib/files.js';
+import FilePreview, { FullScreenPreview } from './FilePreview.jsx';
 import { Spinner } from './ui.jsx';
 
 /**
@@ -13,16 +14,8 @@ import { Spinner } from './ui.jsx';
 export default function PhotoInput({ blob, onChange, onError, busy, label = 'Take photo' }) {
   const cameraRef = useRef(null);
   const fileRef = useRef(null);
-  const [preview, setPreview] = useState(null);
   const [working, setWorking] = useState(false);
-
-  const isPdf = blob?.type === 'application/pdf';
-
-  useEffect(() => {
-    const { url, revoke } = previewUrl(blob);
-    setPreview(url);
-    return revoke;
-  }, [blob]);
+  const [full, setFull] = useState(false);
 
   async function handleFile(event) {
     const file = event.target.files?.[0];
@@ -62,29 +55,40 @@ export default function PhotoInput({ blob, onChange, onError, busy, label = 'Tak
         tabIndex={-1}
       />
 
-      {preview ? (
-        <button
-          type="button"
-          onClick={() => fileRef.current?.click()}
-          disabled={disabled}
-          className="relative block w-full overflow-hidden rounded-2xl ring-1 ring-slate-300 dark:ring-slate-700"
-        >
-          {isPdf ? (
-            <span className="flex min-h-32 w-full flex-col items-center justify-center gap-2 bg-slate-100 py-8 dark:bg-slate-800">
-              <span className="text-3xl" aria-hidden="true">📕</span>
-              <span className="text-[14px] font-semibold">PDF attached</span>
-            </span>
-          ) : (
-            <img
-              src={preview}
-              alt="Captured document"
-              className="max-h-72 w-full bg-slate-200 object-contain dark:bg-slate-800"
-            />
-          )}
-          <span className="absolute right-2 bottom-2 rounded-lg bg-slate-900/80 px-2.5 py-1.5 text-[13px] font-semibold text-white">
-            Replace
-          </span>
-        </button>
+      {blob ? (
+        <div className="overflow-hidden rounded-2xl ring-1 ring-slate-300 dark:ring-slate-700">
+          {/* Tapping the picture makes it bigger. Tapping "Replace" replaces
+              it. Those were the same tap before, which meant that looking
+              closely at a scan risked opening the camera over the top of it. */}
+          <button
+            type="button"
+            onClick={() => setFull(true)}
+            className="block max-h-72 w-full overflow-hidden"
+            aria-label="View full size"
+          >
+            <FilePreview blob={blob} alt="Captured document" maxPages={1} />
+          </button>
+          <div className="flex divide-x divide-slate-200 border-t border-slate-200 dark:divide-slate-700 dark:border-slate-700">
+            <button
+              type="button"
+              onClick={() => setFull(true)}
+              className="min-h-11 flex-1 text-[14px] font-semibold text-indigo-600 dark:text-indigo-400"
+            >
+              View full size
+            </button>
+            <button
+              type="button"
+              onClick={() => fileRef.current?.click()}
+              disabled={disabled}
+              className="min-h-11 flex-1 text-[14px] font-semibold text-slate-600 disabled:opacity-50 dark:text-slate-300"
+            >
+              Replace
+            </button>
+          </div>
+          {full ? (
+            <FullScreenPreview blob={blob} alt="Captured document" onClose={() => setFull(false)} />
+          ) : null}
+        </div>
       ) : (
         <>
           <button

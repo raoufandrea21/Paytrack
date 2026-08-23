@@ -4,6 +4,7 @@ import Dashboard from './screens/Dashboard.jsx';
 import DocumentEditor from './screens/DocumentEditor.jsx';
 import DocumentDetail from './screens/DocumentDetail.jsx';
 import MemberForm from './screens/MemberForm.jsx';
+import MemberOrder from './screens/MemberOrder.jsx';
 import Archive from './screens/Archive.jsx';
 import BulkAdd from './screens/BulkAdd.jsx';
 import DriveImport from './screens/DriveImport.jsx';
@@ -119,6 +120,7 @@ export default function App() {
       <Routes>
         <Route path="/" element={<Dashboard />} />
         <Route path="/members/new" element={<MemberForm mode="add" />} />
+        <Route path="/members/order" element={<MemberOrder />} />
         <Route path="/members/:id/edit" element={<MemberForm mode="edit" />} />
         <Route path="/upload" element={<BulkAdd />} />
         <Route path="/onedrive" element={<DriveImport />} />

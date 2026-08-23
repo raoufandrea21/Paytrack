@@ -70,6 +70,7 @@ export const IMPORTS_EPOCH = 'imports_cleared_at';
  */
 export const SHARED_SETTINGS = [
   'reminder_rules',
+  'member_order',
   'onedrive_import_filter',
   'onedrive_import_folder',
   'onedrive_watch_folder',

@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { db, documentsNeedingReview, duplicateMembers, mergeMembers } from '../db.js';
+import { db, documentsNeedingReview, duplicateMembers, getSetting, mergeMembers } from '../db.js';
+import { ORDER_SETTING, applyOrder, hasOrder } from '../lib/memberorder.js';
 import { byUrgency, shortRemainingFor, standingFor, urgencyForDocument } from '../lib/dates.js';
 import Screen from '../components/Screen.jsx';
 import DocumentRow from '../components/DocumentRow.jsx';
@@ -26,6 +27,9 @@ export default function Dashboard() {
   );
   const reviewCount = useLiveQuery(async () => (await documentsNeedingReview()).length, [], 0);
   const duplicates = useLiveQuery(() => duplicateMembers(), [], []);
+  // The order the user arranged, if they arranged one. A setting rather than a
+  // column, so it is one row to sync — see lib/memberorder.js.
+  const chosenOrder = useLiveQuery(() => getSetting(ORDER_SETTING, null), [], undefined);
 
   // Which people are folded away. A per-device preference about a screen, not
   // anything about the documents, so it lives in the browser rather than the
@@ -53,25 +57,36 @@ export default function Dashboard() {
     return () => clearTimeout(timer);
   }, [members, documents]);
 
+  const manual = hasOrder(chosenOrder, members ?? []);
+
   const grouped = useMemo(() => {
     if (!members || !documents) return null;
     const byMember = new Map(members.map((m) => [m.id, []]));
     for (const doc of documents) {
       if (byMember.has(doc.member_id)) byMember.get(doc.member_id).push(doc);
     }
-    return members
-      .map((member) => {
-        const docs = [...(byMember.get(member.id) ?? [])].sort(byUrgency);
-        const worst = docs.length ? urgencyForDocument(docs[0]) : null;
-        return { member, docs, worst };
-      })
-      .sort((a, b) => {
-        const ra = a.worst?.rank ?? 4;
-        const rb = b.worst?.rank ?? 4;
-        if (ra !== rb) return ra - rb;
-        return (a.worst?.days ?? Infinity) - (b.worst?.days ?? Infinity);
-      });
-  }, [members, documents]);
+    const cards = members.map((member) => {
+      const docs = [...(byMember.get(member.id) ?? [])].sort(byUrgency);
+      const worst = docs.length ? urgencyForDocument(docs[0]) : null;
+      return { member, docs, worst };
+    });
+
+    // An order the user set by hand beats the app's opinion about urgency: they
+    // arranged it for a reason, and having it silently reshuffle is worse than
+    // having the urgent one further down — the summary at the top of the screen
+    // is what answers "what is urgent" anyway.
+    if (manual) {
+      const rank = new Map(applyOrder(members, chosenOrder).map((m, i) => [m.id, i]));
+      return cards.sort((a, b) => rank.get(a.member.id) - rank.get(b.member.id));
+    }
+
+    return cards.sort((a, b) => {
+      const ra = a.worst?.rank ?? 4;
+      const rb = b.worst?.rank ?? 4;
+      if (ra !== rb) return ra - rb;
+      return (a.worst?.days ?? Infinity) - (b.worst?.days ?? Infinity);
+    });
+  }, [members, documents, chosenOrder, manual]);
 
   /**
    * Everything falling due in the next two months, whoever it belongs to.
@@ -219,7 +234,13 @@ export default function Dashboard() {
           ))}
 
           {grouped.length > 1 ? (
-            <div className="flex justify-end px-1">
+            <div className="flex items-center justify-between gap-3 px-1">
+              <Link
+                to="/members/order"
+                className="min-h-11 content-center text-[13px] font-semibold text-slate-500 underline-offset-4 hover:underline dark:text-slate-400"
+              >
+                {manual ? 'Your order · rearrange' : 'Rearrange people'}
+              </Link>
               <button
                 type="button"
                 onClick={() => setAllFolded(

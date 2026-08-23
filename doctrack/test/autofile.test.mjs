@@ -6,6 +6,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { memberNamedIn, reviewReasons } from '../src/lib/autofile.js';
+import { validateDocument } from '../src/lib/validate.js';
 import { matchMemberByName } from '../src/db.js';
 import { normaliseExtraction } from '../src/lib/extract.js';
 import { buildExtractionRequest, PDF_MEDIA_TYPE } from '../shared/extraction-spec.js';
@@ -150,4 +151,26 @@ test('a one-letter member name cannot swallow every file', () => {
 
 test('the name has to be whole words, not a fragment', () => {
   assert.equal(memberNamedIn('Lilypad Insurance', [{ id: 1, name: 'Lily' }]), null);
+});
+
+// ------------------------- confirming a document that could never remind you
+
+test('checking a document refuses a blank date rather than trapping it', () => {
+  const form = { member_id: 1, type: 'passport', label: '', expiry_date: '', no_expiry: 0 };
+  assert.deepEqual(validateDocument(form), {}, 'an ordinary edit is allowed to leave it blank');
+  assert.match(
+    validateDocument(form, { requireRemindable: true }).expiry_date ?? '',
+    /does not expire/,
+    'but confirming it in the review run has to say why it cannot be accepted',
+  );
+});
+
+test('"does not expire" is the other way to satisfy it', () => {
+  const form = { member_id: 1, type: 'birth_certificate', expiry_date: '', no_expiry: 1 };
+  assert.deepEqual(validateDocument(form, { requireRemindable: true }), {});
+});
+
+test('a date is the obvious way to satisfy it', () => {
+  const form = { member_id: 1, type: 'passport', expiry_date: '2031-01-01', no_expiry: 0 };
+  assert.deepEqual(validateDocument(form, { requireRemindable: true }), {});
 });

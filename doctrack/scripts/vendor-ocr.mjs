@@ -12,7 +12,7 @@
  * Runs from `npm run prebuild` and `postinstall`, so a fresh clone and a
  * deployment both get it without anyone remembering to.
  */
-import { cpSync, existsSync, mkdirSync, statSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -37,6 +37,22 @@ const files = [
 // pdf.js needs its worker served from our own origin for the same reason.
 const rootFiles = [['pdfjs-dist/build/pdf.worker.min.mjs', 'pdf.worker.min.mjs']];
 
+/**
+ * pdf.js 6 uses two proposal methods no shipping browser has, and one of them
+ * — Math.sumPrecise — is only ever called inside the worker, where the app's
+ * own polyfill cannot reach. A worker has no imports to hook, so the shim is
+ * pasted onto the front of the file as it is copied.
+ *
+ * Read from src/lib/pdfshims.js rather than written twice, so the two copies
+ * cannot drift; the export line is stripped because a classic worker script has
+ * no module scope to export into.
+ */
+function withPdfShims(source) {
+  const shims = readFileSync(join(root, 'src', 'lib', 'pdfshims.js'), 'utf8')
+    .replace('export function installPdfShims', 'function installPdfShims');
+  return `${shims}\ninstallPdfShims(globalThis);\n${source}`;
+}
+
 mkdirSync(out, { recursive: true });
 
 let copied = 0;
@@ -60,7 +76,11 @@ for (const [from, to] of rootFiles) {
     continue;
   }
   const target = join(root, 'public', to);
-  cpSync(source, target);
+  if (to === 'pdf.worker.min.mjs') {
+    writeFileSync(target, withPdfShims(readFileSync(source, 'utf8')));
+  } else {
+    cpSync(source, target);
+  }
   copied += 1;
   bytes += statSync(target).size;
 }

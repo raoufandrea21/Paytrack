@@ -416,6 +416,17 @@ export function documentsNeedingReview() {
     .toArray();
 }
 
+/**
+ * The ids still waiting to be checked, oldest first.
+ *
+ * Deliberately just the live set. Where you are in a run of them is decided by
+ * lib/reviewrun.js against a frozen snapshot, because a position measured
+ * against a list that shrinks under you is a counter that jumps.
+ */
+export async function reviewQueue() {
+  return { ids: (await documentsNeedingReview()).map((d) => d.id).sort((a, b) => a - b) };
+}
+
 export function clearReviewFlag(id) {
   return db.documents.update(id, { review_needed: 0, updated_at: new Date().toISOString() });
 }

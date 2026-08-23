@@ -1,11 +1,13 @@
 import { useMemo } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db, documentsNeedingReview } from '../db.js';
 import { documentLabel, documentType } from '../lib/constants.js';
 import { formatDate } from '../lib/dates.js';
+import { reviewReasonsFor } from '../lib/review.js';
+import { startRun } from '../lib/reviewrun.js';
 import Screen from '../components/Screen.jsx';
-import { Card, EmptyState, Spinner } from '../components/ui.jsx';
+import { Button, Card, EmptyState, Spinner } from '../components/ui.jsx';
 
 /**
  * Everything automatic filing saved but was not sure about. This is the only
@@ -13,6 +15,7 @@ import { Card, EmptyState, Spinner } from '../components/ui.jsx';
  * clean.
  */
 export default function Review() {
+  const navigate = useNavigate();
   const docs = useLiveQuery(() => documentsNeedingReview(), [], null);
   const members = useLiveQuery(() => db.members.toArray(), [], null);
 
@@ -22,7 +25,7 @@ export default function Review() {
     return docs.map((doc) => ({
       doc,
       holder: names.get(doc.member_id) ?? 'Unknown',
-      reasons: reasonsFor(doc),
+      reasons: reviewReasonsFor(doc),
     }));
   }, [docs, members]);
 
@@ -36,9 +39,26 @@ export default function Review() {
         </EmptyState>
       ) : (
         <div className="space-y-3 pb-4">
-          <p className="px-1 text-[14px] text-slate-600 dark:text-slate-400">
-            These are saved already. Open one to correct it — the reminders update as soon as you do.
-          </p>
+          {/* One button that starts the run, rather than thirty-eight
+              round trips through this list. */}
+          <Card className="p-4">
+            <p className="text-[14px] text-slate-600 dark:text-slate-400">
+              These are all saved already — nothing is lost while they sit here. Checking one
+              takes you straight to the next, with the scan on the same screen, so you can
+              work through the pile without coming back to this list.
+            </p>
+            <Button
+              className="mt-3 w-full"
+              onClick={() => {
+                // The order is fixed here, so the counter means something and
+                // skipping does not send you back over ground you covered.
+                const ids = startRun(rows.map((r) => r.doc.id));
+                navigate(`/documents/${ids[0]}/edit?queue=review`);
+              }}
+            >
+              Check {rows.length === 1 ? 'it' : `all ${rows.length}`}, one after another
+            </Button>
+          </Card>
           {rows.map(({ doc, holder, reasons }) => (
             <Card key={doc.id} className="overflow-hidden">
               <Link
@@ -74,22 +94,4 @@ export default function Review() {
       )}
     </Screen>
   );
-}
-
-/**
- * Reasons are recomputed from the stored record rather than persisted, so a
- * document that gets its expiry date filled in stops complaining about it even
- * if the review flag is cleared separately.
- */
-function reasonsFor(doc) {
-  const reasons = [];
-  if (!doc.expiry_date && !doc.no_expiry) {
-    reasons.push('No expiry date — no reminders will fire.');
-  }
-  if (doc.type === 'other' && !doc.label) {
-    reasons.push('Document type was not recognised — say what it is.');
-  }
-  if (!doc.number) reasons.push('No document number was read.');
-  for (const warning of doc.extraction?.warnings ?? []) reasons.push(warning);
-  return reasons.length > 0 ? reasons : ['Read with low confidence.'];
 }

@@ -10,6 +10,7 @@
  * no text layer) does it need rendering to a canvas and running through OCR
  * like any other photo.
  */
+import { installPdfShims } from './pdfshims.js';
 
 let pdfjsPromise = null;
 
@@ -21,6 +22,7 @@ async function getPdfjs() {
           cause: error,
         });
       });
+      installPdfShims();
       // Vendored alongside the OCR engine rather than pulled from a CDN — same
       // reasoning: no third party in the path of a private document.
       pdfjs.GlobalWorkerOptions.workerSrc = `${import.meta.env?.BASE_URL ?? '/'}pdf.worker.min.mjs`;
@@ -45,7 +47,18 @@ const MAX_PAGES = 5;
 async function openDocument(blob) {
   const pdfjs = await getPdfjs();
   const data = new Uint8Array(await blob.arrayBuffer());
-  const loadingTask = pdfjs.getDocument({ data, isEvalSupported: false, disableFontFace: true });
+  const base = import.meta.env?.BASE_URL ?? '/';
+  const loadingTask = pdfjs.getDocument({
+    data,
+    isEvalSupported: false,
+    disableFontFace: true,
+    // Without these, every page using a standard font (Helvetica, Times —
+    // which is most of them) renders in a substitute, and a preview of your own
+    // passport comes back looking like somebody else's document. Served from
+    // this app rather than a CDN, and left out of the precache so they cost
+    // nothing until a PDF is actually opened.
+    standardFontDataUrl: `${base}pdf-fonts/`,
+  });
   return { doc: await loadingTask.promise, loadingTask };
 }
 

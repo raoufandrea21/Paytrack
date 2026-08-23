@@ -11,6 +11,7 @@ import {
 import { documentLabel, documentType } from '../lib/constants.js';
 import { expiryPhraseFor, formatDate, urgencyForDocument } from '../lib/dates.js';
 import { previewUrl } from '../lib/files.js';
+import FilePreview, { FullScreenPreview } from '../components/FilePreview.jsx';
 import Screen from '../components/Screen.jsx';
 import { Banner, Button, Card, Spinner, UrgencyChip } from '../components/ui.jsx';
 
@@ -30,6 +31,7 @@ export default function DocumentDetail() {
   const [photoUrl, setPhotoUrl] = useState(null);
   const [backUrl, setBackUrl] = useState(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [full, setFull] = useState(null); // the blob being looked at properly
 
   useEffect(() => {
     const { url, revoke } = previewUrl(doc?.photo);
@@ -82,24 +84,40 @@ export default function DocumentDetail() {
       }
       footer={
         archived ? (
-          <Button className="w-full" onClick={() => unarchiveDocument(doc.id)}>
-            Restore to the dashboard
-          </Button>
+          <div>
+            <Button className="w-full" onClick={() => unarchiveDocument(doc.id)}>
+              Restore to the dashboard
+            </Button>
+            <p className="mt-2 text-center text-[12px] text-slate-500 dark:text-slate-400">
+              Puts it back among the live documents, with its reminders switched on again.
+            </p>
+          </div>
         ) : (
-          <div className="flex gap-2">
-            <Button as="link" to={`/documents/${doc.id}/renew`} className="flex-1">
-              Renew
-            </Button>
-            <Button
-              variant="secondary"
-              className="flex-1"
-              onClick={async () => {
-                await archiveDocument(doc.id);
-                navigate('/', { replace: true });
-              }}
-            >
-              Archive
-            </Button>
+          <div>
+            <div className="flex gap-2">
+              <Button as="link" to={`/documents/${doc.id}/renew`} className="flex-1">
+                Renew
+              </Button>
+              <Button
+                variant="secondary"
+                className="flex-1"
+                onClick={async () => {
+                  await archiveDocument(doc.id);
+                  navigate('/', { replace: true });
+                }}
+              >
+                Archive
+              </Button>
+            </div>
+            {/* Two buttons that both make a document go away, for opposite
+                reasons. Saying which is which here is cheaper than getting it
+                wrong once. */}
+            <p className="mt-2 text-center text-[12px] leading-snug text-slate-500 dark:text-slate-400">
+              <span className="font-semibold">Renew</span> when you have the new one — this
+              becomes history and the new one takes over.{' '}
+              <span className="font-semibold">Archive</span> when you are done with it — kept,
+              but off the dashboard and no longer reminded about.
+            </p>
           </div>
         )
       }
@@ -157,34 +175,42 @@ export default function DocumentDetail() {
           </p>
         ) : null}
 
-        {photoUrl && isPdf ? (
+        {doc.photo ? (
           <Card className="overflow-hidden">
-            {/* Phones mostly refuse to render a PDF inline, so offer the file
-                rather than a blank grey box pretending to be a viewer. */}
-            <object data={photoUrl} type="application/pdf" className="hidden h-96 w-full sm:block">
-              <p className="p-4 text-[14px]">Your browser cannot display PDFs inline.</p>
-            </object>
-            <a
-              href={photoUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="flex min-h-14 items-center gap-3 px-3.5 py-3 text-[15px] font-semibold text-indigo-600 dark:text-indigo-400"
-            >
-              <span className="text-xl" aria-hidden="true">📕</span>
-              Open the PDF
-            </a>
-          </Card>
-        ) : photoUrl ? (
-          <Card className="overflow-hidden">
-            <img src={photoUrl} alt={`${documentLabel(doc)} scan`} className="w-full bg-slate-100 object-contain dark:bg-slate-800" />
-            {backUrl ? (
+            {/* A PDF is drawn into pictures rather than handed to a viewer the
+                phone will refuse to open — see FilePreview. */}
+            <button type="button" onClick={() => setFull(doc.photo)} className="block w-full" aria-label="View full size">
+              <FilePreview blob={doc.photo} alt={`${documentLabel(doc)} scan`} maxPages={3} />
+            </button>
+            {doc.photo_back ? (
               <>
                 <p className="border-t border-slate-100 px-3.5 py-2 text-[13px] font-semibold text-slate-500 dark:border-slate-800 dark:text-slate-400">
                   Back
                 </p>
-                <img src={backUrl} alt={`${documentLabel(doc)} reverse`} className="w-full bg-slate-100 object-contain dark:bg-slate-800" />
+                <button type="button" onClick={() => setFull(doc.photo_back)} className="block w-full" aria-label="View the back full size">
+                  <FilePreview blob={doc.photo_back} alt={`${documentLabel(doc)} reverse`} maxPages={3} />
+                </button>
               </>
             ) : null}
+            <div className="flex divide-x divide-slate-100 border-t border-slate-100 dark:divide-slate-800 dark:border-slate-800">
+              <button
+                type="button"
+                onClick={() => setFull(doc.photo)}
+                className="min-h-12 flex-1 text-[14px] font-semibold text-indigo-600 dark:text-indigo-400"
+              >
+                View full size
+              </button>
+              {isPdf && photoUrl ? (
+                <a
+                  href={photoUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex min-h-12 flex-1 items-center justify-center text-[14px] font-semibold text-slate-600 dark:text-slate-300"
+                >
+                  Open the PDF
+                </a>
+              ) : null}
+            </div>
           </Card>
         ) : (
           <Card className="p-4 text-center text-[14px] text-slate-500 dark:text-slate-400">
@@ -243,6 +269,14 @@ export default function DocumentDetail() {
               ))}
             </div>
           </Card>
+        ) : null}
+
+        {full ? (
+          <FullScreenPreview
+            blob={full}
+            alt={`${documentLabel(doc)} scan`}
+            onClose={() => setFull(null)}
+          />
         ) : null}
       </div>
     </Screen>

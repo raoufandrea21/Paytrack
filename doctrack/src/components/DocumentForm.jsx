@@ -3,6 +3,9 @@ import { DOCUMENT_TYPES, previousLabels, typeIsPermanent } from '../lib/constant
 import { expiryPhrase, isValidISODate, urgencyFor } from '../lib/dates.js';
 import { Banner, Field, Input, Select, Textarea, UrgencyChip } from './ui.jsx';
 
+// Re-exported so the screens keep one import for the form and its rules.
+export { validateDocument } from '../lib/validate.js';
+
 /**
  * The confirm/correct step. Shared by add, edit and renew so a renewal is
  * literally the same form the user already knows.
@@ -238,26 +241,3 @@ export default function DocumentForm({
 }
 
 /** Shared validation so add, edit and renew reject the same things. */
-export function validateDocument(value, { requireMember = true } = {}) {
-  const errors = {};
-  if (requireMember && !value.member_id) errors.member_id = 'Pick who this belongs to.';
-  if (!value.type) errors.type = 'Pick a document type.';
-  if (value.type === 'other' && !String(value.label ?? '').trim()) {
-    errors.label = 'Say what kind of document this is.';
-  }
-  if (value.no_expiry) return errors; // nothing else to check on a filed document
-  if (value.expiry_date && !isValidISODate(value.expiry_date)) {
-    errors.expiry_date = 'That is not a valid date.';
-  }
-  if (value.issue_date && !isValidISODate(value.issue_date)) {
-    errors.issue_date = 'That is not a valid date.';
-  }
-  if (
-    isValidISODate(value.issue_date) &&
-    isValidISODate(value.expiry_date) &&
-    value.issue_date > value.expiry_date
-  ) {
-    errors.expiry_date = 'Expiry is before the issue date.';
-  }
-  return errors;
-}

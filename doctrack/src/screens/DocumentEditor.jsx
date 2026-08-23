@@ -7,9 +7,12 @@ import {
   deleteDocument,
   getSettings,
   renewDocument,
+  reviewQueue,
   updateDocument,
 } from '../db.js';
 import { documentLabel } from '../lib/constants.js';
+import { reviewReasonsFor } from '../lib/review.js';
+import { currentRun, endRun, positionIn } from '../lib/reviewrun.js';
 import { extractDocument, extractionAvailable, ExtractionError } from '../lib/extract.js';
 import Screen from '../components/Screen.jsx';
 import PhotoInput from '../components/PhotoInput.jsx';
@@ -62,9 +65,60 @@ export default function DocumentEditor({ mode }) {
   const [seeded, setSeeded] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
+  /**
+   * Working through the "needs checking" pile, rather than editing one
+   * document you went looking for.
+   *
+   * It is the same form either way — what changes is where Save goes. Landing
+   * on the detail page after every single correction, and having to press back
+   * and pick the next one out of a list of thirty-eight, is most of the work
+   * and none of the point.
+   */
+  const checking = search.get('queue') === 'review';
+  const [queue, setQueue] = useState(null);
+
+  useEffect(() => {
+    if (!checking || !documentId) { setQueue(null); return undefined; }
+    let alive = true;
+    reviewQueue().then(({ ids }) => {
+      if (!alive) return;
+      const run = currentRun();
+      // A run someone deep-linked into, or reopened in a new tab, has no
+      // snapshot; fall back to the live list so the screen still works.
+      setQueue(positionIn(run, documentId, ids) ?? positionIn(ids, documentId, ids));
+    });
+    return () => { alive = false; };
+  }, [checking, documentId]);
+
+  /** Where to go after this one — the next in the run, or back to the pile. */
+  async function goToNext() {
+    const { ids } = await reviewQueue();
+    const spot = positionIn(currentRun(), documentId, ids);
+    const nextId = spot ? spot.nextId : ids.find((id) => id !== documentId) ?? null;
+    if (!nextId) endRun();
+    navigate(nextId ? `/documents/${nextId}/edit?queue=review` : '/review', { replace: true });
+  }
+
   useEffect(() => {
     getSettings().then(setSettings);
   }, []);
+
+  /**
+   * Moving to the next document to check reuses this component — same route,
+   * different id — so everything about the last one has to be dropped. Without
+   * this the form would still be showing the previous document's values, and
+   * saving would write them over the new one.
+   */
+  useEffect(() => {
+    setSeeded(false);
+    setPhoto(null);
+    setExtraction(null);
+    setStatus('idle');
+    setNotice(null);
+    setErrors({});
+    setConfirmDelete(false);
+    setStep(mode === 'edit' ? 'confirm' : 'capture');
+  }, [documentId, mode]);
 
   // Seed the form once the record and member list have loaded.
   useEffect(() => {
@@ -83,6 +137,9 @@ export default function DocumentEditor({ mode }) {
       navigate('/', { replace: true });
       return;
     }
+    // The live query can still be holding the document we just moved off; only
+    // seed from the one actually being edited.
+    if (existing.id !== documentId) return;
 
     setForm({
       member_id: existing.member_id,
@@ -96,7 +153,7 @@ export default function DocumentEditor({ mode }) {
       notes: existing.notes ?? '',
     });
     setSeeded(true);
-  }, [seeded, members, existing, mode, search, navigate]);
+  }, [seeded, members, existing, mode, search, navigate, documentId]);
 
   const canExtract = settings ? extractionAvailable(settings) : false;
 
@@ -159,7 +216,7 @@ export default function DocumentEditor({ mode }) {
   }
 
   async function handleSave() {
-    const validation = validateDocument(form);
+    const validation = validateDocument(form, { requireRemindable: checking });
     setErrors(validation);
     if (Object.keys(validation).length > 0) {
       setNotice({ tone: 'error', text: 'Some fields still need fixing.' });
@@ -209,6 +266,13 @@ export default function DocumentEditor({ mode }) {
         await updateDocument(documentId, payload);
       }
 
+      if (checking) {
+        // Straight on to the next one in the run, without a detour through a
+        // detail page nobody asked to see.
+        await goToNext();
+        return;
+      }
+
       navigate(`/documents/${targetId}`, { replace: true });
     } catch (error) {
       setStatus('idle');
@@ -216,26 +280,48 @@ export default function DocumentEditor({ mode }) {
     }
   }
 
-  const title =
-    mode === 'renew'
+  const title = checking
+    ? 'Check this one'
+    : mode === 'renew'
       ? `Renew ${documentLabel(existing ?? {})}`
       : mode === 'edit'
         ? 'Edit document'
         : 'Add document';
+
+  /** Move on without changing anything — it stays in the pile for later. */
+  const skip = goToNext;
 
   const loading = members === null || (mode !== 'add' && existing === undefined);
 
   return (
     <Screen
       title={title}
-      subtitle={mode === 'renew' ? 'The old record is kept in the archive.' : undefined}
-      back
+      subtitle={
+        checking && queue?.total
+          ? `${queue.index} of ${queue.total} · ${queue.remaining} still to do`
+          : mode === 'renew'
+            ? 'The old record is kept in the archive.'
+            : undefined
+      }
+      back={checking ? '/review' : true}
       footer={
         step === 'confirm' ? (
-          <Button onClick={handleSave} disabled={status === 'saving'} className="w-full">
-            {status === 'saving' ? <Spinner /> : null}
-            {mode === 'renew' ? 'Save renewal' : mode === 'edit' ? 'Save changes' : 'Save document'}
-          </Button>
+          checking ? (
+            <div className="flex gap-2">
+              <Button variant="secondary" className="px-4" onClick={skip} disabled={status === 'saving'}>
+                Skip
+              </Button>
+              <Button onClick={handleSave} disabled={status === 'saving'} className="flex-1">
+                {status === 'saving' ? <Spinner /> : null}
+                {queue?.nextId ? 'Looks right — next' : 'Looks right — finish'}
+              </Button>
+            </div>
+          ) : (
+            <Button onClick={handleSave} disabled={status === 'saving'} className="w-full">
+              {status === 'saving' ? <Spinner /> : null}
+              {mode === 'renew' ? 'Save renewal' : mode === 'edit' ? 'Save changes' : 'Save document'}
+            </Button>
+          )
         ) : null
       }
     >
@@ -250,6 +336,19 @@ export default function DocumentEditor({ mode }) {
         </Banner>
       ) : (
         <div className="space-y-4 pb-4">
+          {/* What was wrong with it, at the top, before the form. Being told
+              "this needs checking" and then having to work out why is most of
+              the reason a pile of thirty-eight never gets cleared. */}
+          {checking && existing ? (
+            <Banner tone="warn" title="Why this one was flagged">
+              <ul className="space-y-0.5">
+                {reviewReasonsFor(existing).map((reason, i) => (
+                  <li key={i}>• {reason}</li>
+                ))}
+              </ul>
+            </Banner>
+          ) : null}
+
           <PhotoInput
             blob={photo?.blob ?? (mode === 'edit' ? existing?.photo : null)}
             onChange={handlePhoto}
