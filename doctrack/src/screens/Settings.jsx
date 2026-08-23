@@ -74,6 +74,45 @@ export default function Settings() {
 
   const mode = settings?.extraction_mode ?? DEFAULT_EXTRACTION_MODE;
 
+  /**
+   * Builds a backup, hands it to the browser, and says how big it turned out.
+   *
+   * The size is the point of saying anything at all: it is what decides whether
+   * the file can be emailed to a phone, and finding out from a bounced message
+   * ten minutes later is worse than reading it here.
+   */
+  async function exportBackup(photos) {
+    setBusy(true);
+    setTransfer(null);
+    try {
+      const backup = await buildBackup({ photos });
+      const blob = new Blob([JSON.stringify(backup)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = backupFilename(new Date(), { photos });
+      link.click();
+      URL.revokeObjectURL(url);
+
+      const megabytes = blob.size / 1e6;
+      const size = megabytes >= 1 ? `${megabytes.toFixed(1)} MB` : `${Math.round(blob.size / 1000)} KB`;
+      const withPhotos = photos ? ', scans included' : ', without the scans';
+      setTransfer({
+        tone: 'info',
+        text:
+          `Exported ${count(backup.documents.length, 'document')} for `
+          + `${count(backup.members.length, 'person', 'people')}${withPhotos} — ${size}. `
+          + (photos && megabytes > 20
+            ? 'That is too big for most email. Use "the details only" to move it to a phone.'
+            : 'Your API key is not included.'),
+      });
+    } catch (error) {
+      setTransfer({ tone: 'error', text: error?.message ?? 'Could not build the backup.' });
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function update(key, value) {
     await setSetting(key, value);
     setSettings((prev) => ({ ...prev, [key]: value }));
@@ -469,32 +508,25 @@ export default function Settings() {
             <Button
               variant="secondary"
               disabled={busy}
-              onClick={async () => {
-                setBusy(true);
-                setTransfer(null);
-                try {
-                  const backup = await buildBackup();
-                  const blob = new Blob([JSON.stringify(backup)], { type: 'application/json' });
-                  const url = URL.createObjectURL(blob);
-                  const link = document.createElement('a');
-                  link.href = url;
-                  link.download = backupFilename();
-                  link.click();
-                  URL.revokeObjectURL(url);
-                  setTransfer({
-                    tone: 'info',
-                    text: `Exported ${backup.documents.length} document${backup.documents.length === 1 ? '' : 's'} for ${backup.members.length} ${backup.members.length === 1 ? 'person' : 'people'}. Your API key is not included.`,
-                  });
-                } catch (error) {
-                  setTransfer({ tone: 'error', text: error?.message ?? 'Could not build the backup.' });
-                } finally {
-                  setBusy(false);
-                }
-              }}
+              onClick={() => exportBackup(true)}
             >
               {busy ? <Spinner /> : null}
               Export a backup file
             </Button>
+
+            {/* The one that can actually be sent to a phone. Sixty scanned
+                documents come to well over a hundred megabytes once the images
+                are inside the JSON — past what email and most chat apps carry,
+                and enough to make a phone give up parsing it. */}
+            <Button variant="secondary" disabled={busy} onClick={() => exportBackup(false)}>
+              {busy ? <Spinner /> : null}
+              Export the details only — small enough to email
+            </Button>
+            <p className="-mt-1 px-1 text-[13px] text-slate-500 dark:text-slate-400">
+              Everyone, every document, every date and reminder — without the scans. This is
+              the one to send to a phone that cannot sign in; the pictures follow over OneDrive
+              once it can.
+            </p>
 
             <Button variant="secondary" disabled={busy} onClick={() => importRef.current?.click()}>
               Import a backup file
@@ -682,13 +714,15 @@ function Section({ title, children }) {
   );
 }
 
+/** "1 document", "3 people" — pluralised without a second thought at each site. */
+const count = (n, one, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
+
 /**
  * What the sync actually did, in a sentence. Quiet runs say so plainly rather
  * than reciting four zeroes, and anything that did not transfer is named — a
  * silent partial sync is how someone ends up trusting a phone that is behind.
  */
 function describeSync(result) {
-  const count = (n, one, many = one + 's') => `${n} ${n === 1 ? one : many}`;
   const parts = [];
   if (result.pulled) parts.push(`${count(result.pulled, 'record')} came down`);
   if (result.pushed) parts.push(`${count(result.pushed, 'record')} went up`);

@@ -30,13 +30,20 @@ async function dataUrlToBlob(dataUrl) {
 }
 
 /**
- * Everything, photos included, as one JSON object.
+ * Everything, as one JSON object.
  *
- * The API key is deliberately left out: a backup is a file people email to
- * themselves and drop in cloud storage, and a spendable credential should not
- * ride along inside it.
+ * `photos: false` leaves the scans behind, and that is not a lesser backup so
+ * much as a different job. A household of sixty scanned documents runs to a
+ * hundred megabytes once the images are base64'd into JSON — too big to email,
+ * too big for most chat apps, and enough to make a phone fail at JSON.parse.
+ * The records are a few hundred kilobytes and are what makes the app useful:
+ * who, what, and when it expires. The pictures can follow over OneDrive.
+ *
+ * The API key is deliberately left out of both: a backup is a file people email
+ * to themselves and drop in cloud storage, and a spendable credential should
+ * not ride along inside it.
  */
-export async function buildBackup() {
+export async function buildBackup({ photos = true } = {}) {
   const [members, documents, reminders, settings] = await Promise.all([
     db.members.toArray(),
     db.documents.toArray(),
@@ -50,8 +57,8 @@ export async function buildBackup() {
       ...doc,
       // Both images, and both explicitly: a Blob left in the object becomes {}
       // in JSON, which restores as an object the image viewer cannot open.
-      photo: doc.photo ? await blobToDataUrl(doc.photo) : null,
-      photo_back: doc.photo_back ? await blobToDataUrl(doc.photo_back) : null,
+      photo: photos && doc.photo ? await blobToDataUrl(doc.photo) : null,
+      photo_back: photos && doc.photo_back ? await blobToDataUrl(doc.photo_back) : null,
     });
   }
 
@@ -59,6 +66,9 @@ export async function buildBackup() {
     format: BACKUP_FORMAT,
     version: BACKUP_VERSION,
     exported_at: new Date().toISOString(),
+    // Recorded so the restoring device can say "the details arrived, the
+    // pictures did not" rather than leaving someone to wonder where they went.
+    photos_included: Boolean(photos),
     members,
     documents: packed,
     reminders,
@@ -66,9 +76,9 @@ export async function buildBackup() {
   };
 }
 
-export function backupFilename(date = new Date()) {
+export function backupFilename(date = new Date(), { photos = true } = {}) {
   const stamp = date.toISOString().slice(0, 10);
-  return `doctrack-backup-${stamp}.json`;
+  return photos ? `doctrack-backup-${stamp}.json` : `doctrack-details-${stamp}.json`;
 }
 
 /**
@@ -137,5 +147,5 @@ export async function restoreBackup(payload, { onProgress } = {}) {
     documentsAdded += 1;
   }
 
-  return { membersAdded, documentsAdded, skipped };
+  return { membersAdded, documentsAdded, skipped, photos: payload.photos_included !== false };
 }
