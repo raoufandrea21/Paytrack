@@ -9,7 +9,7 @@ import {
   unarchiveDocument,
 } from '../db.js';
 import { documentLabel, documentType } from '../lib/constants.js';
-import { expiryPhraseFor, formatDate, urgencyForDocument } from '../lib/dates.js';
+import { expiryPhraseFor, formatDate, isValidISODate, urgencyForDocument } from '../lib/dates.js';
 import { previewUrl } from '../lib/files.js';
 import FilePreview, { FullScreenPreview } from '../components/FilePreview.jsx';
 import Screen from '../components/Screen.jsx';
@@ -167,11 +167,13 @@ export default function DocumentDetail() {
           {doc.notes ? <Detail label="Notes" value={doc.notes} wrap /> : null}
         </Card>
 
-        {doc.extraction ? (
+        {/* Only the parts that are actually there. A record from an older
+            build, or one that arrived from the folder import, can be missing
+            the model or the score, and "Read by on — · 0% confidence" reads
+            like the app failed at something. */}
+        {readingCredit(doc.extraction) ? (
           <p className="px-1 text-[12px] text-slate-400 dark:text-slate-500">
-            Read by {doc.extraction.model} on{' '}
-            {formatDate(doc.extraction.extracted_at?.slice(0, 10))} ·{' '}
-            {Math.round((doc.extraction.confidence ?? 0) * 100)}% confidence
+            {readingCredit(doc.extraction)}
           </p>
         ) : null}
 

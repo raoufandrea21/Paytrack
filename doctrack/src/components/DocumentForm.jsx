@@ -1,6 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { DOCUMENT_TYPES, previousLabels, typeIsPermanent } from '../lib/constants.js';
 import { expiryPhrase, isValidISODate, urgencyFor } from '../lib/dates.js';
+import { RULES_SETTING, describeLeads, leadsFor } from '../lib/reminderrules.js';
+import { getSetting } from '../db.js';
 import { Banner, Field, Input, Select, Textarea, UrgencyChip } from './ui.jsx';
 
 // Re-exported so the screens keep one import for the form and its rules.
@@ -56,6 +58,12 @@ export default function DocumentForm({
   // is one tap rather than typed out again.
   const labelSuggestions = previousLabels(knownDocuments);
   const isOther = value.type === 'other';
+
+  // The reminder ladder for this kind of document, so the line under the date
+  // says what will actually happen rather than a sentence that used to be true.
+  const [rules, setRules] = useState(null);
+  useEffect(() => { getSetting(RULES_SETTING, null).then(setRules); }, []);
+  const leads = leadsFor(value.type, rules);
 
   return (
     <div className="space-y-4">
@@ -220,8 +228,11 @@ export default function DocumentForm({
         <div className="flex items-center gap-2">
           <UrgencyChip urgency={expiryUrgency}>{expiryPhrase(value.expiry_date)}</UrgencyChip>
           {expiryUrgency.days !== null && expiryUrgency.days > 0 ? (
+            // The real rule for this kind of document, not a fixed sentence —
+            // a passport warns six months ahead and insurance three days, and
+            // promising the same schedule for both was simply untrue.
             <span className="text-[13px] text-slate-500 dark:text-slate-400">
-              Reminders at 60, 30 and 7 days.
+              {leads.length ? `Reminded ${describeLeads(leads).toLowerCase()}.` : 'No reminders for this kind.'}
             </span>
           ) : null}
         </div>
