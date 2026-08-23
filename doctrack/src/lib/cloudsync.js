@@ -28,6 +28,15 @@ import { fileDocument } from './autofile.js';
 /** When this device last finished a sync. Never shared — see runSync. */
 export const LAST_SYNC_SETTING = 'last_sync_at';
 
+/**
+ * How many documents were in the shared folder at that moment.
+ *
+ * The single most useful number when two devices disagree about whether there
+ * is anything to sync: if the laptop says sixty and the phone says none, the
+ * question is answered without anybody having to describe a symptom.
+ */
+export const SHARED_COUNT_SETTING = 'last_sync_shared_documents';
+
 /** Reads this device's side of the world in the shape the merge expects. */
 export async function localState() {
   const [members, documents, tombstones, settings, imports] = await Promise.all([
@@ -197,6 +206,7 @@ export async function runSync(settings, { onStatus, api = graph } = {}) {
   // local on purpose: it is a fact about this phone, not about the household,
   // so it is deliberately not in SHARED_SETTINGS.
   await setSetting(LAST_SYNC_SETTING, new Date().toISOString());
+  await setSetting(SHARED_COUNT_SETTING, merged.documents.length);
 
   say(null);
   return { pulled: applied, pushed: remoteIsStale ? merged.documents.length : 0, photos, inbox };

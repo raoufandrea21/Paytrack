@@ -27,7 +27,7 @@ import {
   signInProblem,
   signOut,
 } from '../lib/onedrive.js';
-import { runSync } from '../lib/cloudsync.js';
+import { LAST_SYNC_SETTING, SHARED_COUNT_SETTING, runSync } from '../lib/cloudsync.js';
 import { BUILD_ID, BUILT_AT, checkForUpdate } from '../lib/version.js';
 import Screen from '../components/Screen.jsx';
 import { Banner, Button, Card, Field, Input, Select, Spinner } from '../components/ui.jsx';
@@ -315,7 +315,14 @@ export default function Settings() {
           <div className="mt-3 flex flex-col gap-2">
             {account ? (
               <>
-                <Banner tone="info">Connected as {account.username}.</Banner>
+                <Banner tone="info">
+                  <p>Connected as {account.username}.</p>
+                  {/* The two numbers that settle an argument between devices:
+                      when this one last synced, and how much was in the shared
+                      folder when it did. A laptop saying sixty and a phone
+                      saying none locates the problem immediately. */}
+                  <p className="mt-1 text-[13px]">{syncStanding(settings)}</p>
+                </Banner>
                 <Button
                   disabled={syncing}
                   onClick={async () => {
@@ -626,6 +633,25 @@ function formatBytes(bytes) {
   const gb = bytes / 1e9;
   if (gb >= 1) return `${gb.toFixed(gb < 10 ? 1 : 0)} GB`;
   return `${Math.max(1, Math.round(bytes / 1e6))} MB`;
+}
+
+/** "Last synced 5 minutes ago · 62 documents in the shared folder." */
+function syncStanding(settings) {
+  const at = settings?.[LAST_SYNC_SETTING];
+  if (!at) return 'This device has not finished a sync yet.';
+
+  const shared = settings?.[SHARED_COUNT_SETTING];
+  const minutes = Math.max(0, Math.round((Date.now() - new Date(at).getTime()) / 60000));
+  const when =
+    minutes < 1 ? 'just now'
+      : minutes < 60 ? `${minutes} minute${minutes === 1 ? '' : 's'} ago`
+        : minutes < 60 * 24 ? `${Math.round(minutes / 60)} hour${Math.round(minutes / 60) === 1 ? '' : 's'} ago`
+          : `${Math.round(minutes / 1440)} day${Math.round(minutes / 1440) === 1 ? '' : 's'} ago`;
+
+  const count = Number.isFinite(Number(shared))
+    ? ` · ${shared} document${Number(shared) === 1 ? '' : 's'} in the shared folder`
+    : '';
+  return `Last synced ${when}${count}.`;
 }
 
 const UPDATE_WORDING = {
