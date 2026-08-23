@@ -6,7 +6,7 @@
  * even if the photo transfer is interrupted, and the Inbox is processed last so
  * newly filed documents go up on the next run rather than racing this one.
  */
-import { db, newUid, putSettingRow, recordTombstone, settingRows } from '../db.js';
+import { db, newUid, putSettingRow, recordTombstone, setSetting, settingRows } from '../db.js';
 import {
   IMPORTS_EPOCH,
   mergeStates,
@@ -24,6 +24,9 @@ import { prepareFile } from './files.js';
 import { readPath } from './filename.js';
 import { extractDocument, extractionAvailable } from './extract.js';
 import { fileDocument } from './autofile.js';
+
+/** When this device last finished a sync. Never shared — see runSync. */
+export const LAST_SYNC_SETTING = 'last_sync_at';
 
 /** Reads this device's side of the world in the shape the merge expects. */
 export async function localState() {
@@ -187,6 +190,13 @@ export async function runSync(settings, { onStatus, api = graph } = {}) {
     console.warn('[doctrack] could not read the Inbox', error);
     return { filed: 0, skipped: 0, error: error?.message ?? 'the Inbox could not be read' };
   });
+
+  // Recorded so a device that is connected but has nothing on it can tell the
+  // difference between "never synced" and "synced, and the folder was empty" —
+  // which are the same blank screen and completely different problems. Device-
+  // local on purpose: it is a fact about this phone, not about the household,
+  // so it is deliberately not in SHARED_SETTINGS.
+  await setSetting(LAST_SYNC_SETTING, new Date().toISOString());
 
   say(null);
   return { pulled: applied, pushed: remoteIsStale ? merged.documents.length : 0, photos, inbox };

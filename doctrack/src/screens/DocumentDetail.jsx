@@ -20,7 +20,14 @@ export default function DocumentDetail() {
   const documentId = Number(id);
   const navigate = useNavigate();
 
-  const doc = useLiveQuery(() => db.documents.get(documentId), [documentId], undefined);
+  // `?? null` matters: Dexie answers a missing row with undefined, which is
+  // also what useLiveQuery means by "still loading" — so without this a link to
+  // a document that has been deleted spins forever instead of saying so.
+  const doc = useLiveQuery(
+    async () => (await db.documents.get(documentId)) ?? null,
+    [documentId],
+    undefined,
+  );
   const member = useLiveQuery(
     () => (doc ? db.members.get(doc.member_id) : null),
     [doc?.member_id],
@@ -283,6 +290,22 @@ export default function DocumentDetail() {
       </div>
     </Screen>
   );
+}
+
+/** "Read by claude on 12 Aug 2026 · 93% confidence", minus whatever is missing. */
+function readingCredit(extraction) {
+  if (!extraction) return null;
+  const parts = [];
+  const when = extraction.extracted_at?.slice(0, 10);
+  if (extraction.model) parts.push(`Read by ${extraction.model}`);
+  if (when && isValidISODate(when)) {
+    parts.push(parts.length ? `on ${formatDate(when)}` : `Read on ${formatDate(when)}`);
+  }
+  const line = parts.join(' ');
+  const score = Number(extraction.confidence);
+  if (!Number.isFinite(score) || score <= 0) return line || null;
+  const percent = `${Math.round(score * 100)}% confidence`;
+  return line ? `${line} · ${percent}` : percent;
 }
 
 function Detail({ label, value, mono, wrap }) {

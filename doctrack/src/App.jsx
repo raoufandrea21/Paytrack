@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Navigate, Route, Routes } from 'react-router-dom';
+import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import Dashboard from './screens/Dashboard.jsx';
 import DocumentEditor from './screens/DocumentEditor.jsx';
 import DocumentDetail from './screens/DocumentDetail.jsx';
@@ -15,6 +15,7 @@ import Settings from './screens/Settings.jsx';
 import { checkRemindersNow } from './lib/notifications.js';
 import { DATABASE_STATE, getSettings, openDatabase } from './db.js';
 import DatabaseError from './components/DatabaseError.jsx';
+import ErrorBoundary from './components/ErrorBoundary.jsx';
 import { currentAccount } from './lib/onedrive.js';
 import { runSync } from './lib/cloudsync.js';
 import { readWatchedFolder } from './lib/driveimport.js';
@@ -53,6 +54,7 @@ async function syncQuietly() {
 }
 
 export default function App() {
+  const location = useLocation();
   // Dexie opens lazily, so a failed or blocked upgrade would otherwise show as
   // a spinner that never resolves. Gate the app on a definite answer.
   const [database, setDatabase] = useState({ state: DATABASE_STATE.OPENING, error: null });
@@ -117,6 +119,16 @@ export default function App() {
   return (
     <>
       {banner}
+      {/* Inside the shell, so a screen that fails to draw does not take the
+          update banner and the rest of the app with it. Reset on every
+          navigation — carrying one bad render around is what made it look like
+          the whole app had died.
+
+          Both the path and the key, because neither alone is enough: the key
+          catches going back to the same screen from a link, and the path
+          catches a hash change driven from outside the router, where react-
+          router leaves the key as "default". */}
+      <ErrorBoundary resetKey={`${location.pathname}${location.search}|${location.key}`}>
       <Routes>
         <Route path="/" element={<Dashboard />} />
         <Route path="/members/new" element={<MemberForm mode="add" />} />
@@ -135,6 +147,7 @@ export default function App() {
         <Route path="/reminders" element={<Reminders />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+      </ErrorBoundary>
     </>
   );
 }

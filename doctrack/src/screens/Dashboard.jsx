@@ -7,6 +7,7 @@ import { byUrgency, shortRemainingFor, standingFor, urgencyForDocument } from '.
 import Screen from '../components/Screen.jsx';
 import DocumentRow from '../components/DocumentRow.jsx';
 import { Button, Card, EmptyState, Spinner, UrgencyChip } from '../components/ui.jsx';
+import EmptyDashboard from '../components/EmptyDashboard.jsx';
 
 // How much of a long list is shown before it asks to be opened. Enough to see
 // what is urgent, few enough that eight people still fit on a phone screen.
@@ -112,7 +113,7 @@ export default function Dashboard() {
         grouped === null
           ? 'Loading…'
           : grouped.length === 0
-            ? 'Nothing on file yet'
+            ? ''
             // The three tiles below already say how urgent things are, so this
             // says the other thing worth knowing at a glance: how much is here.
             : `${grouped.length} ${grouped.length === 1 ? 'person' : 'people'} · ` +
@@ -170,21 +171,9 @@ export default function Dashboard() {
           </div>
         )
       ) : grouped.length === 0 ? (
-        <EmptyState icon="📄" title="Nothing on file yet">
-          <p>
-            Upload photos or PDFs of your documents and DocTrack will read them, sort them by
-            person and set the reminders for you.
-          </p>
-          <Button as="link" to="/upload" className="mt-4">
-            Upload documents
-          </Button>
-          <Link
-            to="/members/new"
-            className="mt-3 block text-[14px] font-medium text-slate-500 underline-offset-4 hover:underline dark:text-slate-400"
-          >
-            Or add a person by hand
-          </Link>
-        </EmptyState>
+        // An empty second device and an empty first one need opposite advice,
+        // so this works out which it is — see EmptyDashboard.
+        <EmptyDashboard />
       ) : (
         <div className="space-y-3">
           <StatusStrip documents={documents ?? []} />

@@ -48,8 +48,12 @@ export default function DocumentEditor({ mode }) {
   const members = useLiveQuery(() => db.members.orderBy('created_at').toArray(), [], null);
   // Only needed for the label suggestions, so an empty list is a fine default.
   const knownDocuments = useLiveQuery(() => db.documents.toArray(), [], []);
+  // `?? null` for the same reason as on the detail screen: Dexie says undefined
+  // for a row that is not there, and useLiveQuery says undefined for "still
+  // loading". Without the difference, editing a document deleted on the other
+  // device is a spinner that never stops rather than a bounce back home.
   const existing = useLiveQuery(
-    () => (documentId ? db.documents.get(documentId) : null),
+    async () => (documentId ? (await db.documents.get(documentId)) ?? null : null),
     [documentId],
     undefined,
   );
