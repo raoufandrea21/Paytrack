@@ -894,18 +894,19 @@ function renderMonthly(){
 function remTbl(rows,empty){
   if(!rows.length)return'<p style="font-size:12px;color:var(--t2);padding:.5rem 0;display:flex;align-items:center;gap:6px">✓'+empty+'</p>';
   rows.sort(function(a,b){return a._d-b._d;});
-  return'<div style="overflow-x:auto"><table><thead><tr><th>Account</th><th>Date</th><th>Description</th><th style="text-align:right">Amount</th><th>Status</th></tr></thead><tbody>'+rows.map(function(r){return'<tr><td style="font-weight:500">'+r.acc+'</td><td style="font-family:var(--m);font-size:11px">'+eff(r)+'</td><td style="color:var(--t2)">'+r.desc+'</td><td style="text-align:right;font-family:var(--m);font-weight:600">'+fmt(r.amount)+'</td><td>'+sbdg(r.status)+'</td></tr>';}).join('')+'</tbody></table></div>';
+  return'<div style="overflow-x:auto"><table><thead><tr><th>Account</th><th>Date</th><th>Description</th><th style="text-align:right">Amount</th><th>Status</th><th></th></tr></thead><tbody>'+rows.map(function(r){return'<tr><td style="font-weight:500">'+r.acc+'</td><td style="font-family:var(--m);font-size:11px">'+eff(r)+'</td><td style="color:var(--t2)">'+r.desc+'</td><td style="text-align:right;font-family:var(--m);font-weight:600">'+fmt(r.amount)+'</td><td>'+sbdg(r.status)+'</td><td style="white-space:nowrap">'+(r.aid!==undefined?payActions(r.aid,r,r.pi):'')+'</td></tr>';}).join('')+'</tbody></table></div>';
 }
 function renderRem(){
   var d30=new Date(TODAY);d30.setDate(d30.getDate()+30);
   var d90=new Date(TODAY);d90.setDate(d90.getDate()+90);
   var ov=[],n30=[],n90=[];
   accs.forEach(function(a){
-    a.pays.forEach(function(p){
+    a.pays.forEach(function(p,pi){
       var d=pd(eff(p));
-      if(p.status==='overdue')ov.push(Object.assign({},p,{acc:a.name,_d:d||TODAY}));
-      else if(owed(p)&&d&&d>=TODAY&&d<=d30)n30.push(Object.assign({},p,{acc:a.name,_d:d}));
-      else if(owed(p)&&d&&d>d30&&d<=d90)n90.push(Object.assign({},p,{acc:a.name,_d:d}));
+      var meta={acc:a.name,aid:a.id,pi:pi};
+      if(p.status==='overdue')ov.push(Object.assign({},p,meta,{_d:d||TODAY}));
+      else if(owed(p)&&d&&d>=TODAY&&d<=d30)n30.push(Object.assign({},p,meta,{_d:d}));
+      else if(owed(p)&&d&&d>d30&&d<=d90)n90.push(Object.assign({},p,meta,{_d:d}));
     });
   });
   document.getElementById('r1').innerHTML=remTbl(ov,'No overdue payments — great!');
