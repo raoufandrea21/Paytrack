@@ -1579,27 +1579,34 @@ function hasWebAuthn(){
   return !!(window.PublicKeyCredential && navigator.credentials && navigator.credentials.create);
 }
 
-function lkOfferBiometric(){
-  if (!hasWebAuthn()) return;
+function lkOfferBiometric(force){
+  var cred=null; try{ cred=localStorage.getItem('pt_cred'); }catch(e){}
+  if(cred && !force){ return; }
+  if(!window.isSecureContext){ alert('Fingerprint needs a secure (https) connection.'); return; }
+  if(!hasWebAuthn()){ alert('This browser does not support fingerprint sign-in.\n\nOn Android use Chrome or the installed app.'); return; }
   PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable().then(function(avail){
-    if (!avail) return;
-    if (!confirm('Unlock PayTrack with your fingerprint on this device?')) return;
-    var ch = new Uint8Array(32); crypto.getRandomValues(ch);
-    return navigator.credentials.create({publicKey: {
-      challenge: ch,
-      rp: {name: 'PayTrack'},
-      user: {id: new TextEncoder().encode('paytrack-user'), name: 'PayTrack', displayName: 'PayTrack'},
-      pubKeyCredParams: [{type:'public-key', alg:-7}, {type:'public-key', alg:-257}],
-      authenticatorSelection: {authenticatorAttachment:'platform', userVerification:'required', residentKey:'preferred'},
-      timeout: 60000, attestation: 'none'
-    }}).then(function(cred){
-      var id = b64u(cred.rawId);
-      try { localStorage.setItem('pt_cred', id); } catch(e){}
-      return fetch('/api/auth?action=webauthn-save', {
-        method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({credentialId: id})
-      }).then(function(){ alert('Fingerprint unlock is on for this device.'); });
+    if(!avail){
+      alert('No fingerprint or face unlock is available to this browser.\n\nCheck a fingerprint is enrolled in Android settings, and open PayTrack from the installed app or Chrome.');
+      return;
+    }
+    if(!confirm('Unlock PayTrack with your fingerprint on this device?')) return;
+    var ch=new Uint8Array(32); crypto.getRandomValues(ch);
+    return navigator.credentials.create({publicKey:{
+      challenge:ch,
+      rp:{name:'PayTrack'},
+      user:{id:new TextEncoder().encode('paytrack-user'),name:'PayTrack',displayName:'PayTrack'},
+      pubKeyCredParams:[{type:'public-key',alg:-7},{type:'public-key',alg:-257}],
+      authenticatorSelection:{authenticatorAttachment:'platform',userVerification:'required',residentKey:'preferred'},
+      timeout:60000, attestation:'none'
+    }}).then(function(c){
+      var id=b64u(c.rawId);
+      try{ localStorage.setItem('pt_cred',id); }catch(e){}
+      return fetch('/api/auth?action=webauthn-save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({credentialId:id})})
+        .then(function(){ alert('Fingerprint unlock is on for this device.'); });
     });
-  }).catch(function(){ /* cancelled or unsupported */ });
+  }).catch(function(err){
+    alert('Could not set up fingerprint on this device.\n\n'+(err && err.message ? err.message : err));
+  });
 }
 
 function lkBiometric(){
@@ -1644,13 +1651,12 @@ function lkSecurity(){
   fetch('/api/auth?action=status',{cache:'no-store'}).then(function(r){return r.json();}).then(function(j){
     if(!j.configured){ lkSetup(); return; }
     var cred=null; try{ cred=localStorage.getItem('pt_cred'); }catch(e){}
-    var msg='A passcode is set.'+(cred?' Fingerprint unlock is on for this device.':'');
-    if(!cred && hasWebAuthn()){
-      if(confirm(msg+'\n\nSet up fingerprint unlock on this device?')){ lkOfferBiometric(); return; }
-    }
-    if(confirm(msg+'\n\nLock PayTrack now?')){
-      fetch('/api/auth?action=logout',{method:'POST'}).then(function(){ location.reload(); });
-    }
+    var msg='Passcode: on\nFingerprint on THIS device: '+(cred?'on':'not set up');
+    var choice=prompt(msg+'\n\nType:\n  F  set up / redo fingerprint here\n  L  lock PayTrack now','F');
+    if(!choice) return;
+    choice=choice.trim().toUpperCase();
+    if(choice==='F'){ lkOfferBiometric(true); return; }
+    if(choice==='L'){ fetch('/api/auth?action=logout',{method:'POST'}).then(function(){ location.reload(); }); }
   }).catch(function(){ alert('Could not reach the server.'); });
 }
 
