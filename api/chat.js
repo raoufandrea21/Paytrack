@@ -21,6 +21,10 @@ export default async function handler(req) {
       let totalOutstanding = 0, totalPaid = 0, overdueTotal = 0;
       const overdueItems = [], upcomingItems = [];
       accs.forEach(a => {
+        // debt with no payment rows (open-ended lender loans) still counts
+        const sched = (a.pays || []).reduce((s, p) => s + (p.amount || 0), 0);
+        const unscheduled = Math.max(0, (a.principal || 0) - sched);
+        totalOutstanding += unscheduled;
         if (!a.pays) return;
         a.pays.forEach(p => {
           if (p.status === 'paid') { totalPaid += p.amount; return; }
@@ -55,9 +59,12 @@ ${accs.map(a => {
   const paid = (a.pays||[]).filter(p=>p.status==='paid').reduce((s,p)=>s+p.amount,0);
   const out = (a.pays||[]).filter(p=>p.status!=='paid').reduce((s,p)=>s+p.amount,0);
   const ov = (a.pays||[]).filter(p=>p.status==='overdue').reduce((s,p)=>s+p.amount,0);
-  const total = paid+out;
+  const sched = (a.pays||[]).reduce((s,p)=>s+(p.amount||0),0);
+  const unscheduled = Math.max(0, (a.principal||0) - sched);
+  const total = paid+out+unscheduled;
   const pct = total>0?Math.round(paid/total*100):0;
-  return '- ' + a.name + ' (' + a.type + '): Total ' + fmt(total) + ' | Paid ' + fmt(paid) + ' (' + pct + '%) | Outstanding ' + fmt(out) + (ov>0?' | OVERDUE '+fmt(ov):'');
+  return '- ' + a.name + ' (' + a.type + '): Total ' + fmt(total) + ' | Paid ' + fmt(paid) + ' (' + pct + '%) | Outstanding ' + fmt(out+unscheduled)
+    + (unscheduled>0?' | '+fmt(unscheduled)+' UNSCHEDULED (no dated payments)':'') + (ov>0?' | OVERDUE '+fmt(ov):'');
 }).join('\n')}
 
 ${overdueItems.length>0 ? 'OVERDUE ('+overdueItems.length+'):\n'+overdueItems.slice(0,10).map(i=>'- '+i).join('\n') : 'NO OVERDUE PAYMENTS'}

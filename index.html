@@ -227,7 +227,7 @@ label{display:block;font-size:11px;color:var(--t2);margin-bottom:4px;font-weight
       <div style="position:absolute;top:-20px;right:-20px;width:80px;height:80px;background:rgba(242,107,107,0.1);border-radius:50%"></div>
       <div style="font-size:10px;font-weight:700;color:var(--red);text-transform:uppercase;letter-spacing:1px;margin-bottom:.5rem">Total Outstanding</div>
       <div style="font-size:22px;font-weight:700;color:var(--t1);font-family:var(--m);letter-spacing:-1px" id="m1">—</div>
-      <div style="font-size:11px;color:var(--t2);margin-top:.5rem">Across all accounts</div>
+      <div style="font-size:11px;color:var(--t2);margin-top:.5rem" id="m1-sub">Across all accounts</div>
     </div>
     <div onclick="go('accs',null)" style="background:linear-gradient(135deg,rgba(62,207,142,0.15),rgba(62,207,142,0.05));border:1px solid rgba(62,207,142,0.3);border-radius:14px;padding:1.25rem;cursor:pointer;position:relative;overflow:hidden">
       <div style="position:absolute;top:-20px;right:-20px;width:80px;height:80px;background:rgba(62,207,142,0.1);border-radius:50%"></div>
@@ -435,6 +435,15 @@ function fromInputDate(s){ if(!s) return ''; var m=(''+s).match(/^(\d{4})-(\d{2}
 // from every total and view. cfConfig may not be loaded yet on first paint, so
 // default to hidden (false) until loaded.
 function fcVisible(){ return true; } // forecasts always shown
+// Money owed that no payment row represents — e.g. an open-ended loan from a
+// lender with no agreed schedule. Without this it is missing from every total.
+// Schedules that exceed principal (interest, fees, forecasts) return 0, not a negative.
+function unsched(a){
+  if(!a)return 0;
+  var sched=(a.pays||[]).reduce(function(s,p){return s+(p.amount||0);},0);
+  return Math.max(0,(a.principal||0)-sched);
+}
+function unschedTotal(){ return accs.reduce(function(s,a){return s+unsched(a);},0); }
 function visPays(a){ if(!a||!a.pays) return []; return fcVisible()?a.pays:a.pays.filter(function(p){return !p.forecast;}); }
 function sbdg(s){var m={paid:'Paid',overdue:'Overdue',notpaid:'Not paid',deferred:'Deferred',confirm:'Confirm?',delayed:'Delayed'};var c={paid:'bp',overdue:'bo',notpaid:'bn',deferred:'bd',confirm:'bn',delayed:'bo'};return'<span class="bdg '+(c[s]||'bn')+'">'+(m[s]||s)+'</span>';}
 function fcTag(){return '<span style="background:rgba(167,139,250,.15);color:var(--purple);font-size:9px;font-weight:700;padding:1px 6px;border-radius:99px;margin-left:4px">FORECAST</span>';}
@@ -701,11 +710,17 @@ function renderDash(){
       if(x.status!=='paid'&&d&&d.getFullYear()===nextYr&&d.getMonth()===nextMo)nmo+=x.amount;
     });
   });
+  var uns=unschedTotal();
+  o+=uns;                       // unscheduled debt is still debt
   var sv=stocks.reduce(function(s,x){return s+x.qty*(x.cp||0);},0);
   var bal=sv-o;
   var gl=stocks.reduce(function(s,x){return s+x.qty*((x.cp||0)-(x.bp||0));},0);
   var ovc=accs.reduce(function(s,a){return s+visPays(a).filter(function(px){return px.status==='overdue';}).length;},0);
   document.getElementById('m1').textContent=fmt(o);
+  var m1s=document.getElementById('m1-sub');
+  if(m1s) m1s.innerHTML = uns>0
+    ? 'Across all accounts · <span style="color:var(--amber)">'+fmt(uns)+' unscheduled</span>'
+    : 'Across all accounts';
   document.getElementById('m2').textContent=fmt(p);
   var tot=o+p;
   document.getElementById('m2-pct').textContent=tot>0?Math.round(p/tot*100)+'% of total':'All time';
@@ -771,7 +786,8 @@ function renderDash(){
 
 function renderAccs(){
   document.getElementById('aclist').innerHTML=accs.map(function(a){
-    var debt=visPays(a).filter(function(p){return p.status!=='paid';}).reduce(function(s,p){return s+p.amount;},0);
+    var uns=unsched(a);
+    var debt=visPays(a).filter(function(p){return p.status!=='paid';}).reduce(function(s,p){return s+p.amount;},0)+uns;
     var paid=visPays(a).filter(function(p){return p.status==='paid';}).reduce(function(s,p){return s+p.amount;},0);
     var ov=visPays(a).filter(function(p){return p.status==='overdue';}).reduce(function(s,p){return s+p.amount;},0);
     var tot=paid+debt,pct=tot>0?Math.round(paid/tot*100):0;
@@ -780,8 +796,8 @@ function renderAccs(){
       var hn=p.nd&&p.nd.trim();
       var fcRow=p.forecast?'background:rgba(167,139,250,.05);border-left:2px solid var(--purple)':'';var delBtn=' <button class="btn-s btn-d" onclick="delPay(\''+a.id+'\','+i+')" title="Delete this payment">✕</button>';var acts=(p.forecast?'<button class="btn-s" onclick="confirmForecast(\''+a.id+'\','+i+')" style="color:var(--purple)">✓ Confirm real</button> <button class="btn-s" onclick="opEdit(\''+a.id+'\','+i+')">✎ Edit</button>':(payActions(a.id,p,i)+''+(a.defer&&p.status!=='paid'?' <button class="btn-s" onclick="deferP(\''+a.id+'\','+i+')">Defer</button>':'')+' <button class="btn-s" onclick="opEdit(\''+a.id+'\','+i+')">✎ Edit</button>'))+delBtn;return'<tr style="'+fcRow+'"><td style="color:var(--t3);font-family:var(--m);font-size:10px">'+(i+1)+'</td><td style="font-family:var(--m);font-size:11px">'+eff(p)+(hn?'<br><span style="font-size:10px;color:var(--t3);text-decoration:line-through">'+p.dt+'</span>':'')+'</td><td style="color:var(--t2)">'+p.desc+(p.forecast?fcTag():'')+'</td><td style="font-family:var(--m);font-size:10px;color:var(--t3)">'+(p.chq||'—')+'</td><td style="text-align:right;font-family:var(--m);font-weight:600">'+fmt(p.amount)+'</td><td style="color:var(--t3);font-size:11px">'+(p.pct||'')+'</td><td>'+(p.forecast?'':sbdg(p.status))+'</td><td style="white-space:nowrap">'+acts+'</td></tr>';
     }).join('');
-    var sb='';
-    return'<div class="ar"><div class="ah" onclick="togAcc(\'d-'+a.id+'\')"><div style="display:flex;align-items:center;gap:12px"><div style="width:36px;height:36px;border-radius:10px;background:rgba(91,156,246,.1);color:'+tcl(a.type)+';display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0"><i class="ti ti-'+tic(a.type)+'"></i></div><div><div style="font-weight:600;font-size:14px">'+a.name+' '+sb+'</div><div style="font-size:11px;color:var(--t2);margin-top:2px">'+a.type+' · Principal: '+fmt(a.principal)+(a.defer?' · <span style="color:var(--blue)">defer on</span>':'')+'</div><div class="prog"><div class="prog-f" style="width:'+pct+'%"></div></div><div style="font-size:10px;color:var(--t3);margin-top:2px">'+pct+'% paid</div></div></div><div style="text-align:right;display:flex;align-items:center;gap:12px"><div><div style="font-weight:600;font-size:15px;font-family:var(--m);color:var(--red)">'+fmt(debt)+'</div><div style="font-size:11px;color:var(--t2);margin-top:2px">'+fmt(paid)+' paid'+(ov?' · <span style="color:var(--red)">'+fmt(ov)+' overdue</span>':'')+'</div></div><button class="btn-d btn-s" onclick="event.stopPropagation();opDel(\''+a.id+'\')">Delete</button></div></div><div class="adet" id="d-'+a.id+'"><div style="padding:8px 14px;border-bottom:1px solid var(--b1);display:flex;gap:8px"><button class="btn-s" onclick="opAddPay(\''+a.id+'\')">+ Add payment</button><button class="btn-s" onclick="openAutoForecast(\''+a.id+'\')" style="color:var(--purple)"><i class="ti ti-wand"></i> Auto-forecast</button><div id="pselbar-'+a.id+'" style="display:none;align-items:center;gap:8px;margin-left:auto"><span id="psellbl-'+a.id+'" style="font-size:11px;color:var(--t2)">0 selected</span><button class="btn-s btn-d" onclick="cfDelSelected(\''+a.id+'\')"><i class="ti ti-trash"></i> Delete selected</button></div></div><div class="remrow">🔔 Remind me <input type="number" min="0" max="90" value="'+(a.remDays||7)+'" onchange="setRem(\''+a.id+'\',this.value)"> days before each due date</div>'+(a.pays.length?'<div style="overflow-x:auto"><table><thead><tr><th style="width:24px"><input type="checkbox" onchange="cfSelAll(\''+a.id+'\',this.checked)" style="width:auto" title="Select all"></th><th>#</th><th>Date</th><th>Description</th><th>Chq</th><th style="text-align:right">Amount</th><th>%</th><th>Status</th><th></th></tr></thead><tbody>'+rows+'</tbody></table></div>':'<p style="padding:1rem;font-size:12px;color:var(--t2)">No payments yet.</p>')+'</div></div>';
+    var sb=uns>0?'<span style="font-size:10px;font-weight:600;color:var(--amber);background:rgba(245,166,35,.14);padding:2px 7px;border-radius:100px;margin-left:6px">'+fmt(uns)+' unscheduled</span>':'';
+    return'<div class="ar"><div class="ah" onclick="togAcc(\'d-'+a.id+'\')"><div style="display:flex;align-items:center;gap:12px"><div style="width:36px;height:36px;border-radius:10px;background:rgba(91,156,246,.1);color:'+tcl(a.type)+';display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0"><i class="ti ti-'+tic(a.type)+'"></i></div><div><div style="font-weight:600;font-size:14px">'+a.name+' '+sb+'</div><div style="font-size:11px;color:var(--t2);margin-top:2px">'+a.type+' · Principal: '+fmt(a.principal)+(a.defer?' · <span style="color:var(--blue)">defer on</span>':'')+'</div><div class="prog"><div class="prog-f" style="width:'+pct+'%"></div></div><div style="font-size:10px;color:var(--t3);margin-top:2px">'+pct+'% paid</div></div></div><div style="text-align:right;display:flex;align-items:center;gap:12px"><div><div style="font-weight:600;font-size:15px;font-family:var(--m);color:var(--red)">'+fmt(debt)+'</div><div style="font-size:11px;color:var(--t2);margin-top:2px">'+fmt(paid)+' paid'+(ov?' · <span style="color:var(--red)">'+fmt(ov)+' overdue</span>':'')+'</div></div><button class="btn-d btn-s" onclick="event.stopPropagation();opDel(\''+a.id+'\')">Delete</button></div></div><div class="adet" id="d-'+a.id+'"><div style="padding:8px 14px;border-bottom:1px solid var(--b1);display:flex;gap:8px"><button class="btn-s" onclick="opAddPay(\''+a.id+'\')">+ Add payment</button><button class="btn-s" onclick="openAutoForecast(\''+a.id+'\')" style="color:var(--purple)"><i class="ti ti-wand"></i> Auto-forecast</button><div id="pselbar-'+a.id+'" style="display:none;align-items:center;gap:8px;margin-left:auto"><span id="psellbl-'+a.id+'" style="font-size:11px;color:var(--t2)">0 selected</span><button class="btn-s btn-d" onclick="cfDelSelected(\''+a.id+'\')"><i class="ti ti-trash"></i> Delete selected</button></div></div><div class="remrow">🔔 Remind me <input type="number" min="0" max="90" value="'+(a.remDays||7)+'" onchange="setRem(\''+a.id+'\',this.value)"> days before each due date</div>'+(a.pays.length?'<div style="overflow-x:auto"><table><thead><tr><th style="width:24px"><input type="checkbox" onchange="cfSelAll(\''+a.id+'\',this.checked)" style="width:auto" title="Select all"></th><th>#</th><th>Date</th><th>Description</th><th>Chq</th><th style="text-align:right">Amount</th><th>%</th><th>Status</th><th></th></tr></thead><tbody>'+rows+'</tbody></table></div>':'<p style="padding:1rem;font-size:12px;color:var(--t2)">'+(uns>0?'No payment schedule. The '+fmt(uns)+' principal counts toward your totals, but with no dates it can never appear in the monthly view or trigger a reminder. Add payments to schedule it.':'No payments yet.')+'</p>')+'</div></div>';
   }).join('');
   // restore expanded panels after re-render
   Object.keys(cfOpenAccs).forEach(function(id){ if(cfOpenAccs[id]){ var el=document.getElementById(id); if(el) el.classList.add('on'); } });
