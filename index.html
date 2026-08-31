@@ -158,24 +158,49 @@ label{display:block;font-size:11px;color:var(--t2);margin-bottom:4px;font-weight
   .msheet-t{font-size:14px;font-weight:600;color:var(--t1)}
   .msheet-s{font-size:11px;color:var(--t2);margin-top:1px}
 }
+.ic{width:1em;height:1em;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0;display:block}
+.tbi-i .ic{width:22px;height:22px}
+.ni .ic{width:18px;height:18px}
+.msheet-r>span .ic{width:22px;height:22px}
 .remrow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 14px;border-bottom:1px solid var(--b1);font-size:12px;color:var(--t2)}
 .remrow input{width:64px;min-height:34px}
 </style>
 </head>
 <body>
+<!-- Icons: coolicons by Kryston Schwarze (https://github.com/krystonschwarze/coolicons), CC BY 4.0 -->
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true"><symbol id="ic-home" viewBox="0 0 24 24" fill="none"><g>
+<path d="M20 17.0002V11.4522C20 10.9179 19.9995 10.6506 19.9346 10.4019C19.877 10.1816 19.7825 9.97307 19.6546 9.78464C19.5102 9.57201 19.3096 9.39569 18.9074 9.04383L14.1074 4.84383C13.3608 4.19054 12.9875 3.86406 12.5674 3.73982C12.1972 3.63035 11.8026 3.63035 11.4324 3.73982C11.0126 3.86397 10.6398 4.19014 9.89436 4.84244L5.09277 9.04383C4.69064 9.39569 4.49004 9.57201 4.3457 9.78464C4.21779 9.97307 4.12255 10.1816 4.06497 10.4019C4 10.6506 4 10.9179 4 11.4522V17.0002C4 17.932 4 18.3978 4.15224 18.7654C4.35523 19.2554 4.74432 19.6452 5.23438 19.8482C5.60192 20.0005 6.06786 20.0005 6.99974 20.0005C7.93163 20.0005 8.39808 20.0005 8.76562 19.8482C9.25568 19.6452 9.64467 19.2555 9.84766 18.7654C9.9999 18.3979 10 17.932 10 17.0001V16.0001C10 14.8955 10.8954 14.0001 12 14.0001C13.1046 14.0001 14 14.8955 14 16.0001V17.0001C14 17.932 14 18.3979 14.1522 18.7654C14.3552 19.2555 14.7443 19.6452 15.2344 19.8482C15.6019 20.0005 16.0679 20.0005 16.9997 20.0005C17.9316 20.0005 18.3981 20.0005 18.7656 19.8482C19.2557 19.6452 19.6447 19.2554 19.8477 18.7654C19.9999 18.3978 20 17.932 20 17.0002Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+</g></symbol><symbol id="ic-accounts" viewBox="0 0 24 24" fill="none"><g>
+<path d="M2 20H4M4 20H12M4 20V7.2002C4 6.08009 4 5.51962 4.21799 5.0918C4.40973 4.71547 4.71547 4.40973 5.0918 4.21799C5.51962 4 6.08009 4 7.2002 4H8.8002C9.9203 4 10.4801 4 10.9079 4.21799C11.2842 4.40973 11.5905 4.71547 11.7822 5.0918C12 5.5192 12 6.07899 12 7.19691V10.2461M12 20H20M12 20V10.2461M20 20H22M20 20V14.3682C20 13.843 20 13.5799 19.937 13.335C19.8812 13.1178 19.7889 12.9118 19.6647 12.7252C19.5245 12.5146 19.3295 12.3388 18.9387 11.9877L16.6387 9.92139C15.8827 9.2422 15.5045 8.90275 15.0771 8.77393C14.7007 8.66045 14.299 8.66045 13.9226 8.77393C13.4953 8.90273 13.1173 9.24235 12.3614 9.92139L12 10.2461" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+</g></symbol><symbol id="ic-monthly" viewBox="0 0 24 24" fill="none"><g>
+<path d="M4 8H20M4 8V16.8002C4 17.9203 4 18.4801 4.21799 18.9079C4.40973 19.2842 4.71547 19.5905 5.0918 19.7822C5.5192 20 6.07899 20 7.19691 20H16.8031C17.921 20 18.48 20 18.9074 19.7822C19.2837 19.5905 19.5905 19.2842 19.7822 18.9079C20 18.4805 20 17.9215 20 16.8036V8M4 8V7.2002C4 6.08009 4 5.51962 4.21799 5.0918C4.40973 4.71547 4.71547 4.40973 5.0918 4.21799C5.51962 4 6.08009 4 7.2002 4H8M20 8V7.19691C20 6.07899 20 5.5192 19.7822 5.0918C19.5905 4.71547 19.2837 4.40973 18.9074 4.21799C18.4796 4 17.9203 4 16.8002 4H16M16 2V4M16 4H8M8 2V4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+</g></symbol><symbol id="ic-more" viewBox="0 0 24 24" fill="none"><g>
+<g>
+<path d="M17 12C17 12.5523 17.4477 13 18 13C18.5523 13 19 12.5523 19 12C19 11.4477 18.5523 11 18 11C17.4477 11 17 11.4477 17 12Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M11 12C11 12.5523 11.4477 13 12 13C12.5523 13 13 12.5523 13 12C13 11.4477 12.5523 11 12 11C11.4477 11 11 11.4477 11 12Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M5 12C5 12.5523 5.44772 13 6 13C6.55228 13 7 12.5523 7 12C7 11.4477 6.55228 11 6 11C5.44772 11 5 11.4477 5 12Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+</g>
+</g></symbol><symbol id="ic-stocks" viewBox="0 0 24 24" fill="none"><g>
+<path d="M3 15.0002V16.8C3 17.9201 3 18.4798 3.21799 18.9076C3.40973 19.2839 3.71547 19.5905 4.0918 19.7822C4.5192 20 5.07899 20 6.19691 20H21.0002M3 15.0002V5M3 15.0002L6.8534 11.7891L6.85658 11.7865C7.55366 11.2056 7.90288 10.9146 8.28154 10.7964C8.72887 10.6567 9.21071 10.6788 9.64355 10.8584C10.0105 11.0106 10.3323 11.3324 10.9758 11.9759L10.9822 11.9823C11.6357 12.6358 11.9633 12.9635 12.3362 13.1153C12.7774 13.2951 13.2685 13.3106 13.7207 13.1606C14.1041 13.0334 14.4542 12.7275 15.1543 12.115L21 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+</g></symbol><symbol id="ic-ai" viewBox="0 0 24 24" fill="none"><g>
+<path d="M7.50977 19.8018C8.83126 20.5639 10.3645 21 11.9996 21C16.9702 21 21 16.9706 21 12C21 7.02944 16.9706 3 12 3C7.02944 3 3 7.02944 3 12C3 13.6351 3.43604 15.1684 4.19819 16.4899L4.20114 16.495C4.27448 16.6221 4.31146 16.6863 4.32821 16.7469C4.34401 16.804 4.34842 16.8554 4.34437 16.9146C4.34003 16.9781 4.3186 17.044 4.27468 17.1758L3.50586 19.4823L3.50489 19.4853C3.34268 19.9719 3.26157 20.2152 3.31938 20.3774C3.36979 20.5187 3.48169 20.6303 3.62305 20.6807C3.78482 20.7384 4.02705 20.6577 4.51155 20.4962L4.51758 20.4939L6.82405 19.7251C6.95537 19.6813 7.02214 19.6591 7.08559 19.6548C7.14475 19.6507 7.19578 19.6561 7.25293 19.6719C7.31368 19.6887 7.37783 19.7257 7.50563 19.7994L7.50977 19.8018Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+</g></symbol><symbol id="ic-export" viewBox="0 0 24 24" fill="none"><g>
+<path d="M12 12V18M12 18L15 16M12 18L9 16M13 3.00087C12.9045 3 12.7973 3 12.6747 3H8.2002C7.08009 3 6.51962 3 6.0918 3.21799C5.71547 3.40973 5.40973 3.71547 5.21799 4.0918C5 4.51962 5 5.08009 5 6.2002V17.8002C5 18.9203 5 19.4801 5.21799 19.9079C5.40973 20.2842 5.71547 20.5905 6.0918 20.7822C6.5192 21 7.07899 21 8.19691 21H15.8031C16.921 21 17.48 21 17.9074 20.7822C18.2837 20.5905 18.5905 20.2842 18.7822 19.9079C19 19.4805 19 18.9215 19 17.8036V9.32568C19 9.20296 19 9.09561 18.9991 9M13 3.00087C13.2856 3.00347 13.4663 3.01385 13.6388 3.05526C13.8429 3.10425 14.0379 3.18526 14.2168 3.29492C14.4186 3.41857 14.5918 3.59182 14.9375 3.9375L18.063 7.06298C18.4089 7.40889 18.5809 7.58136 18.7046 7.78319C18.8142 7.96214 18.8953 8.15726 18.9443 8.36133C18.9857 8.53376 18.9963 8.71451 18.9991 9M13 3.00087V5.8C13 6.9201 13 7.47977 13.218 7.90759C13.4097 8.28392 13.7155 8.59048 14.0918 8.78223C14.5192 9 15.079 9 16.1969 9H18.9991M18.9991 9H19.0002" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+</g></symbol></svg>
+
 <div class="app">
 <div class="sb">
   <div class="logo"><div class="logo-icon">💳</div><div><div class="logo-text">PayTrack</div><div class="logo-sub">Financial OS</div></div></div>
   <div class="nl">Overview</div>
-  <div class="ni on" onclick="go('dash',this)"><i class="ti ti-home"></i><span>Home</span><span class="dot" id="ov-dot">0</span></div>
+  <div class="ni on" onclick="go('dash',this)"><svg class="ic"><use href="#ic-home"/></svg><span>Home</span><span class="dot" id="ov-dot">0</span></div>
   <div class="nl">Finance</div>
-  <div class="ni" onclick="go('accs',this)"><i class="ti ti-building-bank"></i><span>Accounts</span></div>
-  <div class="ni" onclick="go('monthly',this)"><i class="ti ti-calendar-stats"></i><span>Monthly view</span></div>
+  <div class="ni" onclick="go('accs',this)"><svg class="ic"><use href="#ic-accounts"/></svg><span>Accounts</span></div>
+  <div class="ni" onclick="go('monthly',this)"><svg class="ic"><use href="#ic-monthly"/></svg><span>Monthly view</span></div>
   <div class="nl">Investments</div>
-  <div class="ni" onclick="go('stk',this)"><i class="ti ti-chart-line"></i><span>Stocks</span></div>
+  <div class="ni" onclick="go('stk',this)"><svg class="ic"><use href="#ic-stocks"/></svg><span>Stocks</span></div>
   <div class="nl">Tools</div>
-  <div class="ni" onclick="go('ai',this)"><i class="ti ti-robot"></i><span>AI assistant</span></div>
-  <div class="ni" onclick="go('exp',this)"><i class="ti ti-download"></i><span>Export</span></div>
+  <div class="ni" onclick="go('ai',this)"><svg class="ic"><use href="#ic-ai"/></svg><span>AI assistant</span></div>
+  <div class="ni" onclick="go('exp',this)"><svg class="ic"><use href="#ic-export"/></svg><span>Export</span></div>
   <div class="sb-foot"><div class="av">RA</div><div><div style="font-size:13px;font-weight:500">Raouf Andrea</div><div style="font-size:10px;color:var(--t2)">mr.raouf@gmail.com</div></div></div>
 </div>
 
@@ -1529,18 +1554,18 @@ function urlB64ToUint8(base64String){
 
 <div class="ovlay" id="m-tv" style="display:none;align-items:center;justify-content:center"><div style="background:var(--bg2);border:1px solid var(--b2);border-radius:16px;width:92vw;max-width:1000px;height:85vh;display:flex;flex-direction:column;overflow:hidden"><div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--b1)"><div style="font-size:14px;font-weight:600" id="tv-title">Chart</div><button onclick="cM('m-tv');document.getElementById('tv-frame').src=''" style="font-size:12px">Close</button></div><iframe id="tv-frame" src="" style="flex:1;border:none;border-radius:0 0 16px 16px" allowfullscreen></iframe></div></div>
 <nav class="bnav">
-  <div class="tbi on" onclick="go('dash',null);bnSet(0)"><span class="tbi-i"><i class="ti ti-home"></i></span><span>Home</span><span class="bdot" id="ov-dot-m">0</span></div>
-  <div class="tbi" onclick="go('accs',null);bnSet(1)"><span class="tbi-i"><i class="ti ti-building-bank"></i></span><span>Accounts</span></div>
-  <div class="tbi" onclick="go('monthly',null);bnSet(2)"><span class="tbi-i"><i class="ti ti-calendar-stats"></i></span><span>Monthly</span></div>
-  <div class="tbi" onclick="openMore()"><span class="tbi-i"><i class="ti ti-dots"></i></span><span>More</span></div>
+  <div class="tbi on" onclick="go('dash',null);bnSet(0)"><span class="tbi-i"><svg class="ic"><use href="#ic-home"/></svg></span><span>Home</span><span class="bdot" id="ov-dot-m">0</span></div>
+  <div class="tbi" onclick="go('accs',null);bnSet(1)"><span class="tbi-i"><svg class="ic"><use href="#ic-accounts"/></svg></span><span>Accounts</span></div>
+  <div class="tbi" onclick="go('monthly',null);bnSet(2)"><span class="tbi-i"><svg class="ic"><use href="#ic-monthly"/></svg></span><span>Monthly</span></div>
+  <div class="tbi" onclick="openMore()"><span class="tbi-i"><svg class="ic"><use href="#ic-more"/></svg></span><span>More</span></div>
 </nav>
 
 <div class="msheet" id="more-sheet" onclick="if(event.target===this)closeMore()">
   <div class="msheet-in">
     <div class="msheet-grip"></div>
-    <div class="msheet-r" onclick="closeMore();go('stk',null)"><span><i class="ti ti-chart-line"></i></span><div><div class="msheet-t">Stocks</div><div class="msheet-s">Portfolio &amp; live prices</div></div></div>
-    <div class="msheet-r" onclick="closeMore();go('ai',null)"><span><i class="ti ti-robot"></i></span><div><div class="msheet-t">AI assistant</div><div class="msheet-s">Ask about your finances</div></div></div>
-    <div class="msheet-r" onclick="closeMore();go('exp',null)"><span><i class="ti ti-download"></i></span><div><div class="msheet-t">Export</div><div class="msheet-s">Report, Excel, print</div></div></div>
+    <div class="msheet-r" onclick="closeMore();go('stk',null)"><span><svg class="ic"><use href="#ic-stocks"/></svg></span><div><div class="msheet-t">Stocks</div><div class="msheet-s">Portfolio &amp; live prices</div></div></div>
+    <div class="msheet-r" onclick="closeMore();go('ai',null)"><span><svg class="ic"><use href="#ic-ai"/></svg></span><div><div class="msheet-t">AI assistant</div><div class="msheet-s">Ask about your finances</div></div></div>
+    <div class="msheet-r" onclick="closeMore();go('exp',null)"><span><svg class="ic"><use href="#ic-export"/></svg></span><div><div class="msheet-t">Export</div><div class="msheet-s">Report, Excel, print</div></div></div>
   </div>
 </div>
 </body>
