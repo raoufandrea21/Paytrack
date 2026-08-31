@@ -167,15 +167,15 @@ label{display:block;font-size:11px;color:var(--t2);margin-bottom:4px;font-weight
 <div class="sb">
   <div class="logo"><div class="logo-icon">💳</div><div><div class="logo-text">PayTrack</div><div class="logo-sub">Financial OS</div></div></div>
   <div class="nl">Overview</div>
-  <div class="ni on" onclick="go('dash',this)">▣<span>Home</span><span class="dot" id="ov-dot">0</span></div>
+  <div class="ni on" onclick="go('dash',this)"><i class="ti ti-home"></i><span>Home</span><span class="dot" id="ov-dot">0</span></div>
   <div class="nl">Finance</div>
-  <div class="ni" onclick="go('accs',this)">🏦<span>Accounts</span></div>
-  <div class="ni" onclick="go('monthly',this)">📊<span>Monthly view</span></div>
+  <div class="ni" onclick="go('accs',this)"><i class="ti ti-building-bank"></i><span>Accounts</span></div>
+  <div class="ni" onclick="go('monthly',this)"><i class="ti ti-calendar-stats"></i><span>Monthly view</span></div>
   <div class="nl">Investments</div>
-  <div class="ni" onclick="go('stk',this)">📈<span>Stocks</span></div>
+  <div class="ni" onclick="go('stk',this)"><i class="ti ti-chart-line"></i><span>Stocks</span></div>
   <div class="nl">Tools</div>
-  <div class="ni" onclick="go('ai',this)">🤖<span>AI assistant</span></div>
-  <div class="ni" onclick="go('exp',this)">↓<span>Export</span></div>
+  <div class="ni" onclick="go('ai',this)"><i class="ti ti-robot"></i><span>AI assistant</span></div>
+  <div class="ni" onclick="go('exp',this)"><i class="ti ti-download"></i><span>Export</span></div>
   <div class="sb-foot"><div class="av">RA</div><div><div style="font-size:13px;font-weight:500">Raouf Andrea</div><div style="font-size:10px;color:var(--t2)">mr.raouf@gmail.com</div></div></div>
 </div>
 
@@ -1110,7 +1110,7 @@ async function doAI(){
 function askC(q){document.getElementById('ai-in').value=q;doAI();}
 
 var pgTitles={dash:'Home',accs:'Accounts',monthly:'Monthly view',stk:'Stocks',ai:'AI assistant',exp:'Export'};
-var bnPage={dash:0,accs:1,stk:2};
+var bnPage={dash:0,accs:1,monthly:2};
 function bnSet(i){var b=document.querySelectorAll('.tbi');b.forEach(function(n,k){n.classList.toggle('on',k===i);});}
 function openMore(){document.getElementById('more-sheet').classList.add('on');}
 function closeMore(){document.getElementById('more-sheet').classList.remove('on');}
@@ -1134,6 +1134,7 @@ function go(pg,el){
 }
 function rAll(){
   renderDash();
+  try{renderRem();}catch(e){}
   var pgs=['accs','monthly','stk','exp'];
   pgs.forEach(function(p){if(document.getElementById('p-'+p)&&document.getElementById('p-'+p).classList.contains('on')){if(p==='accs')renderAccs();if(p==='monthly')renderMonthly();if(p==='stk')renderStocks();if(p==='exp')renderExport();}});
 }
@@ -1528,18 +1529,18 @@ function urlB64ToUint8(base64String){
 
 <div class="ovlay" id="m-tv" style="display:none;align-items:center;justify-content:center"><div style="background:var(--bg2);border:1px solid var(--b2);border-radius:16px;width:92vw;max-width:1000px;height:85vh;display:flex;flex-direction:column;overflow:hidden"><div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--b1)"><div style="font-size:14px;font-weight:600" id="tv-title">Chart</div><button onclick="cM('m-tv');document.getElementById('tv-frame').src=''" style="font-size:12px">Close</button></div><iframe id="tv-frame" src="" style="flex:1;border:none;border-radius:0 0 16px 16px" allowfullscreen></iframe></div></div>
 <nav class="bnav">
-  <div class="tbi on" onclick="go('dash',null);bnSet(0)"><span class="tbi-i">▣</span><span>Home</span><span class="bdot" id="ov-dot-m">0</span></div>
-  <div class="tbi" onclick="go('accs',null);bnSet(1)"><span class="tbi-i">🏦</span><span>Accounts</span></div>
-  <div class="tbi" onclick="go('stk',null);bnSet(2)"><span class="tbi-i">📈</span><span>Stocks</span></div>
-  <div class="tbi" onclick="openMore()"><span class="tbi-i">☰</span><span>More</span></div>
+  <div class="tbi on" onclick="go('dash',null);bnSet(0)"><span class="tbi-i"><i class="ti ti-home"></i></span><span>Home</span><span class="bdot" id="ov-dot-m">0</span></div>
+  <div class="tbi" onclick="go('accs',null);bnSet(1)"><span class="tbi-i"><i class="ti ti-building-bank"></i></span><span>Accounts</span></div>
+  <div class="tbi" onclick="go('monthly',null);bnSet(2)"><span class="tbi-i"><i class="ti ti-calendar-stats"></i></span><span>Monthly</span></div>
+  <div class="tbi" onclick="openMore()"><span class="tbi-i"><i class="ti ti-dots"></i></span><span>More</span></div>
 </nav>
 
 <div class="msheet" id="more-sheet" onclick="if(event.target===this)closeMore()">
   <div class="msheet-in">
     <div class="msheet-grip"></div>
-    <div class="msheet-r" onclick="closeMore();go('monthly',null)"><span>📊</span><div><div class="msheet-t">Monthly view</div><div class="msheet-s">Obligations month by month</div></div></div>
-    <div class="msheet-r" onclick="closeMore();go('ai',null)"><span>🤖</span><div><div class="msheet-t">AI assistant</div><div class="msheet-s">Ask about your finances</div></div></div>
-    <div class="msheet-r" onclick="closeMore();go('exp',null)"><span>↓</span><div><div class="msheet-t">Export</div><div class="msheet-s">Report, Excel, print</div></div></div>
+    <div class="msheet-r" onclick="closeMore();go('stk',null)"><span><i class="ti ti-chart-line"></i></span><div><div class="msheet-t">Stocks</div><div class="msheet-s">Portfolio &amp; live prices</div></div></div>
+    <div class="msheet-r" onclick="closeMore();go('ai',null)"><span><i class="ti ti-robot"></i></span><div><div class="msheet-t">AI assistant</div><div class="msheet-s">Ask about your finances</div></div></div>
+    <div class="msheet-r" onclick="closeMore();go('exp',null)"><span><i class="ti ti-download"></i></span><div><div class="msheet-t">Export</div><div class="msheet-s">Report, Excel, print</div></div></div>
   </div>
 </div>
 </body>
