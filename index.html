@@ -195,6 +195,18 @@ label{display:block;font-size:11px;color:var(--t2);margin-bottom:4px;font-weight
 <path d="M12 12V18M12 18L15 16M12 18L9 16M13 3.00087C12.9045 3 12.7973 3 12.6747 3H8.2002C7.08009 3 6.51962 3 6.0918 3.21799C5.71547 3.40973 5.40973 3.71547 5.21799 4.0918C5 4.51962 5 5.08009 5 6.2002V17.8002C5 18.9203 5 19.4801 5.21799 19.9079C5.40973 20.2842 5.71547 20.5905 6.0918 20.7822C6.5192 21 7.07899 21 8.19691 21H15.8031C16.921 21 17.48 21 17.9074 20.7822C18.2837 20.5905 18.5905 20.2842 18.7822 19.9079C19 19.4805 19 18.9215 19 17.8036V9.32568C19 9.20296 19 9.09561 18.9991 9M13 3.00087C13.2856 3.00347 13.4663 3.01385 13.6388 3.05526C13.8429 3.10425 14.0379 3.18526 14.2168 3.29492C14.4186 3.41857 14.5918 3.59182 14.9375 3.9375L18.063 7.06298C18.4089 7.40889 18.5809 7.58136 18.7046 7.78319C18.8142 7.96214 18.8953 8.15726 18.9443 8.36133C18.9857 8.53376 18.9963 8.71451 18.9991 9M13 3.00087V5.8C13 6.9201 13 7.47977 13.218 7.90759C13.4097 8.28392 13.7155 8.59048 14.0918 8.78223C14.5192 9 15.079 9 16.1969 9H18.9991M18.9991 9H19.0002" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
 </g></symbol></svg>
 
+<div id="lockscreen" style="display:none;position:fixed;inset:0;z-index:9999;background:var(--bg0);align-items:center;justify-content:center;padding:24px">
+  <div style="width:100%;max-width:340px;text-align:center">
+    <img src="/icon.svg" alt="" width="64" height="64" style="border-radius:16px;margin-bottom:18px">
+    <div id="lk-title" style="font-size:19px;font-weight:600;margin-bottom:6px">Enter your passcode</div>
+    <div id="lk-sub" style="font-size:12px;color:var(--t2);margin-bottom:20px;line-height:1.6">PayTrack is locked.</div>
+    <input id="lk-pc" type="password" inputmode="numeric" autocomplete="current-password" style="width:100%;text-align:center;font-size:20px;letter-spacing:4px;font-family:var(--m);margin-bottom:10px" placeholder="passcode">
+    <div id="lk-pc2-wrap" style="display:none"><input id="lk-pc2" type="password" inputmode="numeric" autocomplete="new-password" style="width:100%;text-align:center;font-size:20px;letter-spacing:4px;font-family:var(--m);margin-bottom:10px" placeholder="repeat"></div>
+    <div id="lk-err" style="font-size:12px;color:var(--red);min-height:18px;margin-bottom:10px"></div>
+    <button class="btn-p" id="lk-go" onclick="lkSubmit()" style="width:100%;justify-content:center;margin-bottom:10px">Unlock</button>
+    <button id="lk-bio" onclick="lkBiometric()" style="width:100%;justify-content:center;display:none">Use fingerprint</button>
+  </div>
+</div>
 <div class="app">
 <div class="sb">
   <div class="logo"><div class="logo-icon"><img src="/icon.svg" alt="PayTrack" width="30" height="30" style="display:block;border-radius:8px"></div><div><div class="logo-text">PayTrack</div><div class="logo-sub">Financial OS</div></div></div>
@@ -1482,6 +1494,119 @@ async function loadFromServer(){
 // Refresh from the server when returning to the app, and every 60s while open.
 // Skipped while a dialog is open, while typing, or with unsaved local changes,
 // so an incoming refresh can never wipe work in progress.
+
+// -- Lock screen -----------------------------------------------------------
+// The passcode is verified on the SERVER and gates /api/load and /api/save.
+// The fingerprint is a local convenience on top of a session you already hold,
+// the way a banking app works: it reopens a session, it does not replace the
+// passcode, and it cannot grant access the server has not already allowed.
+var LK_MODE = 'login';
+function lkShow(mode, sub){
+  LK_MODE = mode;
+  document.getElementById('lockscreen').style.display = 'flex';
+  document.getElementById('lk-title').textContent = mode === 'setup' ? 'Choose a passcode' : 'Enter your passcode';
+  document.getElementById('lk-sub').textContent = sub || (mode === 'setup'
+    ? 'At least 4 characters. It is hashed on the server and stored nowhere in the app. If you lose it, it cannot be recovered.'
+    : 'PayTrack is locked.');
+  document.getElementById('lk-pc2-wrap').style.display = mode === 'setup' ? '' : 'none';
+  document.getElementById('lk-go').textContent = mode === 'setup' ? 'Set passcode' : 'Unlock';
+  setTimeout(function(){ document.getElementById('lk-pc').focus(); }, 50);
+}
+function lkHide(){ document.getElementById('lockscreen').style.display = 'none'; }
+function lkErr(t){ document.getElementById('lk-err').textContent = t || ''; }
+
+function lkSubmit(){
+  var pc = document.getElementById('lk-pc').value;
+  lkErr('');
+  if (LK_MODE === 'setup'){
+    if (pc.length < 4) return lkErr('Use at least 4 characters.');
+    if (pc !== document.getElementById('lk-pc2').value) return lkErr('The two entries do not match.');
+  }
+  if (!pc) return lkErr('Enter your passcode.');
+  var btn = document.getElementById('lk-go');
+  btn.disabled = true;
+  fetch('/api/auth?action=' + (LK_MODE === 'setup' ? 'setup' : 'login'), {
+    method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({passcode: pc})
+  }).then(function(r){ return r.json().then(function(j){ return {ok: r.ok, j: j}; }); })
+    .then(function(res){
+      if (!res.ok || !res.j.ok){ lkErr(res.j.error || 'Could not sign in.'); return; }
+      document.getElementById('lk-pc').value = '';
+      var wasSetup = LK_MODE === 'setup';
+      lkHide();
+      loadFromServer();
+      if (wasSetup) setTimeout(lkOfferBiometric, 600);
+    })
+    .catch(function(){ lkErr('Connection problem. Try again.'); })
+    .then(function(){ btn.disabled = false; });
+}
+
+// -- WebAuthn (fingerprint / Windows Hello) --------------------------------
+function b64u(buf){
+  return btoa(String.fromCharCode.apply(null, new Uint8Array(buf)))
+    .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+function hasWebAuthn(){
+  return !!(window.PublicKeyCredential && navigator.credentials && navigator.credentials.create);
+}
+
+function lkOfferBiometric(){
+  if (!hasWebAuthn()) return;
+  PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable().then(function(avail){
+    if (!avail) return;
+    if (!confirm('Unlock PayTrack with your fingerprint on this device?')) return;
+    var ch = new Uint8Array(32); crypto.getRandomValues(ch);
+    return navigator.credentials.create({publicKey: {
+      challenge: ch,
+      rp: {name: 'PayTrack'},
+      user: {id: new TextEncoder().encode('paytrack-user'), name: 'PayTrack', displayName: 'PayTrack'},
+      pubKeyCredParams: [{type:'public-key', alg:-7}, {type:'public-key', alg:-257}],
+      authenticatorSelection: {authenticatorAttachment:'platform', userVerification:'required', residentKey:'preferred'},
+      timeout: 60000, attestation: 'none'
+    }}).then(function(cred){
+      var id = b64u(cred.rawId);
+      try { localStorage.setItem('pt_cred', id); } catch(e){}
+      return fetch('/api/auth?action=webauthn-save', {
+        method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({credentialId: id})
+      }).then(function(){ alert('Fingerprint unlock is on for this device.'); });
+    });
+  }).catch(function(){ /* cancelled or unsupported */ });
+}
+
+function lkBiometric(){
+  var id = null;
+  try { id = localStorage.getItem('pt_cred'); } catch(e){}
+  if (!id || !hasWebAuthn()) return lkErr('Fingerprint is not set up on this device.');
+  var raw = Uint8Array.from(atob(id.replace(/-/g,'+').replace(/_/g,'/')), function(c){ return c.charCodeAt(0); });
+  var ch = new Uint8Array(32); crypto.getRandomValues(ch);
+  navigator.credentials.get({publicKey: {
+    challenge: ch, allowCredentials: [{type:'public-key', id: raw}],
+    userVerification: 'required', timeout: 60000
+  }}).then(function(){ lkHide(); loadFromServer(); })
+    .catch(function(){ lkErr('Fingerprint not recognised. Use your passcode.'); });
+}
+
+// Decide on boot whether the app should be locked.
+function lkInit(){
+  return fetch('/api/auth?action=status', {cache:'no-store'})
+    .then(function(r){ return r.json(); })
+    .then(function(j){
+      if (!j.configured) return;              // no passcode set: open, as before
+      if (j.authenticated){                    // server session already valid
+        var cred = null;
+        try { cred = localStorage.getItem('pt_cred'); } catch(e){}
+        if (cred){
+          lkShow('login', 'Unlock to continue.');
+          document.getElementById('lk-bio').style.display = '';
+          lkBiometric();
+        }
+        return;
+      }
+      lkShow('login');
+    })
+    .catch(function(){ /* offline: local data still readable */ });
+}
+function lkSetup(){ lkShow('setup'); }
+
 function refreshSafe(){
   if(PT_DIRTY||PT_SAVING)return;
   if(document.hidden)return;
@@ -1499,6 +1624,7 @@ window.addEventListener('load', function() {
   try { loadState(); } catch(e) { console.log('loadState error:', e); }
   try { renderDash(); } catch(e) { console.log('renderDash error:', e); }
   loadFromServer();
+  lkInit();
 });
 // Fallback in case load already fired
 if(document.readyState === 'complete') {
