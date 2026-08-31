@@ -40,14 +40,16 @@ html,body{height:100%;overflow:hidden;background:var(--bg0);color:var(--t1);font
 .ct{flex:1;overflow-y:auto;padding:1.5rem}
 .pg{display:none;width:100%;min-height:100%}.pg.on{display:block;width:100%;min-height:100%}
 .mg{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:1.25rem}
-.mc{background:var(--bg2);border:1px solid var(--b1);border-radius:12px;padding:1rem;cursor:pointer;transition:all .12s;position:relative;overflow:hidden}
+.mc{background:var(--bg2);border:1px solid var(--b1);border-radius:12px;padding:1rem;cursor:pointer;transition:all .12s;position:relative;overflow:hidden;min-width:0}
 .mc:hover{background:var(--bg3);border-color:var(--b2)}
 .mc::before{content:'';position:absolute;top:0;left:0;right:0;height:2px}
 .mc.rb::before{background:var(--red)}.mc.gb::before{background:var(--green)}.mc.ab::before{background:var(--amber)}.mc.bb::before{background:var(--blue)}.mc.pb::before{background:var(--purple)}
 .mc-ic{width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:15px;margin-bottom:.75rem}
 .mc-ic.r{background:rgba(242,107,107,.15);color:var(--red)}.mc-ic.g{background:rgba(62,207,142,.15);color:var(--green)}.mc-ic.a{background:rgba(245,166,35,.15);color:var(--amber)}.mc-ic.b{background:rgba(91,156,246,.15);color:var(--blue)}.mc-ic.p{background:rgba(167,139,250,.15);color:var(--purple)}
 .mc-lbl{font-size:11px;color:var(--t2);margin-bottom:4px}
-.mc-val{font-size:19px;font-weight:600;letter-spacing:-.5px;color:var(--t1)}
+.mc-val{font-size:clamp(15px,1.6vw,19px);font-weight:600;letter-spacing:-.5px;color:var(--t1);font-family:var(--m);font-variant-numeric:tabular-nums;overflow-wrap:anywhere;min-width:0}
+.mc-sub{overflow-wrap:anywhere}
+.mc input{min-width:0}
 .mc-sub{font-size:10px;color:var(--t3);margin-top:4px}
 .g2{display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;margin-bottom:1.25rem}
 .g3{display:grid;grid-template-columns:2fr 1fr;gap:1.25rem;margin-bottom:1.25rem}
@@ -972,6 +974,22 @@ function setRem(id,v){var a=accs.find(function(x){return x.id===id;});if(!a)retu
 var cfOpenAccs={};
 function togAcc(id){var el=document.getElementById(id);if(!el)return;el.classList.toggle('on');cfOpenAccs[id]=el.classList.contains('on');}
 
+// Open the monthly view where you actually are, not at the top of history.
+function scrollToThisMonth(){
+  var now=new Date(), key=now.getFullYear()*12+now.getMonth();
+  var grps=[].slice.call(document.querySelectorAll('#mo-body .mo-grp'));
+  if(!grps.length)return;
+  var target=null;
+  for(var i=0;i<grps.length;i++){
+    var k=+grps[i].getAttribute('data-k');
+    if(k===key){ target=grps[i]; break; }
+    if(k>key && !target){ target=grps[i]; }        // nothing this month: jump to the next one
+  }
+  if(!target) target=grps[grps.length-1];
+  var body=target.querySelector('.mb');
+  if(body) body.classList.add('on');
+  target.scrollIntoView({block:'start',behavior:'auto'});
+}
 function renderMonthly(){
   var raw=document.getElementById('mo-yr').value;
   var allYears=(raw==='all');
@@ -999,7 +1017,7 @@ function renderMonthly(){
       var hn=p.nd&&p.nd.trim();
       return'<tr style="'+(p.forecast?'background:rgba(167,139,250,.05)':'')+'"><td style="font-weight:500">'+p.acc+'</td><td style="font-family:var(--m);font-size:11px">'+eff(p)+(hn?'<br><span style="font-size:10px;color:var(--t3);text-decoration:line-through">'+p.dt+'</span>':'')+'</td><td style="color:var(--t2)">'+p.desc+(p.forecast?fcTag():'')+'</td><td style="font-family:var(--m);font-size:10px;color:var(--t3)">'+(p.chq||'—')+'</td><td style="text-align:right;font-family:var(--m);font-weight:600">'+fmt(p.amount)+'</td><td>'+(p.forecast?'':sbdg(p.status))+'</td><td style="white-space:nowrap">'+payActions(p.aid,p,p.pi)+''+(p.defer&&owed(p)?' <button class="btn-s" onclick="deferP(\''+p.aid+'\','+p.pi+')">Defer</button>':'')+' <button class="btn-s" onclick="opEdit(\''+p.aid+'\','+p.pi+')">✎ Edit</button></td></tr>';
     }).join('');
-    return'<div class="ar" style="margin-bottom:10px"><div class="mh" onclick="this.nextElementSibling.classList.toggle(\'on\')"><div style="display:flex;align-items:center;gap:10px"><div style="width:36px;height:36px;background:rgba(91,156,246,.1);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--blue)">'+M3[m]+'</div><div><div style="font-size:13px;font-weight:600">'+MNS[m]+' '+ky+'<span class="mbadge">'+pays.length+' payments</span></div><div style="font-size:11px;color:var(--t2);margin-top:2px">'+fmt(paid)+' paid · '+(ovc>0?'<span style="color:var(--red)">'+ovc+' overdue</span>':'all on track')+'</div></div></div><div style="font-size:13px;font-weight:600;color:var(--amber);font-family:var(--m)">'+fmt(total)+'</div></div><div class="mb"><div style="overflow-x:auto"><table><thead><tr><th>Account</th><th>Date</th><th>Description</th><th>Chq</th><th style="text-align:right">Amount</th><th>Status</th><th></th></tr></thead><tbody>'+rows+'</tbody></table></div></div></div>';
+    return'<div class="ar mo-grp" data-k="'+k+'" style="margin-bottom:10px"><div class="mh" onclick="this.nextElementSibling.classList.toggle(\'on\')"><div style="display:flex;align-items:center;gap:10px"><div style="width:36px;height:36px;background:rgba(91,156,246,.1);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--blue)">'+M3[m]+'</div><div><div style="font-size:13px;font-weight:600">'+MNS[m]+' '+ky+'<span class="mbadge">'+pays.length+' payments</span></div><div style="font-size:11px;color:var(--t2);margin-top:2px">'+fmt(paid)+' paid · '+(ovc>0?'<span style="color:var(--red)">'+ovc+' overdue</span>':'all on track')+'</div></div></div><div style="font-size:13px;font-weight:600;color:var(--amber);font-family:var(--m)">'+fmt(total)+'</div></div><div class="mb"><div style="overflow-x:auto"><table><thead><tr><th>Account</th><th>Date</th><th>Description</th><th>Chq</th><th style="text-align:right">Amount</th><th>Status</th><th></th></tr></thead><tbody>'+rows+'</tbody></table></div></div></div>';
   }).join('');
 }
 
@@ -1551,7 +1569,7 @@ function go(pg,el){
   document.getElementById('pg-title').textContent=pgTitles[pg]||pg;
   bnSet(bnPage[pg]===undefined?-1:bnPage[pg]);
   if(pg==='accs')renderAccs();
-  if(pg==='monthly')renderMonthly();
+  if(pg==='monthly'){renderMonthly();setTimeout(scrollToThisMonth,60);}
   if(pg==='dash'){renderDash();renderRem();}
   if(pg==='stk'){renderStocks();try{renderSavings();}catch(e){}setTimeout(function(){
     if(!stocks.length)return;
@@ -1828,7 +1846,25 @@ function lkOfferBiometric(force){
       var id=b64u(c.rawId);
       try{ localStorage.setItem('pt_cred',id); }catch(e){}
       return fetch('/api/auth?action=webauthn-save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({credentialId:id})})
-        .then(function(){ alert('Fingerprint unlock is on for this device.'); });
+        .then(function(){
+          // Prove it actually authenticates before claiming success. Registration
+          // can succeed while the stored id fails to verify, which is exactly how
+          // this looked broken with no error anywhere.
+          var raw=Uint8Array.from(atob(id.replace(/-/g,'+').replace(/_/g,'/')),function(ch){return ch.charCodeAt(0);});
+          var c2=new Uint8Array(32); crypto.getRandomValues(c2);
+          var sig2=waCancel();
+          return navigator.credentials.get({signal:sig2,publicKey:{
+            challenge:c2, allowCredentials:[{type:'public-key',id:raw}],
+            userVerification:'required', timeout:60000
+          }}).then(function(){
+            alert('Fingerprint unlock is on and verified for this device.');
+          }).catch(function(e2){
+            try{ localStorage.removeItem('pt_cred'); }catch(e3){}
+            alert('Registered, but the verification failed:' + String.fromCharCode(10)
+              + (e2&&e2.name) + ' - ' + (e2&&e2.message) + String.fromCharCode(10,10)
+              + 'Send me this message.');
+          });
+        });
     });
   }).catch(function(err){
     if(err && (err.name==='AbortError'||err.name==='NotAllowedError')) return;
