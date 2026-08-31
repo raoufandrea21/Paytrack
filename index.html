@@ -173,6 +173,25 @@ label{display:block;font-size:11px;color:var(--t2);margin-bottom:4px;font-weight
 .stk-cell{min-width:0}
 .stk-cell>div:last-child{overflow-wrap:anywhere;line-height:1.35}
 #stk-grid .stk-cell{display:flex;flex-direction:column;justify-content:flex-start}
+
+.stk-card{background:var(--bg2);border:1px solid var(--b1);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:14px}
+.stk-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.stk-tk{font-size:15px;font-weight:700;letter-spacing:-.2px}
+.stk-meta{font-size:11px;color:var(--t3);margin-top:2px}
+.stk-px{text-align:right;flex-shrink:0}
+.stk-price{font-family:var(--m);font-size:15px;font-weight:600}
+.stk-day{font-size:11px;margin-top:3px;font-family:var(--m)}
+.stk-value{border-top:1px solid var(--b1);border-bottom:1px solid var(--b1);padding:12px 0}
+.stk-value-lbl{font-size:10px;text-transform:uppercase;letter-spacing:.8px;color:var(--t3)}
+.stk-value-num{font-family:var(--m);font-size:24px;font-weight:700;letter-spacing:-1px;margin-top:3px;font-variant-numeric:tabular-nums}
+.stk-gl{font-family:var(--m);font-size:12px;font-weight:600;margin-top:4px}
+.stk-rows{display:flex;flex-direction:column;gap:7px}
+.stk-row{display:flex;align-items:baseline;justify-content:space-between;gap:12px;font-size:12px}
+.stk-row>span:first-child{color:var(--t3);white-space:nowrap}
+.stk-row>span:last-child{font-family:var(--m);font-weight:600;text-align:right;font-variant-numeric:tabular-nums}
+.stk-btns{display:flex;gap:6px}
+.stk-btns button{flex:1;justify-content:center;font-size:12px}
+@media(max-width:820px){ .stk-value-num{font-size:22px} }
 .remrow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 14px;border-bottom:1px solid var(--b1);font-size:12px;color:var(--t2)}
 .remrow input{width:64px;min-height:34px}
 </style>
@@ -356,33 +375,21 @@ label{display:block;font-size:11px;color:var(--t2);margin-bottom:4px;font-weight
 
 
   <div class="mg" style="margin-bottom:1.25rem">
-    <div class="mc bb"><div class="mc-ic b">💼</div><div class="mc-lbl">Total value</div><div class="mc-val" id="st1">AED 0</div></div>
-    <div class="mc gb"><div class="mc-ic g">↑</div><div class="mc-lbl">Total gain/loss</div><div class="mc-val" id="st2">AED 0</div></div>
-    <div class="mc ab"><div class="mc-ic a">🏦</div><div class="mc-lbl">Margin owed</div><div class="mc-val"><input type="number" id="st-margin" placeholder="0" onchange="setMargin(+this.value)" style="width:100%;font-size:16px;font-weight:600;font-family:var(--m);padding:2px 6px;background:transparent;border:1px dashed var(--b2)"></div><div class="mc-sub">Borrowed from broker — editable</div></div>
-    <div class="mc pb"><div class="mc-ic p">◆</div><div class="mc-lbl">Net worth</div><div class="mc-val" id="st-nw">AED 0</div><div class="mc-sub">Value − margin</div></div>
-    <div class="mc pb"><div class="mc-ic p">▤</div><div class="mc-lbl">Positions</div><div class="mc-val" id="st3">0</div></div>
+    <div class="mc pb"><div class="mc-ic p">&#9670;</div><div class="mc-lbl">Total net worth</div><div class="mc-val" id="st-nw">AED 0</div><div class="mc-sub" id="st-nw-sub">Market value minus margin</div></div>
+    <div class="mc gb"><div class="mc-ic g">&#8593;</div><div class="mc-lbl">Total profit</div><div class="mc-val" id="st2">AED 0</div><div class="mc-sub" id="st2-sub">&nbsp;</div></div>
+    <div class="mc ab"><div class="mc-ic a">🏦</div><div class="mc-lbl">Savings</div><div class="mc-val" id="st-sav">AED 0</div>
+      <div style="display:flex;gap:5px;margin-top:8px">
+        <input id="sv-bank" placeholder="Bank" style="flex:1;min-width:0;font-size:12px">
+        <input id="sv-amt" type="number" placeholder="Amount" style="flex:1;min-width:0;font-size:12px">
+        <button class="btn-s" onclick="addSaving()">Add</button>
+      </div>
+      <div id="sv-mini" style="font-size:11px;color:var(--t2);margin-top:8px"></div>
+    </div>
   </div>
   <div id="stk-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(255px,1fr));gap:12px"></div>
   <div id="stk-empty" style="text-align:center;padding:3rem;color:var(--t2)"><i class="ti ti-chart-line" style="font-size:48px;opacity:.25;display:block;margin-bottom:1rem"></i>No stocks yet. Click Add stock to begin.</div>
 
-  <div class="card" style="margin-top:1.25rem">
-    <div class="card-t">Margin owed <span id="mg-total" style="float:right;font-family:var(--m);color:var(--red)">AED 0</span></div>
-    <p style="font-size:11px;color:var(--t2);margin-bottom:12px">Money borrowed from a broker against your shares. Recorded per brokerage account and subtracted from net worth.</p>
-    <div id="mg-list"></div>
   </div>
-
-  <div class="card" style="margin-top:1.25rem">
-    <div class="card-t">Savings <span id="sv-total" style="float:right;font-family:var(--m);color:var(--green)">AED 0</span></div>
-    <p style="font-size:11px;color:var(--t2);margin-bottom:12px">Cash held at a bank. Counted as an asset in your net balance.</p>
-    <div class="fr2" style="margin-bottom:10px">
-      <div><label>Bank</label><input id="sv-bank" placeholder="e.g. NBF"></div>
-      <div><label>Amount (AED)</label><input id="sv-amt" type="number" placeholder="0"></div>
-    </div>
-    <div style="margin-bottom:10px"><label>Note (optional)</label><input id="sv-label" placeholder="e.g. emergency fund"></div>
-    <button class="btn-p" onclick="addSaving()" style="margin-bottom:12px">+ Add savings</button>
-    <div id="sv-list"></div>
-  </div>
-</div>
 
 <div id="p-ai" class="pg">
   <div class="card" style="min-height:480px;display:flex;flex-direction:column">
@@ -1059,13 +1066,14 @@ function savTotal(){ return savings.reduce(function(t,x){return t+(+x.amount||0)
 function addSaving(){
   var bank=(document.getElementById('sv-bank').value||'').trim();
   var amt=+document.getElementById('sv-amt').value||0;
-  var lbl=(document.getElementById('sv-label').value||'').trim();
+  var lblEl=document.getElementById('sv-label');
+  var lbl=lblEl?(lblEl.value||'').trim():'';
   if(!bank) return alert('Enter the bank name.');
   if(!(amt>0)) return alert('Enter an amount greater than zero.');
   savings.push({bank:bank,label:lbl,amount:amt});
   document.getElementById('sv-bank').value='';
   document.getElementById('sv-amt').value='';
-  document.getElementById('sv-label').value='';
+  if(lblEl) lblEl.value='';
   saveState(); renderSavings(); renderStocks(); renderDash();
 }
 function delSaving(i){
@@ -1090,6 +1098,18 @@ function renderMargins(){
       }).join('')+'</tbody></table></div>';
 }
 function renderSavings(){
+  var tot=document.getElementById('st-sav'); if(tot) tot.textContent=fmt(savTotal());
+  var mini=document.getElementById('sv-mini');
+  if(mini){
+    mini.innerHTML = savings.length
+      ? savings.map(function(x,i){
+          return '<div style="display:flex;justify-content:space-between;gap:8px;padding:3px 0">'
+            +'<span>'+x.bank+'</span>'
+            +'<span style="font-family:var(--m)">'+fmt(x.amount)
+            +' <a href="#" onclick="delSaving('+i+');return false;" style="color:var(--red);text-decoration:none">&times;</a></span></div>';
+        }).join('')
+      : 'No savings added yet.';
+  }
   var body=document.getElementById('sv-list'); if(!body)return;
   var t=document.getElementById('sv-total'); if(t) t.textContent=fmt(savTotal());
   if(!savings.length){ body.innerHTML='<p style="font-size:12px;color:var(--t2);padding:.75rem 0">No savings added yet.</p>'; return; }
@@ -1107,12 +1127,21 @@ function renderStocks(){
   var total=stocks.reduce(function(s,x){return s+x.qty*(x.cp||0);},0);
   var gl=stocks.reduce(function(s,x){return s+x.qty*((x.cp||0)-(x.bp||0));},0);
   var netWorth=total+savTotal()-marginTotal();
-  document.getElementById('st1').textContent=total>0?fmt(total):'AED 0';
+  var stEl=document.getElementById('st1'); if(stEl) stEl.textContent=total>0?fmt(total):'AED 0';
+  var sub=document.getElementById('st-nw-sub');
+  if(sub) sub.textContent = marginTotal()>0
+    ? fmt(total)+' less '+fmt(marginTotal())+' margin'
+    : 'Market value, no margin owed';
+  var p2=document.getElementById('st2-sub');
+  if(p2){
+    var cost=stocks.reduce(function(t,x){return t+x.qty*(x.bp||0);},0);
+    p2.textContent = cost>0 ? (gl>=0?'+':'')+(gl/cost*100).toFixed(1)+'% on '+fmt(cost)+' invested' : '\u00a0';
+  }
   var glEl=document.getElementById('st2');
   glEl.innerHTML=gl===0?'AED 0':'<span style="color:'+(gl>=0?'var(--green)':'var(--red)')+'"> '+(gl>=0?'+':'')+fmt(gl)+'</span>';
   var mEl=document.getElementById('st-margin'); if(mEl && document.activeElement!==mEl) mEl.value=stkMargin||'';
   var nwEl=document.getElementById('st-nw'); if(nwEl){ nwEl.innerHTML='<span style="color:'+(netWorth>=0?'var(--green)':'var(--red)')+'">'+fmt(netWorth)+'</span>'; }
-  document.getElementById('st3').textContent=stocks.length;
+  var p3=document.getElementById('st3'); if(p3) p3.textContent=stocks.length;   // positions card was removed
   document.getElementById('m6').textContent=total>0?fmt(total):'--';
   var grid=document.getElementById('stk-grid');
   var empty=document.getElementById('stk-empty');
@@ -1126,63 +1155,58 @@ function renderStocks(){
     var dayChg=s.prevClose&&s.cp?(s.cp-s.prevClose)/s.prevClose*100:null;
     var card=document.createElement('div');
     card.className='stk-card';
-    card.style.cssText='display:flex;flex-direction:column;gap:0';
-    // header
-    var hdr=document.createElement('div');
-    hdr.style.cssText='display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:.875rem';
-    hdr.innerHTML='<div><div style="font-size:15px;font-weight:700;font-family:var(--m)">'
-      +s.ticker+'</div><div style="font-size:11px;color:var(--t2);margin-top:2px">'
-      +s.name+'</div><span style="display:inline-block;background:rgba(91,156,246,0.12);color:var(--blue);font-size:10px;padding:1px 7px;border-radius:4px;font-weight:600;margin-top:4px">'
-      +s.mkt+'</span></div>'
-      +'<div>'+priceAge(s)+'</div>';
-    card.appendChild(hdr);
-    // price
-    var priceRow=document.createElement('div');
-    priceRow.style.cssText='display:flex;align-items:baseline;gap:8px;margin-bottom:.75rem;flex-wrap:wrap';
-    priceRow.innerHTML='<div style="font-size:22px;font-weight:700;font-family:var(--m)">'
-      +s.cur+' '+(s.cp||0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})+'</div>'
-      +'<span style="font-size:12px;font-weight:600;padding:2px 8px;border-radius:6px;font-family:var(--m);background:'
-      +(pct>=0?'rgba(62,207,142,0.12)':'rgba(242,107,107,0.12)')+';color:'+(pct>=0?'var(--green)':'var(--red)')+'"> '
-      +(pct>=0?'+':'')+pct.toFixed(2)+'%</span>'
-      +(dayChg!==null?'<span style="font-size:11px;color:var(--t2)">'+(dayChg>=0?'▲':'▼')+Math.abs(dayChg).toFixed(2)+'% day</span>':'');
-    card.appendChild(priceRow);
-    // stats
-    var stats=document.createElement('div');
-    stats.style.cssText='display:flex;flex-direction:column;gap:1px;margin-bottom:10px;background:var(--bg1);border-radius:8px;padding:4px 0';
-    stats.innerHTML=[
-      ['Qty',s.qty.toLocaleString(),'var(--t1)'],
-      ['Avg buy',s.cur+' '+(s.bp||0).toFixed(2),'var(--t1)'],
-      ['Value',fmt(val),'var(--t1)'],
-      ['G/L',(gl2>=0?'+':'')+fmt(gl2),(gl2>=0?'var(--green)':'var(--red)')],
-      s.broker?['Broker',s.broker,'var(--t2)']:null,
-      s.broker?['Net · '+s.broker, fmt(brokerNet((s.broker||'').trim())), (brokerNet((s.broker||'').trim())>=0?'var(--green)':'var(--red)')]:null,
-      dayChg!==null?['Day chg',(dayChg>=0?'+':'')+dayChg.toFixed(2)+'%',(dayChg>=0?'var(--green)':'var(--red)')]:null
-    ].filter(Boolean).map(function(x){
-      // Label left, value right. The previous grid of small boxes truncated
-      // real figures like "AED 1,223,965" to "AED 1,..." -- a number you cannot
-      // read is worse than no number.
-      return '<div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding:5px 10px">'
-        +'<span style="font-size:11px;color:var(--t3);white-space:nowrap">'+x[0]+'</span>'
-        +'<span style="font-size:13px;font-weight:600;font-family:var(--m);font-variant-numeric:tabular-nums;color:'+x[2]+';text-align:right">'+x[1]+'</span></div>';
-    }).join('');
-    card.appendChild(stats);
-    // buttons
+
+    var up = (dayChg===null) ? null : dayChg>=0;
+    var glUp = gl2>=0;
+    var brk = (s.broker||'').trim();
+
+    // header: ticker + market on the left, price and day move on the right
+    var head='<div class="stk-head">'
+      +'<div class="stk-id">'
+        +'<div class="stk-tk">'+s.ticker+'</div>'
+        +'<div class="stk-meta">'+(s.mkt||'')+(brk?' &middot; '+brk:'')+'</div>'
+      +'</div>'
+      +'<div class="stk-px">'
+        +'<div class="stk-price">'+(s.cur||'AED')+' '+(s.cp||0).toFixed(2)+'</div>'
+        +'<div class="stk-day" style="color:'+(up===null?'var(--t3)':(up?'var(--green)':'var(--red)'))+'">'
+          +(up===null?priceAge(s):((up?'▲ +':'▼ ')+dayChg.toFixed(2)+'%')) +'</div>'
+      +'</div></div>';
+
+    // the number that matters, large
+    var value='<div class="stk-value">'
+      +'<div class="stk-value-lbl">Market value</div>'
+      +'<div class="stk-value-num">'+fmt(val)+'</div>'
+      +'<div class="stk-gl" style="color:'+(glUp?'var(--green)':'var(--red)')+'">'
+        +(glUp?'+':'')+fmt(gl2)+' &nbsp;('+(glUp?'+':'')+pct.toFixed(1)+'%)</div>'
+      +'</div>';
+
+    var rows=[
+      ['Quantity', s.qty.toLocaleString()],
+      ['Avg buy', (s.cur||'AED')+' '+(s.bp||0).toFixed(2)],
+      ['Invested', fmt(s.qty*(s.bp||0))]
+    ];
+    if(brk){
+      var mg=+margins[brk]||0;
+      if(mg>0) rows.push(['Margin at '+brk, '-'+fmt(mg)]);
+      rows.push(['Net at '+brk, fmt(brokerNet(brk))]);
+    }
+    rows.push([priceAge(s).indexOf('MANUAL')>=0?'Price source':'Price updated', priceAge(s)]);
+
+    var body='<div class="stk-rows">'+rows.map(function(r){
+      return '<div class="stk-row"><span>'+r[0]+'</span><span>'+r[1]+'</span></div>';
+    }).join('')+'</div>';
+
+    card.innerHTML = head + value + body;
+
     var btns=document.createElement('div');
-    btns.style.cssText='display:flex;gap:6px;margin-top:4px';
-    var bChart=document.createElement('button');
-    bChart.textContent='Chart';
-    bChart.style.cssText='flex:1;background:rgba(91,156,246,0.12);color:var(--blue);border-color:rgba(91,156,246,0.3);font-size:11px;justify-content:center';
-    bChart.onclick=(function(t,m){return function(){openChart(t,m);};})(s.ticker,s.mkt);
-    var bEdit=document.createElement('button');
-    bEdit.textContent='Edit';
-    bEdit.style.cssText='flex:1;font-size:11px;justify-content:center';
-    bEdit.onclick=(function(idx){return function(){editStk(idx);};})(i);
-    var bDel=document.createElement('button');
-    bDel.textContent='Delete';
-    bDel.className='btn-d';
-    bDel.style.cssText='flex:1;font-size:11px;justify-content:center';
-    bDel.onclick=(function(idx){return function(){delStk(idx);};})(i);
-    btns.appendChild(bChart);btns.appendChild(bEdit);btns.appendChild(bDel);
+    btns.className='stk-btns';
+    [['Chart',function(){openChart(s.ticker,s.mkt);},''],
+     ['Edit',function(){editStk(i);},''],
+     ['Delete',function(){delStk(i);},'btn-d']].forEach(function(b){
+      var el=document.createElement('button');
+      el.textContent=b[0]; if(b[2]) el.className=b[2];
+      el.onclick=b[1]; btns.appendChild(el);
+    });
     card.appendChild(btns);
     grid.appendChild(card);
   });
@@ -1234,10 +1258,15 @@ function editStk(i){
   document.getElementById('es-yf').value=s.yfSym||'';
   document.getElementById('es-cur').value=s.cur||'AED';
   document.getElementById('es-m').value=s.mkt||'DFM';
+  var mgEl=document.getElementById('es-margin');
+  if(mgEl) mgEl.value=(+margins[(s.broker||'').trim()]||'');
   oM('m-stk-edit');
 }
 function saveStk(){
   var i=+document.getElementById('es-i').value;
+  var brk=(document.getElementById('es-br').value||'').trim();
+  var mgEl=document.getElementById('es-margin');
+  if(brk && mgEl) setBrokerMargin(brk, mgEl.value);
   var orig=stocks[i]||{};
   stocks[i]=Object.assign({},orig,{
     ticker:document.getElementById('es-t').value.trim().toUpperCase(),
@@ -1803,8 +1832,15 @@ function lkBiometric(){
     challenge: ch, allowCredentials: [{type:'public-key', id: raw}],
     userVerification: 'required', timeout: 60000
   }}).then(function(){ lkHide(); loadFromServer(); })
-    .catch(function(err){ if(err && err.name==='AbortError') return;
-      lkErr('Fingerprint not recognised. Use your passcode.'); });
+    .catch(function(err){
+      if(err && err.name==='AbortError') return;
+      // A stored id can outlive the credential it points at -- registering
+      // again under the same account replaces the old one, leaving this id
+      // dangling. Drop it and offer a clean re-registration.
+      try{ localStorage.removeItem('pt_cred'); }catch(e){}
+      document.getElementById('lk-bio').style.display='none';
+      lkErr('That fingerprint record is out of date. Enter your passcode once and I will set it up again.');
+    });
 }
 
 // Decide on boot whether the app should be locked.
@@ -2096,7 +2132,7 @@ function urlB64ToUint8(base64String){
     <div class="fr2"><div><label>Ticker</label><input id="es-t"></div><div><label>Company name</label><input id="es-n"></div></div>
     <div class="fr2"><div><label>Market</label><select id="es-m"><option>DFM</option><option>ADX</option><option>NYSE</option><option>NASDAQ</option><option>LSE</option><option>Other</option></select></div><div><label>Currency</label><select id="es-cur"><option>AED</option><option>USD</option><option>GBP</option><option>EUR</option></select></div></div>
     <div class="fr2"><div><label>Quantity</label><input type="number" id="es-q"></div><div><label>Avg buy price</label><input type="number" id="es-b" step="0.01"></div></div>
-    <div class="fr2"><div><label>Current price (manual)</label><input type="number" id="es-p" step="0.01"></div><div><label>Broker</label><input id="es-br"></div></div>
+    <div class="fr2"><div><label>Current price (manual)</label><input type="number" id="es-p" step="0.01"></div><div><label>Broker</label><input id="es-br"></div><div style="margin-bottom:12px"><label>Margin owed at this broker (AED)</label><input type="number" min="0" id="es-margin" placeholder="0"><div style="font-size:11px;color:var(--t2);margin-top:4px">Applies to the whole brokerage account, not just this holding.</div></div></div>
     <div class="fr"><label>Yahoo Finance symbol (optional, for price fetch)</label><input id="es-yf" placeholder="e.g. MULTIPLY.AE or AAPL"></div>
     <div class="fa"><button onclick="cM('m-stk-edit')">Cancel</button><button class="btn-p" onclick="saveStk()">✓ Save</button></div>
   </div>
