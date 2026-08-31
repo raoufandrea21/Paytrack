@@ -1,0 +1,91 @@
+<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PayTrack sync check</title>
+<style>
+body{font:14px/1.6 system-ui,sans-serif;background:#0d0d12;color:#eee;margin:0;padding:18px}
+h1{font-size:17px;margin:0 0 4px}
+p.sub{color:#8888a0;font-size:12px;margin:0 0 16px}
+h2{font-size:11px;text-transform:uppercase;letter-spacing:.7px;color:#8888a0;margin:20px 0 8px}
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+td,th{padding:7px 9px;border-bottom:1px solid #24242e;text-align:left;vertical-align:top}
+th{color:#8888a0;font-weight:600;font-size:10px;text-transform:uppercase;letter-spacing:.5px}
+.ok{color:#3ecf8e}.bad{color:#f26b6b;font-weight:600}.mono{font-family:ui-monospace,monospace}
+pre{background:#171a21;border-radius:8px;padding:10px;font-size:11px;overflow-x:auto;white-space:pre-wrap;word-break:break-word}
+button{padding:11px 16px;border-radius:9px;border:none;background:#5b9cf6;color:#fff;font-weight:600;font-size:14px;margin-right:8px;margin-bottom:8px}
+</style>
+<h1>Sync check</h1>
+<p class="sub">What this device holds, what the server holds, and every read/write it has made.</p>
+<div id="out">Loading…</div>
+<button onclick="copyAll()">Copy everything</button>
+<button onclick="location.reload()">Refresh</button>
+<h2>Event log</h2>
+<pre id="log">…</pre>
+<script>
+function fp(accs, margins){
+  var sch=null, open=[];
+  (accs||[]).forEach(function(a){
+    if(a.openEnded) open.push(a.id);
+    (a.pays||[]).forEach(function(p){
+      if(String(p.desc||'').indexOf('Term 1 2026')===0) sch=(p.nd||p.dt||'(none)');
+    });
+  });
+  return {
+    accounts:(accs||[]).length,
+    payments:(accs||[]).reduce(function(n,a){return n+((a.pays||[]).length);},0),
+    paid:(accs||[]).reduce(function(n,a){return n+(a.pays||[]).filter(function(p){return p.status==='paid';}).length;},0),
+    openEnded:open.join(',')||'(none)',
+    'School Term 1 2026/2027 date':sch||'(row not found)',
+    brokers:Object.keys(margins||{}).join(',')||'(none)'
+  };
+}
+function row(k,a,b){
+  var same = String(a)===String(b);
+  return '<tr><td>'+k+'</td><td class="mono">'+a+'</td><td class="mono">'+b+'</td>'
+       + '<td class="'+(same?'ok':'bad')+'">'+(same?'match':'DIFFERENT')+'</td></tr>';
+}
+var local={}, server={}, meta={};
+try{ local=fp(JSON.parse(localStorage.getItem('pt_accs')||'[]'), JSON.parse(localStorage.getItem('pt_margins')||'{}')); }
+catch(e){ local={error:String(e)}; }
+meta={
+  'pt_dirty (unsaved changes)': localStorage.getItem('pt_dirty')||'no',
+  'pt_save_time (server version ingested)': localStorage.getItem('pt_save_time')||'(none)',
+  'pt_user_save_time (last confirmed save)': localStorage.getItem('pt_user_save_time')||'(none)'
+};
+document.getElementById('log').textContent =
+  (localStorage.getItem('pt_log')
+    ? JSON.parse(localStorage.getItem('pt_log')).slice(-25).map(function(e){
+        return e.t.slice(11,19)+'  tab:'+e.tab+'  '+e.kind.padEnd(13)
+             + ' accs:'+e.fp.accs+' pays:'+e.fp.pays+' paid:'+e.fp.paid
+             + ' open:'+e.fp.openEnded+' school:'+e.fp.schoolTerm1;
+      }).join('\n')
+    : 'No events recorded yet. Open PayTrack, make a change, then come back.');
+
+fetch('/api/load',{cache:'no-store'}).then(function(r){
+  if(r.status===401) throw new Error('locked');
+  return r.json();
+}).then(function(raw){
+  var d = (raw && typeof raw.value==='string') ? JSON.parse(raw.value) : raw;
+  if(d && d.error) throw new Error(d.error);
+  server = fp(d.accs, d.margins);
+  server['saved at'] = d.saved || '(none)';
+  render();
+}).catch(function(e){
+  server = { error: e.message==='locked' ? 'Locked — open PayTrack first and unlock it' : e.message };
+  render();
+});
+
+function render(){
+  var keys = Object.keys(local);
+  var html = '<h2>This device vs the server</h2><table><tr><th>Field</th><th>This device</th><th>Server</th><th></th></tr>';
+  keys.forEach(function(k){ html += row(k, local[k], (k in server)? server[k] : '—'); });
+  if(server['saved at']) html += '<tr><td>server saved at</td><td>—</td><td class="mono">'+server['saved at']+'</td><td></td></tr>';
+  if(server.error) html += '<tr><td>server</td><td>—</td><td class="bad">'+server.error+'</td><td></td></tr>';
+  html += '</table><h2>Sync state on this device</h2><table>';
+  Object.keys(meta).forEach(function(k){ html += '<tr><td>'+k+'</td><td class="mono" colspan="3">'+meta[k]+'</td></tr>'; });
+  html += '</table>';
+  document.getElementById('out').innerHTML = html;
+}
+function copyAll(){
+  var t = document.body.innerText;
+  navigator.clipboard.writeText(t).then(function(){ alert('Copied. Paste it to Claude.'); });
+}
+</script>
