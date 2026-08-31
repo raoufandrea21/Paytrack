@@ -770,7 +770,7 @@ function syncToServer(){
   fetch('/api/save',{
     method:'POST',
     headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({accs:accs,stocks:stocks,savings:savings,margins:margins,baseVersion:base})
+    body:JSON.stringify({accs:accs,stocks:stocks,savings:savings,margins:margins,baseVersion:base,dev:(typeof ptDevice==='function'?ptDevice():'unknown')})
   }).then(function(r){
     return r.json().then(function(j){ return {ok:r.ok,status:r.status,j:j}; });
   }).then(function(res){
@@ -796,20 +796,23 @@ function syncToServer(){
             syncStatus('ok','✓ Updated');
             return;
           }
-          // We do have a real edit. Rebase onto their version and try again,
-          // so the retry is made against a version we have actually seen.
-          if(PT_REBASE>=3){
-            PT_REBASE=0;
-            setDirty(true);
-            syncStatus('bad','✕ Not saved — tap to retry');
-            ptLog('CONFLICT-GIVEUP','3 rebases without success');
-            return;
-          }
-          PT_REBASE++;
+          // We have a local edit AND the server moved on. Retrying with a fresh
+          // version number would push this device's ENTIRE copy -- including
+          // everything stale about it -- legitimising the overwrite. That is
+          // exactly the clobber this system exists to prevent. Safer to adopt
+          // the newer copy, drop the one conflicting edit, and say so loudly:
+          // one visible redo beats silently destroying newer data.
+          ptLog('CONFLICT-DISCARD','adopted server copy, local edit dropped');
+          accs=convertDates(cur.accs);
+          if(Array.isArray(cur.stocks))stocks=cur.stocks;
+          if(Array.isArray(cur.savings))savings=cur.savings;
+          if(cur.margins)margins=cur.margins;
+          saveLocal();
           localStorage.setItem('pt_save_time', new Date(cur.saved).getTime());
-          setDirty(true);
-          syncStatus('busy','Merging…');
-          setTimeout(syncToServer,0);
+          localStorage.setItem('pt_user_save_time', new Date(cur.saved).getTime());
+          setDirty(false); rAll();
+          syncStatus('bad','✕ Updated from another device — please redo your last change');
+          alert('Another device saved first, so this screen has been updated with the newer data.\n\nYour last change was not saved \u2014 please make it again.');
           return;
         }
       }catch(e){}

@@ -1,4 +1,4 @@
-const CACHE = 'paytrack-v2';
+const CACHE = 'paytrack-v3';
 const ASSETS = ['/', '/index.html'];
 
 self.addEventListener('install', e => {

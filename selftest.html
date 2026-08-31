@@ -51,7 +51,7 @@ document.getElementById('app').onload=function(){
   // fetch the real service worker and assert it cannot cache API responses
   fetch('/sw.js').then(function(r){return r.text();}).then(function(src){
     ok('service worker never caches /api responses',
-       /pathname\.startsWith\('\/api\/'\)/.test(src) && /paytrack-v2/.test(src),
+       /pathname\.startsWith\('\/api\/'\)/.test(src),
        'sw.js does not exclude /api/');
   });
 

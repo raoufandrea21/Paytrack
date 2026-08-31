@@ -58,6 +58,22 @@ export default async function handler(req, res) {
       body: JSON.stringify({ value: data })
     });
     if (!r.ok) throw new Error('KV write failed: ' + r.status);
+    // Audit trail: who wrote, from which base. Best effort -- a failure here
+    // must never fail the save itself.
+    try {
+      const lg = await fetch(`${kv}/get/pt_write_log`, { headers: { Authorization: `Bearer ${token}` } });
+      let list = [];
+      if (lg.ok) { const lj = await lg.json(); if (lj.result) { try { list = JSON.parse(lj.result); } catch (e) {} } }
+      if (!Array.isArray(list)) list = [];
+      list.push({ t: new Date().toISOString(), dev: String(req.body.dev || 'unknown').slice(0, 40),
+                  base: baseVersion || null,
+                  accs: accs.length,
+                  paid: accs.reduce((n, a) => n + (a.pays || []).filter(x => x.status === 'paid').length, 0) });
+      while (list.length > 30) list.shift();
+      await fetch(`${kv}/set/pt_write_log`, { method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'text/plain' },
+        body: JSON.stringify(list) });
+    } catch (e) {}
     return res.status(200).json({ success: true, accounts: accs.length, saved: new Date().toISOString() });
   } catch (e) {
     return res.status(500).json({ error: e.message });
