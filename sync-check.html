@@ -55,8 +55,7 @@ document.getElementById('log').textContent =
     ? JSON.parse(localStorage.getItem('pt_log')).slice(-40).map(function(e){
         return e.t.slice(5,19).replace('T',' ')+'  '+(e.dev||'?')+'/'+e.tab+'  '+String(e.kind).padEnd(13)
              + ' open:'+e.fp.openEnded+' school:'+e.fp.schoolTerm1+' paid:'+e.fp.paid
-             + (e.note? '
-                 '+e.note : '');
+             + (e.note ? ('\n                 ' + e.note) : '');
       }).join('\n')
     : 'No events recorded yet. Open PayTrack, make a change, then come back.');
 
