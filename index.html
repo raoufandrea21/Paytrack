@@ -675,7 +675,22 @@ function loadState(){
     autoFlagOverdue();
   }catch(e){console.log('State load error:',e);}
 }
+// Deferring used to push the instalment into the following month AND add a
+// replacement at the end of the term, so the month it was deferred FROM
+// disappeared and the next month showed two payments. A deferred instalment
+// belongs on its original date, marked deferred and owed nothing; the
+// replacement at the end of the term carries the money.
+function migrateDeferred(){
+  var changed=false;
+  accs.forEach(function(a){
+    (a.pays||[]).forEach(function(p){
+      if(p.status==='deferred' && p.nd && p.nd.trim()){ p.nd=''; changed=true; }
+    });
+  });
+  return changed;
+}
 function autoFlagOverdue(){
+  if(migrateDeferred()){ try{ saveState(); }catch(e){} }
   var now=new Date();
   // Set to start of today (midnight) so today's payments are NOT flagged as overdue
   var today=new Date(now.getFullYear(),now.getMonth(),now.getDate());
