@@ -10,10 +10,13 @@ export default async function handler(req, res) {
     const KV_URL = process.env.KV_REST_API_URL, KV_TOKEN = process.env.KV_REST_API_TOKEN;
     // store under a set of subscriptions (keyed by endpoint hash for dedupe)
     const key = 'pt_push_' + Buffer.from(sub.endpoint).toString('base64').slice(-24).replace(/[^a-zA-Z0-9]/g,'');
+    // Upstash stores the request body AS the value. Wrapping it in {"value":...}
+    // stored the wrapper, so the cron sender unwrapped garbage and silently
+    // pushed to nobody.
     await fetch(`${KV_URL}/set/${key}`, {
       method: 'POST',
-      headers: { Authorization: `Bearer ${KV_TOKEN}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ value: JSON.stringify(sub) })
+      headers: { Authorization: `Bearer ${KV_TOKEN}`, 'Content-Type': 'text/plain' },
+      body: JSON.stringify(sub)
     });
     // maintain an index list
     await fetch(`${KV_URL}/sadd/pt_push_index/${key}`, {

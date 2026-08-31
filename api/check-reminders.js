@@ -59,7 +59,11 @@ export default async function handler(req, res) {
     for (const key of idx) {
       const r = await fetch(`${KV_URL}/get/${key}`, { headers: { Authorization: `Bearer ${KV_TOKEN}` } });
       const j = await r.json();
-      if (j.result) { try { subs.push(JSON.parse(j.result)); } catch (e) {} }
+      if (j.result) { try {
+        let sub = JSON.parse(j.result);
+        if (sub && typeof sub.value === 'string') sub = JSON.parse(sub.value);  // legacy wrapped shape
+        if (sub && sub.endpoint) subs.push(sub);
+      } catch (e) {} }
     }
     if (!subs.length) return res.status(200).json({ ok: true, note: 'no subscribers', due: due.length });
 
