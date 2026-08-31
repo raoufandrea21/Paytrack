@@ -633,11 +633,12 @@ function brokerList(){
 function brokerValue(b){ return stocks.reduce(function(t,x){return t+((x.broker||'').trim()===b?x.qty*(x.cp||0):0);},0); }
 function brokerNet(b){ return brokerValue(b)-(+margins[b]||0); }
 function marginTotal(){ return Object.keys(margins).reduce(function(t,b){return t+(+margins[b]||0);},0); }
-function setBrokerMargin(broker,v){
+function setBrokerMargin(broker,v,defer){
   var n=+v||0;
   if(n>0) margins[broker]=n; else delete margins[broker];
   try{ localStorage.setItem('pt_margins',JSON.stringify(margins)); }catch(e){}
   stkMargin=0; try{ localStorage.setItem('pt_margin','0'); }catch(e){}
+  if(defer) return;              // caller will save once, after its own edits
   saveState(); renderStocks(); renderDash();
 }
 // One-time move of the old single margin onto the first broker, so the figure
@@ -688,7 +689,13 @@ function syncToServer(){
   }).then(function(res){
     PT_SAVING=false;
     if(!res.ok || !res.j || res.j.error || !res.j.success) throw new Error((res.j&&res.j.error)||'save failed');
+    // A change made while the previous save was in flight was only flagged
+    // dirty; nothing re-sent it, so it was lost and the server's older value
+    // came back on the next refresh. Coalesce: if anything changed during the
+    // request, send again immediately.
+    var again = PT_DIRTY;
     setDirty(false);
+    if(again) setTimeout(syncToServer, 0);
     if(res.j.saved){ try{
       var t=new Date(res.j.saved).getTime();
       localStorage.setItem('pt_user_save_time',t);
@@ -1401,8 +1408,14 @@ function editStk(i){
 function saveStk(){
   var i=+document.getElementById('es-i').value;
   var brk=(document.getElementById('es-br').value||'').trim();
+  var oldBrk=((stocks[i]||{}).broker||'').trim();
+  // Renaming the broker must carry its margin across, or the figure is orphaned
+  // under a broker that no longer exists.
+  if(oldBrk && brk && oldBrk!==brk && margins[oldBrk]!==undefined){
+    margins[brk]=margins[oldBrk]; delete margins[oldBrk];
+  }
   var mgEl=document.getElementById('es-margin');
-  if(brk && mgEl) setBrokerMargin(brk, mgEl.value);
+  if(brk && mgEl) setBrokerMargin(brk, mgEl.value, true);
   var orig=stocks[i]||{};
   stocks[i]=Object.assign({},orig,{
     ticker:document.getElementById('es-t').value.trim().toUpperCase(),

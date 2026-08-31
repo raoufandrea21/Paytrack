@@ -103,8 +103,29 @@ document.getElementById('app').onload=function(){
     w.loadFromServer().then(function(){
       var y=w.accs.find(function(v){return v.id==='ali';});
       ok('a newer server copy is adopted, so devices do sync', y && y.name==='FROM OTHER DEVICE');
-      w.fetch=realFetch; LS.removeItem('pt_dirty'); LS.removeItem('pt_accs');
-      done();
+      // Last, in isolation: a change made DURING an in-flight save must still
+      // be sent. This is what silently reverted edits made in quick succession.
+      var sent=[], resolvers=[];
+      w.PT_DIRTY=false; w.PT_SAVING=false;
+      if(w.PT_RETRY){ w.clearInterval(w.PT_RETRY); w.PT_RETRY=null; }
+      w.fetch=function(u,o){
+        if(String(u).indexOf('/api/save')>=0){
+          sent.push(String(o.body));
+          return new Promise(function(res){ resolvers.push(function(){ res({ok:true,json:function(){return Promise.resolve({success:true,saved:new Date().toISOString()});}}); }); });
+        }
+        return Promise.resolve({ok:true,json:function(){return Promise.resolve({});}});
+      };
+      w.accs=[{id:'z',name:'BEFORE',type:'Lender',principal:1,pays:[],remDays:7}];
+      w.saveState();
+      w.accs[0].name='AFTER';
+      w.saveState();
+      if(resolvers[0]) resolvers[0]();
+      setTimeout(function(){
+        ok('a change made during an in-flight save is still sent',
+           sent.length===2 && sent[1].indexOf('AFTER')>=0, sent.length+' saves');
+        w.fetch=realFetch; LS.removeItem('pt_dirty'); LS.removeItem('pt_accs');
+        done();
+      }, 80);
     });
     });
   });
