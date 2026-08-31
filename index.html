@@ -261,6 +261,12 @@ label{display:block;font-size:11px;color:var(--t2);margin-bottom:4px;font-weight
     </div>
   </div>
 
+  <div class="card" id="issues-card" style="margin-bottom:1.25rem;display:none;border-color:rgba(245,166,35,.35)">
+    <div class="card-t" style="color:var(--amber)">⚠ Needs attention <span id="issues-n" style="background:rgba(245,166,35,.16);padding:1px 7px;border-radius:100px;font-size:11px;margin-left:4px">0</span></div>
+    <div style="font-size:11px;color:var(--t3);margin-bottom:2px">Payments that are missing from your totals, the monthly view or your reminders. Tap one to open the account.</div>
+    <div id="issues-body"></div>
+  </div>
+
   <div class="card" id="due-card" style="margin-bottom:1.25rem">
     <div class="card-t" style="color:var(--red)">⚠ Overdue now</div><div id="r1"></div>
     <div class="card-t" style="margin-top:1rem">⏱ Due in 30 days</div><div id="r2"></div>
@@ -694,6 +700,59 @@ function renderMoStrip(){
   });
 }
 
+
+// ── Data-quality checks ────────────────────────────────────────────────
+// Rows that are silently excluded from totals, reminders or the monthly view
+// are worse than rows that are wrong: nothing ever surfaces them. This looks
+// for the ways a payment can quietly disappear.
+function dataIssues(){
+  var out=[];
+  accs.forEach(function(a){
+    var byKey={};
+    (a.pays||[]).forEach(function(p,i){
+      var e=eff(p), d=pd(e);
+      if(p.status!=='paid'){
+        if(!d) out.push({sev:'warn',acc:a.id,txt:a.name+' — “'+p.desc+'” ('+fmt(p.amount)+') has no date, so it never appears in the monthly view and can never trigger a reminder.'});
+        if(!p.amount) out.push({sev:'warn',acc:a.id,txt:a.name+' — “'+p.desc+'” has no amount.'});
+        if(d){ var k=e+'|'+p.amount; (byKey[k]=byKey[k]||[]).push(p.desc); }
+      }
+      if(p.forecast&&d&&d<TODAY) out.push({sev:'info',acc:a.id,txt:a.name+' — forecast “'+p.desc+'” was due '+e+'. Confirm it as real or remove it.'});
+    });
+    Object.keys(byKey).forEach(function(k){
+      if(byKey[k].length>1){
+        var parts=k.split('|');
+        out.push({sev:'warn',acc:a.id,txt:a.name+' — '+byKey[k].length+' unpaid payments both fall on '+parts[0]+' at '+fmt(+parts[1])+' each ('+fmt(byKey[k].length*(+parts[1]))+' that day). Check this is intended and not a duplicate.'});
+      }
+    });
+    if(unsched(a)>0) out.push({sev:'info',acc:a.id,txt:a.name+' — '+fmt(unsched(a))+' has no payment schedule, so it counts in your total but never appears in the monthly view.'});
+  });
+  return out;
+}
+function renderIssues(){
+  var card=document.getElementById('issues-card'), body=document.getElementById('issues-body');
+  if(!card||!body)return;
+  var list=dataIssues();
+  if(!list.length){ card.style.display='none'; return; }
+  card.style.display='';
+  document.getElementById('issues-n').textContent=list.length;
+  body.innerHTML=list.map(function(it){
+    var c=it.sev==='warn'?'var(--amber)':'var(--t2)';
+    return '<div class="iss-row" data-acc="'+it.acc+'" style="display:flex;gap:10px;padding:10px 0;border-top:1px solid var(--b1);cursor:pointer;font-size:12px;line-height:1.6"><span style="color:'+c+';flex-shrink:0">●</span><span style="color:var(--t2)">'+it.txt+'</span></div>';
+  }).join('');
+  if(!body.__wired){
+    body.__wired=true;
+    body.addEventListener('click',function(ev){
+      var row=ev.target.closest('.iss-row'); if(!row)return;
+      var id=row.getAttribute('data-acc');
+      go('accs',null); bnSet(1);
+      setTimeout(function(){
+        var e=document.getElementById('d-'+id);
+        if(e){ e.classList.add('on'); cfOpenAccs['d-'+id]=true; e.scrollIntoView({block:'center'}); }
+      },80);
+    });
+  }
+}
+
 function renderDash(){
   autoFlagOverdue();
   var today=new Date();
@@ -717,6 +776,7 @@ function renderDash(){
   var gl=stocks.reduce(function(s,x){return s+x.qty*((x.cp||0)-(x.bp||0));},0);
   var ovc=accs.reduce(function(s,a){return s+visPays(a).filter(function(px){return px.status==='overdue';}).length;},0);
   document.getElementById('m1').textContent=fmt(o);
+  try{renderIssues();}catch(e){}
   var m1s=document.getElementById('m1-sub');
   if(m1s) m1s.innerHTML = uns>0
     ? 'Across all accounts · <span style="color:var(--amber)">'+fmt(uns)+' unscheduled</span>'
