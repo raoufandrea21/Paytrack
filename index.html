@@ -129,7 +129,37 @@ label{display:block;font-size:11px;color:var(--t2);margin-bottom:4px;font-weight
 .modal-t i{font-size:20px;color:var(--blue)}
 .ldots::after{content:'...';animation:ld 1.2s infinite steps(1)}
 @keyframes ld{0%{content:'.'}33%{content:'..'}66%{content:'...'}}
-@media(max-width:720px){.sb{width:50px}.logo-text,.logo-sub,.ni span,.nl,.sb-foot .av+div{display:none}.logo{justify-content:center;padding:.75rem}.ni{justify-content:center}.g2,.g3{grid-template-columns:1fr}.ct{padding:1rem}}
+.bnav{display:none}
+.msheet{display:none}
+@media(max-width:820px){
+  .sb{display:none}
+  .g2,.g3{grid-template-columns:1fr}
+  .ct{padding:1rem 1rem calc(76px + env(safe-area-inset-bottom))}
+  .topbar{position:sticky;top:0;z-index:40}
+  .tb-clock{display:none}
+  .pg>div[style*="grid-template-columns:1.2fr"],
+  .pg>div[style*="grid-template-columns:1.6fr"]{grid-template-columns:1fr!important}
+  table{font-size:12px}
+  button,.btn-s{min-height:38px}
+  input,select{min-height:40px;font-size:16px}
+  .bnav{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:100;background:var(--bg0,#0d0d12);border-top:1px solid var(--b1);padding-bottom:env(safe-area-inset-bottom);box-shadow:0 -6px 20px rgba(0,0,0,.45)}
+  .tbi{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:9px 2px 7px;font-size:10px;color:var(--t3);cursor:pointer;position:relative;-webkit-tap-highlight-color:transparent}
+  .tbi .tbi-i{font-size:19px;line-height:1}
+  .tbi.on{color:var(--blue)}
+  .bdot{position:absolute;top:4px;left:50%;margin-left:6px;background:var(--red);color:#fff;font-size:9px;font-weight:700;padding:0 5px;border-radius:10px;min-width:15px;text-align:center}
+  .msheet{display:none;position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.55)}
+  .msheet.on{display:block}
+  .msheet-in{position:absolute;left:0;right:0;bottom:0;background:var(--bg2);border-radius:18px 18px 0 0;padding:8px 12px calc(18px + env(safe-area-inset-bottom));animation:msup .18s ease}
+  @keyframes msup{from{transform:translateY(100%)}to{transform:translateY(0)}}
+  .msheet-grip{width:38px;height:4px;border-radius:4px;background:var(--b2);margin:6px auto 12px}
+  .msheet-r{display:flex;align-items:center;gap:14px;padding:14px 10px;border-radius:12px;cursor:pointer}
+  .msheet-r:active{background:var(--bg1)}
+  .msheet-r>span{font-size:21px;width:26px;text-align:center}
+  .msheet-t{font-size:14px;font-weight:600;color:var(--t1)}
+  .msheet-s{font-size:11px;color:var(--t2);margin-top:1px}
+}
+.remrow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 14px;border-bottom:1px solid var(--b1);font-size:12px;color:var(--t2)}
+.remrow input{width:64px;min-height:34px}
 </style>
 </head>
 <body>
@@ -137,12 +167,10 @@ label{display:block;font-size:11px;color:var(--t2);margin-bottom:4px;font-weight
 <div class="sb">
   <div class="logo"><div class="logo-icon">💳</div><div><div class="logo-text">PayTrack</div><div class="logo-sub">Financial OS</div></div></div>
   <div class="nl">Overview</div>
-  <div class="ni on" onclick="go('dash',this)">▣<span>Dashboard</span></div>
+  <div class="ni on" onclick="go('dash',this)">▣<span>Home</span><span class="dot" id="ov-dot">0</span></div>
   <div class="nl">Finance</div>
   <div class="ni" onclick="go('accs',this)">🏦<span>Accounts</span></div>
   <div class="ni" onclick="go('monthly',this)">📊<span>Monthly view</span></div>
-  <div class="ni" onclick="go('cal',this)">📅<span>Calendar</span></div>
-  <div class="ni" onclick="go('rem',this)">🔔<span>Reminders</span><span class="dot" id="ov-dot">0</span></div>
   <div class="nl">Investments</div>
   <div class="ni" onclick="go('stk',this)">📈<span>Stocks</span></div>
   <div class="nl">Tools</div>
@@ -153,7 +181,7 @@ label{display:block;font-size:11px;color:var(--t2);margin-bottom:4px;font-weight
 
 <div class="main">
 <div class="topbar">
-  <div class="tb-title" id="pg-title">Dashboard</div>
+  <div class="tb-title" id="pg-title">Home</div>
   <div class="tb-clock" id="clk"></div>
   <button onclick="go('exp',null)">↓ Export</button>
 </div>
@@ -198,6 +226,12 @@ label{display:block;font-size:11px;color:var(--t2);margin-bottom:4px;font-weight
       <div style="font-size:22px;font-weight:700;font-family:var(--m);letter-spacing:-1px" id="m-bal">—</div>
       <div style="font-size:11px;color:var(--t2);margin-top:.5rem">Stocks minus Outstanding</div>
     </div>
+  </div>
+
+  <div class="card" id="due-card" style="margin-bottom:1.25rem">
+    <div class="card-t" style="color:var(--red)">⚠ Overdue now</div><div id="r1"></div>
+    <div class="card-t" style="margin-top:1rem">⏱ Due in 30 days</div><div id="r2"></div>
+    <div class="card-t" style="margin-top:1rem">📅 Due in 31–90 days</div><div id="r3"></div>
   </div>
 
   <div style="display:grid;grid-template-columns:1.2fr 1fr;gap:1.25rem;margin-bottom:1.25rem">
@@ -248,41 +282,6 @@ label{display:block;font-size:11px;color:var(--t2);margin-bottom:4px;font-weight
 <div id="p-monthly" class="pg">
   <div class="sh"><div class="st">Monthly breakdown</div><select id="mo-yr" onchange="renderMonthly()" style="width:110px"><option value="2026">2026</option><option value="2027">2027</option><option value="2028">2028</option><option value="2029">2029</option></select></div>
   <div id="mo-body"></div>
-</div>
-
-<div id="p-cal" class="pg">
-  <div style="display:flex;align-items:center;gap:10px;margin-bottom:1.25rem">
-    <button onclick="cmv(-1)">‹</button>
-    <div style="font-size:16px;font-weight:600" id="cal-lbl"></div>
-    <button onclick="cmv(1)">›</button>
-    <button class="btn-s" onclick="calY=2026;calM=4;renderCal()">Today</button>
-  </div>
-  <div class="cal-dow"><div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div></div>
-  <div class="cal-grid" id="cg"></div>
-</div>
-
-<div id="p-rem" class="pg">
-  <div class="tabs">
-    <div class="tab on" onclick="rtab('ov',this)">Overview</div>
-    <div class="tab" onclick="rtab('set',this)">Per-account</div>
-    <div class="tab" onclick="rtab('em',this)">Email</div>
-  </div>
-  <div id="rem-ov">
-    <div class="card" style="margin-bottom:1rem"><div class="card-t" style="color:var(--red)">⚠ Overdue now</div><div id="r1"></div></div>
-    <div class="card" style="margin-bottom:1rem"><div class="card-t">⏱ Due in 30 days</div><div id="r2"></div></div>
-    <div class="card"><div class="card-t">📅 Due in 31–90 days</div><div id="r3"></div></div>
-  </div>
-  <div id="rem-set" style="display:none">
-    <div class="card" style="margin-bottom:1rem"><div class="card-t">Default settings</div><div class="fr2"><div><label>Reminder email</label><input type="email" id="rem-email" value="mr.raouf@gmail.com"></div><div><label>Days before due</label><input type="number" id="rem-days" value="7"></div></div><button class="btn-p" onclick="alert('Settings saved.')">✓ Save</button></div>
-    <div id="rem-accs"></div>
-  </div>
-  <div id="rem-em" style="display:none">
-    <div class="card"><div class="card-t">Email reminder</div>
-      <div class="fr2"><div><label>Send to</label><input type="email" id="em-to" value="mr.raouf@gmail.com"></div><div><label>Range</label><select id="em-rng"><option value="7">Next 7 days</option><option value="30" selected>Next 30 days</option><option value="90">Next 90 days</option><option value="ov">Overdue only</option><option value="all">All pending</option></select></div></div>
-      <div style="display:flex;gap:8px;margin-bottom:12px"><button onclick="genEmail()">👁 Preview</button><button class="btn-p" onclick="sendEmail()">✉ Open in mail</button><button onclick="testEmail()" style="background:rgba(62,207,142,0.15);color:var(--green);border-color:var(--green)">✓ Send test email</button><button onclick="testReminder()" style="background:rgba(167,139,250,0.15);color:var(--purple);border-color:var(--purple)">🔔 Test auto-reminder</button><button onclick="copyEmail()">⎘ Copy</button></div>
-      <div class="eprev" id="eprev">Click Preview to generate.</div>
-    </div>
-  </div>
 </div>
 
 <div id="p-stk" class="pg">
@@ -651,7 +650,7 @@ function renderDash(){
   var balEl=document.getElementById('m-bal');
   if(balEl){balEl.textContent=(bal<0?'-':'')+fmt(Math.abs(bal));balEl.style.color=bal>=0?'var(--green)':'var(--red)';}
   if(document.getElementById('m5'))document.getElementById('m5').textContent=accs.length;
-  document.getElementById('ov-dot').textContent=ovc;
+  ['ov-dot','ov-dot-m'].forEach(function(id){var e=document.getElementById(id);if(e){e.textContent=ovc;e.style.display=ovc?'':'none';}});
   renderCharts();
   renderMoStrip();
   var cut=new Date(today);cut.setDate(cut.getDate()+90);
@@ -710,11 +709,12 @@ function renderAccs(){
       var fcRow=p.forecast?'background:rgba(167,139,250,.05);border-left:2px solid var(--purple)':'';var delBtn=' <button class="btn-s btn-d" onclick="delPay(\''+a.id+'\','+i+')" title="Delete this payment">✕</button>';var acts=(p.forecast?'<button class="btn-s" onclick="confirmForecast(\''+a.id+'\','+i+')" style="color:var(--purple)">✓ Confirm real</button> <button class="btn-s" onclick="opEdit(\''+a.id+'\','+i+')">✎ Edit</button>':(payActions(a.id,p,i)+''+(a.defer&&p.status!=='paid'?' <button class="btn-s" onclick="deferP(\''+a.id+'\','+i+')">Defer</button>':'')+' <button class="btn-s" onclick="opEdit(\''+a.id+'\','+i+')">✎ Edit</button>'))+delBtn;return'<tr style="'+fcRow+'"><td style="color:var(--t3);font-family:var(--m);font-size:10px">'+(i+1)+'</td><td style="font-family:var(--m);font-size:11px">'+eff(p)+(hn?'<br><span style="font-size:10px;color:var(--t3);text-decoration:line-through">'+p.dt+'</span>':'')+'</td><td style="color:var(--t2)">'+p.desc+(p.forecast?fcTag():'')+'</td><td style="font-family:var(--m);font-size:10px;color:var(--t3)">'+(p.chq||'—')+'</td><td style="text-align:right;font-family:var(--m);font-weight:600">'+fmt(p.amount)+'</td><td style="color:var(--t3);font-size:11px">'+(p.pct||'')+'</td><td>'+(p.forecast?'':sbdg(p.status))+'</td><td style="white-space:nowrap">'+acts+'</td></tr>';
     }).join('');
     var sb='';
-    return'<div class="ar"><div class="ah" onclick="togAcc(\'d-'+a.id+'\')"><div style="display:flex;align-items:center;gap:12px"><div style="width:36px;height:36px;border-radius:10px;background:rgba(91,156,246,.1);color:'+tcl(a.type)+';display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0"><i class="ti ti-'+tic(a.type)+'"></i></div><div><div style="font-weight:600;font-size:14px">'+a.name+' '+sb+'</div><div style="font-size:11px;color:var(--t2);margin-top:2px">'+a.type+' · Principal: '+fmt(a.principal)+(a.defer?' · <span style="color:var(--blue)">defer on</span>':'')+'</div><div class="prog"><div class="prog-f" style="width:'+pct+'%"></div></div><div style="font-size:10px;color:var(--t3);margin-top:2px">'+pct+'% paid</div></div></div><div style="text-align:right;display:flex;align-items:center;gap:12px"><div><div style="font-weight:600;font-size:15px;font-family:var(--m);color:var(--red)">'+fmt(debt)+'</div><div style="font-size:11px;color:var(--t2);margin-top:2px">'+fmt(paid)+' paid'+(ov?' · <span style="color:var(--red)">'+fmt(ov)+' overdue</span>':'')+'</div></div><button class="btn-d btn-s" onclick="event.stopPropagation();opDel(\''+a.id+'\')">Delete</button></div></div><div class="adet" id="d-'+a.id+'"><div style="padding:8px 14px;border-bottom:1px solid var(--b1);display:flex;gap:8px"><button class="btn-s" onclick="opAddPay(\''+a.id+'\')">+ Add payment</button><button class="btn-s" onclick="openAutoForecast(\''+a.id+'\')" style="color:var(--purple)"><i class="ti ti-wand"></i> Auto-forecast</button><div id="pselbar-'+a.id+'" style="display:none;align-items:center;gap:8px;margin-left:auto"><span id="psellbl-'+a.id+'" style="font-size:11px;color:var(--t2)">0 selected</span><button class="btn-s btn-d" onclick="cfDelSelected(\''+a.id+'\')"><i class="ti ti-trash"></i> Delete selected</button></div></div>'+(a.pays.length?'<div style="overflow-x:auto"><table><thead><tr><th style="width:24px"><input type="checkbox" onchange="cfSelAll(\''+a.id+'\',this.checked)" style="width:auto" title="Select all"></th><th>#</th><th>Date</th><th>Description</th><th>Chq</th><th style="text-align:right">Amount</th><th>%</th><th>Status</th><th></th></tr></thead><tbody>'+rows+'</tbody></table></div>':'<p style="padding:1rem;font-size:12px;color:var(--t2)">No payments yet.</p>')+'</div></div>';
+    return'<div class="ar"><div class="ah" onclick="togAcc(\'d-'+a.id+'\')"><div style="display:flex;align-items:center;gap:12px"><div style="width:36px;height:36px;border-radius:10px;background:rgba(91,156,246,.1);color:'+tcl(a.type)+';display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0"><i class="ti ti-'+tic(a.type)+'"></i></div><div><div style="font-weight:600;font-size:14px">'+a.name+' '+sb+'</div><div style="font-size:11px;color:var(--t2);margin-top:2px">'+a.type+' · Principal: '+fmt(a.principal)+(a.defer?' · <span style="color:var(--blue)">defer on</span>':'')+'</div><div class="prog"><div class="prog-f" style="width:'+pct+'%"></div></div><div style="font-size:10px;color:var(--t3);margin-top:2px">'+pct+'% paid</div></div></div><div style="text-align:right;display:flex;align-items:center;gap:12px"><div><div style="font-weight:600;font-size:15px;font-family:var(--m);color:var(--red)">'+fmt(debt)+'</div><div style="font-size:11px;color:var(--t2);margin-top:2px">'+fmt(paid)+' paid'+(ov?' · <span style="color:var(--red)">'+fmt(ov)+' overdue</span>':'')+'</div></div><button class="btn-d btn-s" onclick="event.stopPropagation();opDel(\''+a.id+'\')">Delete</button></div></div><div class="adet" id="d-'+a.id+'"><div style="padding:8px 14px;border-bottom:1px solid var(--b1);display:flex;gap:8px"><button class="btn-s" onclick="opAddPay(\''+a.id+'\')">+ Add payment</button><button class="btn-s" onclick="openAutoForecast(\''+a.id+'\')" style="color:var(--purple)"><i class="ti ti-wand"></i> Auto-forecast</button><div id="pselbar-'+a.id+'" style="display:none;align-items:center;gap:8px;margin-left:auto"><span id="psellbl-'+a.id+'" style="font-size:11px;color:var(--t2)">0 selected</span><button class="btn-s btn-d" onclick="cfDelSelected(\''+a.id+'\')"><i class="ti ti-trash"></i> Delete selected</button></div></div><div class="remrow">🔔 Remind me <input type="number" min="0" max="90" value="'+(a.remDays||7)+'" onchange="setRem(\''+a.id+'\',this.value)"> days before each due date</div>'+(a.pays.length?'<div style="overflow-x:auto"><table><thead><tr><th style="width:24px"><input type="checkbox" onchange="cfSelAll(\''+a.id+'\',this.checked)" style="width:auto" title="Select all"></th><th>#</th><th>Date</th><th>Description</th><th>Chq</th><th style="text-align:right">Amount</th><th>%</th><th>Status</th><th></th></tr></thead><tbody>'+rows+'</tbody></table></div>':'<p style="padding:1rem;font-size:12px;color:var(--t2)">No payments yet.</p>')+'</div></div>';
   }).join('');
   // restore expanded panels after re-render
   Object.keys(cfOpenAccs).forEach(function(id){ if(cfOpenAccs[id]){ var el=document.getElementById(id); if(el) el.classList.add('on'); } });
 }
+function setRem(id,v){var a=accs.find(function(x){return x.id===id;});if(!a)return;a.remDays=Math.max(0,+v||0);saveState();}
 var cfOpenAccs={};
 function togAcc(id){var el=document.getElementById(id);if(!el)return;el.classList.toggle('on');cfOpenAccs[id]=el.classList.contains('on');}
 
@@ -745,53 +745,6 @@ function renderMonthly(){
   }).join('');
 }
 
-var calY=2026,calM=4;
-function renderCal(){
-  document.getElementById('cal-lbl').textContent=MNS[calM]+' '+calY;
-  var first=new Date(calY,calM,1).getDay(),days=new Date(calY,calM+1,0).getDate(),em={};
-  accs.forEach(function(a){
-    a.pays.forEach(function(p,i){
-      var d=pd(eff(p));
-      if(d&&d.getFullYear()===calY&&d.getMonth()===calM){
-        var k=d.getDate();if(!em[k])em[k]=[];
-        em[k].push({n:a.name,sn:a.name.split(' ')[0],st:p.status,amt:p.amount,desc:p.desc,aid:a.id,pi:i});
-      }
-    });
-  });
-  var h='';
-  for(var i=0;i<first;i++)h+='<div class="cal-cell dim"></div>';
-  for(var d=1;d<=days;d++){
-    var it=calY===TODAY.getFullYear()&&calM===TODAY.getMonth()&&d===TODAY.getDate();
-    var evts=em[d]||[];
-    var dayTot=evts.filter(function(e){return e.st!=='paid';}).reduce(function(s,e){return s+e.amt;},0);
-    h+='<div class="cal-cell'+(it?' today':'')+'" onclick="showCalDet('+calY+','+calM+','+d+')">'+'<div class="cal-num">'+d+'</div>'+evts.slice(0,3).map(function(e){return'<div class="cal-evt '+e.st+'" title="'+e.n+': '+fmt(e.amt)+'">'+e.sn+'</div>';}).join('')+(evts.length>3?'<div style="font-size:9px;color:var(--t3)">+'+( evts.length-3)+' more</div>':'')+(dayTot>0?'<div class="cal-tot">'+fmt(dayTot)+'</div>':'')+'</div>';
-  }
-  document.getElementById('cg').innerHTML=h;
-}
-function showCalDet(y,m,d){
-  var evts=[];
-  accs.forEach(function(a){
-    a.pays.forEach(function(p,i){
-      var dt=pd(eff(p));
-      if(dt&&dt.getFullYear()===y&&dt.getMonth()===m&&dt.getDate()===d)evts.push(Object.assign({},p,{acc:a.name,aid:a.id,pi:i}));
-    });
-  });
-  document.getElementById('cal-dt').textContent=d+' '+MNS[m]+' '+y+' — '+evts.length+' payment'+(evts.length!==1?'s':'');
-  document.getElementById('cal-dc').innerHTML=evts.length?'<div style="overflow-x:auto"><table><thead><tr><th>Account</th><th>Description</th><th style="text-align:right">Amount</th><th>Status</th><th></th></tr></thead><tbody>'+evts.map(function(e){return'<tr><td style="font-weight:500">'+e.acc+'</td><td style="color:var(--t2)">'+e.desc+'</td><td style="text-align:right;font-family:var(--m);font-weight:600">'+fmt(e.amount)+'</td><td>'+sbdg(e.status)+'</td><td><button class="btn-s" onclick="mkPaid(\''+e.aid+'\','+e.pi+');renderCal();cM(\'m-cal\');" style="color:#3ecf8e">✓ Mark paid</button></td></tr>';}).join('')+'</tbody></table></div>':'<p style="color:var(--t2);padding:1rem;text-align:center">No payments on this day.</p>';
-  oM('m-cal');
-}
-function cmv(d){calM+=d;if(calM>11){calM=0;calY++;}if(calM<0){calM=11;calY--;}renderCal();}
-
-function rtab(id,el){
-  ['rem-ov','rem-set','rem-em'].forEach(function(s){
-    var el2=document.getElementById(s);
-    if(el2)el2.style.display='none';
-  });
-  document.querySelectorAll('.tab').forEach(function(x){x.classList.remove('on');});
-  var target=document.getElementById('rem-'+id);
-  if(target)target.style.display='block';
-  if(el)el.classList.add('on');
-}
 function remTbl(rows,empty){
   if(!rows.length)return'<p style="font-size:12px;color:var(--t2);padding:.5rem 0;display:flex;align-items:center;gap:6px">✓'+empty+'</p>';
   rows.sort(function(a,b){return a._d-b._d;});
@@ -812,52 +765,7 @@ function renderRem(){
   document.getElementById('r1').innerHTML=remTbl(ov,'No overdue payments — great!');
   document.getElementById('r2').innerHTML=remTbl(n30,'No payments due in 30 days.');
   document.getElementById('r3').innerHTML=remTbl(n90,'No payments due in 31–90 days.');
-  document.getElementById('rem-accs').innerHTML=accs.map(function(a){
-    var up=a.pays.filter(function(p){var d=pd(eff(p));return p.status!=='paid'&&d&&d>=TODAY;}).slice(0,3);
-    return'<div class="ar" style="margin-bottom:8px"><div class="mh" onclick="this.nextElementSibling.classList.toggle(\'on\')"><div style="display:flex;align-items:center;gap:10px"><i class="ti ti-'+tic(a.type)+'" style="color:'+tcl(a.type)+';font-size:18px"></i><div><div style="font-weight:500">'+a.name+'</div><div style="font-size:11px;color:var(--t2)">'+up.length+' upcoming</div></div></div><i class="ti ti-chevron-down" style="color:var(--t3)"></i></div><div class="mb" style="padding:14px 16px"><div class="fr2"><div><label>Reminder days before due</label><input type="number" value="'+(a.remDays||7)+'" onchange="accs.find(function(x){return x.id===\''+a.id+'\';}).remDays=+this.value"></div><div><label>Custom email</label><input type="email" value="'+(a.remEmail||'')+'" placeholder="mr.raouf@gmail.com" onchange="accs.find(function(x){return x.id===\''+a.id+'\';}).remEmail=this.value"></div></div>'+(up.length?'<div style="display:flex;flex-direction:column;gap:6px">'+up.map(function(p){return'<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 10px;background:var(--bg1);border-radius:8px"><div><div style="font-size:12px;font-weight:500">'+p.desc+'</div><div style="font-size:11px;color:var(--t2)">'+eff(p)+'</div></div><div style="font-family:var(--m);font-size:12px;font-weight:600">'+fmt(p.amount)+'</div></div>';}).join('')+'</div>':'')+'</div></div>';
-  }).join('');
 }
-var curEmail='';
-function genEmail(){
-  var rng=document.getElementById('em-rng').value,to=document.getElementById('em-to').value||'mr.raouf@gmail.com';
-  var pays=[];
-  if(rng==='ov'){accs.forEach(function(a){a.pays.forEach(function(p){if(p.status==='overdue')pays.push(Object.assign({},p,{acc:a.name,_d:pd(eff(p))||TODAY}));});});}
-  else if(rng==='all'){accs.forEach(function(a){a.pays.forEach(function(p){if(p.status!=='paid'){var d=pd(eff(p));if(d)pays.push(Object.assign({},p,{acc:a.name,_d:d}));}});});}
-  else{var cut=new Date(TODAY);cut.setDate(cut.getDate()+parseInt(rng));accs.forEach(function(a){a.pays.forEach(function(p){var d=pd(eff(p));if(p.status!=='paid'&&d&&d>=TODAY&&d<=cut)pays.push(Object.assign({},p,{acc:a.name,_d:d}));});});}
-  pays.sort(function(a,b){return a._d-b._d;});
-  var lbl=rng==='ov'?'Overdue payments':rng==='all'?'All pending':`Payments due — next ${rng} days`;
-  var total=pays.reduce(function(s,p){return s+p.amount;},0);
-  var lines=pays.map(function(p){return'  • '+p.acc+' — '+p.desc+'\n    Date: '+eff(p)+'  |  '+fmt(p.amount)+'  |  '+p.status.toUpperCase()+(p.chq?' | Chq: '+p.chq:'');}).join('\n\n');
-  curEmail='To: '+to+'\nSubject: PayTrack Reminder — '+lbl+'\n\nHi Raouf,\n\nPayment reminder as of '+fd(TODAY)+'.\n\n'+lbl.toUpperCase()+'\n'+'─'.repeat(46)+'\n\n'+(lines||'  None.')+'\n\n'+'─'.repeat(46)+'\nTOTAL: '+fmt(total)+'\n\nGenerated by PayTrack.';
-  document.getElementById('eprev').textContent=curEmail;
-}
-function sendEmail(){
-  if(!curEmail)genEmail();
-  var ls=curEmail.split('\n');
-  var subj=ls.find(function(l){return l.startsWith('Subject:');});
-  var to=document.getElementById('em-to').value||'mr.raouf@gmail.com';
-  window.open('mailto:'+to+'?subject='+encodeURIComponent((subj||'').replace('Subject: ',''))+'&body='+encodeURIComponent(ls.slice(2).join('\n')));
-}
-function testEmail(){
-  var to=document.getElementById('em-to').value||'mr.raouf@gmail.com';
-  genEmail();
-  var ls=curEmail.split('\n');
-  var subj=ls.find(function(l){return l.startsWith('Subject:');});
-  var body='TEST EMAIL from PayTrack\n\nThis is a test reminder email sent on '+new Date().toLocaleString()+'\n\n'+ls.slice(2).join('\n');
-  window.open('mailto:'+to+'?subject=TEST: '+encodeURIComponent((subj||'PayTrack Reminder').replace('Subject: ',''))+'&body='+encodeURIComponent(body));
-  alert('Test email opened in your mail app.\nTo: '+to);
-}
-function testReminder(){
-  fetch('/api/remind?test=1')
-    .then(function(r){return r.json();})
-    .then(function(d){
-      if(d.success)alert('✓ Reminder email sent to '+d.sent_to+'\n\nOverdue: '+d.overdue+'\nUpcoming: '+d.upcoming);
-      else if(d.message)alert('Info: '+d.message+(d.preview?'\n\nPreview:\n'+d.preview:''));
-      else alert('Error: '+JSON.stringify(d));
-    })
-    .catch(function(e){alert('Error: '+e.message);});
-}
-function copyEmail(){if(!curEmail)genEmail();navigator.clipboard.writeText(curEmail).then(function(){alert('Copied!');});}
 
 function renderStocks(){
   var total=stocks.reduce(function(s,x){return s+x.qty*(x.cp||0);},0);
@@ -1201,7 +1109,11 @@ async function doAI(){
 }
 function askC(q){document.getElementById('ai-in').value=q;doAI();}
 
-var pgTitles={dash:'Dashboard',accs:'Accounts',monthly:'Monthly view',cal:'Calendar',rem:'Reminders',stk:'Stocks',ai:'AI assistant',exp:'Export'};
+var pgTitles={dash:'Home',accs:'Accounts',monthly:'Monthly view',stk:'Stocks',ai:'AI assistant',exp:'Export'};
+var bnPage={dash:0,accs:1,stk:2};
+function bnSet(i){var b=document.querySelectorAll('.tbi');b.forEach(function(n,k){n.classList.toggle('on',k===i);});}
+function openMore(){document.getElementById('more-sheet').classList.add('on');}
+function closeMore(){document.getElementById('more-sheet').classList.remove('on');}
 function go(pg,el){
   document.querySelectorAll('.pg').forEach(function(p){p.classList.remove('on');});
   document.querySelectorAll('.ni').forEach(function(n){n.classList.remove('on');});
@@ -1209,12 +1121,10 @@ function go(pg,el){
   if(el)el.classList.add('on');
   else{document.querySelectorAll('.ni').forEach(function(n){if(n.getAttribute('onclick')&&n.getAttribute('onclick').indexOf("'"+pg+"'")>=0)n.classList.add('on');});}
   document.getElementById('pg-title').textContent=pgTitles[pg]||pg;
-  if(pg==='cal')renderCal();
+  bnSet(bnPage[pg]===undefined?-1:bnPage[pg]);
   if(pg==='accs')renderAccs();
   if(pg==='monthly')renderMonthly();
-  if(pg==='rem'){renderRem();}
-  if(pg==='dash')renderDash();
-  if(pg==='dash')renderDash();
+  if(pg==='dash'){renderDash();renderRem();}
   if(pg==='stk'){renderStocks();setTimeout(function(){
     if(!stocks.length)return;
     var ps=stocks.map(function(s,i){return fetchLivePrice(s.yfSym||s.ticker,s.mkt).then(function(live){if(live&&live.price&&live.price>0){stocks[i].cp=live.price;stocks[i].livePrice=live.price;stocks[i].prevClose=live.prev||stocks[i].prevClose;}}).catch(function(){});});
@@ -1224,8 +1134,8 @@ function go(pg,el){
 }
 function rAll(){
   renderDash();
-  var pgs=['accs','monthly','rem','stk','exp'];
-  pgs.forEach(function(p){if(document.getElementById('p-'+p)&&document.getElementById('p-'+p).classList.contains('on')){if(p==='accs')renderAccs();if(p==='monthly')renderMonthly();if(p==='rem')renderRem();if(p==='stk')renderStocks();if(p==='exp')renderExport();}});
+  var pgs=['accs','monthly','stk','exp'];
+  pgs.forEach(function(p){if(document.getElementById('p-'+p)&&document.getElementById('p-'+p).classList.contains('on')){if(p==='accs')renderAccs();if(p==='monthly')renderMonthly();if(p==='stk')renderStocks();if(p==='exp')renderExport();}});
 }
 function tick(){document.getElementById('clk').textContent=new Date().toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short',year:'numeric'})+' · '+new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});}
 setInterval(tick,1000);tick();
@@ -1617,5 +1527,20 @@ function urlB64ToUint8(base64String){
 </div>
 
 <div class="ovlay" id="m-tv" style="display:none;align-items:center;justify-content:center"><div style="background:var(--bg2);border:1px solid var(--b2);border-radius:16px;width:92vw;max-width:1000px;height:85vh;display:flex;flex-direction:column;overflow:hidden"><div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--b1)"><div style="font-size:14px;font-weight:600" id="tv-title">Chart</div><button onclick="cM('m-tv');document.getElementById('tv-frame').src=''" style="font-size:12px">Close</button></div><iframe id="tv-frame" src="" style="flex:1;border:none;border-radius:0 0 16px 16px" allowfullscreen></iframe></div></div>
+<nav class="bnav">
+  <div class="tbi on" onclick="go('dash',null);bnSet(0)"><span class="tbi-i">▣</span><span>Home</span><span class="bdot" id="ov-dot-m">0</span></div>
+  <div class="tbi" onclick="go('accs',null);bnSet(1)"><span class="tbi-i">🏦</span><span>Accounts</span></div>
+  <div class="tbi" onclick="go('stk',null);bnSet(2)"><span class="tbi-i">📈</span><span>Stocks</span></div>
+  <div class="tbi" onclick="openMore()"><span class="tbi-i">☰</span><span>More</span></div>
+</nav>
+
+<div class="msheet" id="more-sheet" onclick="if(event.target===this)closeMore()">
+  <div class="msheet-in">
+    <div class="msheet-grip"></div>
+    <div class="msheet-r" onclick="closeMore();go('monthly',null)"><span>📊</span><div><div class="msheet-t">Monthly view</div><div class="msheet-s">Obligations month by month</div></div></div>
+    <div class="msheet-r" onclick="closeMore();go('ai',null)"><span>🤖</span><div><div class="msheet-t">AI assistant</div><div class="msheet-s">Ask about your finances</div></div></div>
+    <div class="msheet-r" onclick="closeMore();go('exp',null)"><span>↓</span><div><div class="msheet-t">Export</div><div class="msheet-s">Report, Excel, print</div></div></div>
+  </div>
+</div>
 </body>
 </html>
