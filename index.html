@@ -1379,6 +1379,16 @@ var UAE_ALIASES={
 
 async function fetchLivePrice(ticker,market){
   var isUAE=(market==='DFM'||market==='ADX');
+  // UAE first: TradingView covers ADX, which Yahoo does not.
+  if(isUAE){
+    try{
+      var qr=await fetch('/api/quote?ticker='+encodeURIComponent(ticker),{cache:'no-store'});
+      if(qr.ok){
+        var qj=await qr.json();
+        if(qj&&qj.price>0) return {price:qj.price,prev:qj.prev,currency:qj.currency||'AED',name:qj.name||ticker};
+      }
+    }catch(e){}
+  }
   // Check alias map first
   var yfSym=null;
   if(isUAE){
