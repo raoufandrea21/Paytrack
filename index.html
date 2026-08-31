@@ -1148,7 +1148,7 @@ function renderStocks(){
     card.appendChild(priceRow);
     // stats
     var stats=document.createElement('div');
-    stats.style.cssText='display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-bottom:8px';
+    stats.style.cssText='display:flex;flex-direction:column;gap:1px;margin-bottom:10px;background:var(--bg1);border-radius:8px;padding:4px 0';
     stats.innerHTML=[
       ['Qty',s.qty.toLocaleString(),'var(--t1)'],
       ['Avg buy',s.cur+' '+(s.bp||0).toFixed(2),'var(--t1)'],
@@ -1158,11 +1158,12 @@ function renderStocks(){
       s.broker?['Net · '+s.broker, fmt(brokerNet((s.broker||'').trim())), (brokerNet((s.broker||'').trim())>=0?'var(--green)':'var(--red)')]:null,
       dayChg!==null?['Day chg',(dayChg>=0?'+':'')+dayChg.toFixed(2)+'%',(dayChg>=0?'var(--green)':'var(--red)')]:null
     ].filter(Boolean).map(function(x){
-      // one line per value: wrapping made the cells different heights and threw
-      // the grid out of alignment. Long values ellipsis with the full text on hover.
-      return '<div style="background:var(--bg1);border-radius:8px;padding:7px 10px;min-width:0">'
-        +'<div style="font-size:10px;color:var(--t3);margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+x[0]+'</div>'
-        +'<div title="'+String(x[1]).replace(/"/g,'&quot;')+'" style="font-size:12px;font-weight:600;font-family:var(--m);color:'+x[2]+';white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+x[1]+'</div></div>';
+      // Label left, value right. The previous grid of small boxes truncated
+      // real figures like "AED 1,223,965" to "AED 1,..." -- a number you cannot
+      // read is worse than no number.
+      return '<div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding:5px 10px">'
+        +'<span style="font-size:11px;color:var(--t3);white-space:nowrap">'+x[0]+'</span>'
+        +'<span style="font-size:13px;font-weight:600;font-family:var(--m);font-variant-numeric:tabular-nums;color:'+x[2]+';text-align:right">'+x[1]+'</span></div>';
     }).join('');
     card.appendChild(stats);
     // buttons
