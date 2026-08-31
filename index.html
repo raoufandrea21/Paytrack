@@ -749,9 +749,10 @@ var PT_DIRTY=false, PT_SAVING=false, PT_RETRY=null;
 // may write until the first server read settles; changes made meanwhile are
 // held and sent afterwards.
 var PT_BOOTED=false;
-var PT_REBASE=0;   // bounded, so a conflict storm cannot spin forever
+var PT_REBASE=0;
+var PT_CHANGED=false;   // set only when data changes while a save is in flight   // bounded, so a conflict storm cannot spin forever
 try{ PT_DIRTY = localStorage.getItem('pt_dirty')==='1'; }catch(e){}
-function setDirty(v){ PT_DIRTY=v; try{ v?localStorage.setItem('pt_dirty','1'):localStorage.removeItem('pt_dirty'); }catch(e){} }
+function setDirty(v){ PT_DIRTY=v; if(v&&PT_SAVING)PT_CHANGED=true; try{ v?localStorage.setItem('pt_dirty','1'):localStorage.removeItem('pt_dirty'); }catch(e){} }
 function syncStatus(kind,text){
   var e=document.getElementById('sync-indicator'); if(!e)return;
   e.className='sync on '+kind; e.textContent=text;
@@ -761,7 +762,7 @@ function syncStatus(kind,text){
 function syncToServer(){
   if(!PT_BOOTED){ setDirty(true); ptLog('SAVE-HELD','waiting for the first server read'); return; }
   if(PT_SAVING){ setDirty(true); return; }
-  PT_SAVING=true; syncStatus('busy','Saving…'); ptLog('SAVE-START');
+  PT_SAVING=true; PT_CHANGED=false; syncStatus('busy','Saving…'); ptLog('SAVE-START');
   // Declare the version being replaced. The server refuses the write if the
   // stored copy has moved on, so this device cannot overwrite something it has
   // never seen -- no matter which code path called save.
@@ -820,7 +821,11 @@ function syncToServer(){
     // dirty; nothing re-sent it, so it was lost and the server's older value
     // came back on the next refresh. Coalesce: if anything changed during the
     // request, send again immediately.
-    var again = PT_DIRTY;
+    // Re-send only when something actually changed during this request.
+    // PT_DIRTY alone is always true here (it was set when this save was
+    // queued), which made every single save fire twice.
+    var again = PT_CHANGED;
+    PT_CHANGED=false;
     PT_REBASE=0;
     setDirty(false);
     ptLog('SAVE-OK', res.j.saved||'');
@@ -832,9 +837,18 @@ function syncToServer(){
     }catch(e){} }
     syncStatus('ok','✓ Saved');
     if(PT_RETRY){ clearInterval(PT_RETRY); PT_RETRY=null; }
-  }).catch(function(){
+  }).catch(function(err){
     PT_SAVING=false; setDirty(true);
-    ptLog('SAVE-FAIL');
+    var msg=(err&&err.message)||'network';
+    ptLog('SAVE-FAIL', msg);
+    // A 401 means the session is gone: retrying can never succeed. Ask for the
+    // passcode instead of looping on a dead red chip.
+    if(/not authorised/i.test(msg)){
+      if(PT_RETRY){ clearInterval(PT_RETRY); PT_RETRY=null; }
+      syncStatus('bad','✕ Locked — unlock to save');
+      lkShow('login','Your changes are kept on this device. Unlock to save them.');
+      return;
+    }
     syncStatus('bad','✕ Not saved — tap to retry');
     if(!PT_RETRY) PT_RETRY=setInterval(function(){ if(PT_DIRTY && navigator.onLine) syncToServer(); },20000);
   });
@@ -2202,7 +2216,8 @@ function lkSubmit(){
       if (!res.ok || !res.j.ok){ lkErr(res.j.error || 'Could not sign in.'); return; }
       document.getElementById('lk-pc').value = '';
       lkHide();
-      loadFromServer();
+      // Held changes take priority: push them rather than pulling over them.
+      if(PT_DIRTY){ syncToServer(); } else { loadFromServer(); }
       // Offer fingerprint after any sign-in on a device that has not set it up,
       // so it becomes the normal way in rather than a one-off at setup.
       var cred = null;

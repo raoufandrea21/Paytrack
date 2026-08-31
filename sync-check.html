@@ -59,6 +59,9 @@ document.getElementById('log').textContent =
       }).join('\n')
     : 'No events recorded yet. Open PayTrack, make a change, then come back.');
 
+fetch('/api/auth?action=status',{cache:'no-store'}).then(function(r){return r.json();}).then(function(j){
+  meta['session on this device'] = j.configured ? (j.authenticated ? 'valid — saves allowed' : 'MISSING — saves will be refused until you unlock') : 'no passcode set';
+}).catch(function(){ meta['session on this device']='could not check'; });
 fetch('/api/load',{cache:'no-store'}).then(function(r){
   if(r.status===401) throw new Error('locked');
   return r.json();
