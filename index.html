@@ -749,6 +749,7 @@ var PT_DIRTY=false, PT_SAVING=false, PT_RETRY=null;
 // may write until the first server read settles; changes made meanwhile are
 // held and sent afterwards.
 var PT_BOOTED=false;
+var PT_REBASE=0;   // bounded, so a conflict storm cannot spin forever
 try{ PT_DIRTY = localStorage.getItem('pt_dirty')==='1'; }catch(e){}
 function setDirty(v){ PT_DIRTY=v; try{ v?localStorage.setItem('pt_dirty','1'):localStorage.removeItem('pt_dirty'); }catch(e){} }
 function syncStatus(kind,text){
@@ -761,20 +762,66 @@ function syncToServer(){
   if(!PT_BOOTED){ setDirty(true); ptLog('SAVE-HELD','waiting for the first server read'); return; }
   if(PT_SAVING){ setDirty(true); return; }
   PT_SAVING=true; syncStatus('busy','Saving…'); ptLog('SAVE-START');
+  // Declare the version being replaced. The server refuses the write if the
+  // stored copy has moved on, so this device cannot overwrite something it has
+  // never seen -- no matter which code path called save.
+  var base = localStorage.getItem('pt_save_time') || '';
   fetch('/api/save',{
     method:'POST',
     headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({accs:accs,stocks:stocks,savings:savings,margins:margins})
+    body:JSON.stringify({accs:accs,stocks:stocks,savings:savings,margins:margins,baseVersion:base})
   }).then(function(r){
-    return r.json().then(function(j){ return {ok:r.ok,j:j}; });
+    return r.json().then(function(j){ return {ok:r.ok,status:r.status,j:j}; });
   }).then(function(res){
     PT_SAVING=false;
+    if(res.status===409){
+      // Someone else wrote first. Take their copy, then decide.
+      var cur=res.j.current||{};
+      var mineHadEdit=PT_DIRTY;
+      ptLog('CONFLICT','stored='+new Date(res.j.storedVersion).toISOString()+' mine claimed='+(res.j.claimedVersion?new Date(res.j.claimedVersion).toISOString():'(none)')+' hadEdit='+mineHadEdit);
+      try{
+        if(Array.isArray(cur.accs)&&cur.accs.length){
+          if(!mineHadEdit){
+            // Nothing of ours to keep: adopt theirs and stop. This is the case
+            // that used to clobber -- housekeeping on a stale device.
+            accs=convertDates(cur.accs);
+            if(Array.isArray(cur.stocks))stocks=cur.stocks;
+            if(Array.isArray(cur.savings))savings=cur.savings;
+            if(cur.margins)margins=cur.margins;
+            saveLocal();
+            localStorage.setItem('pt_save_time', new Date(cur.saved).getTime());
+            localStorage.setItem('pt_user_save_time', new Date(cur.saved).getTime());
+            setDirty(false); rAll();
+            syncStatus('ok','✓ Updated');
+            return;
+          }
+          // We do have a real edit. Rebase onto their version and try again,
+          // so the retry is made against a version we have actually seen.
+          if(PT_REBASE>=3){
+            PT_REBASE=0;
+            setDirty(true);
+            syncStatus('bad','✕ Not saved — tap to retry');
+            ptLog('CONFLICT-GIVEUP','3 rebases without success');
+            return;
+          }
+          PT_REBASE++;
+          localStorage.setItem('pt_save_time', new Date(cur.saved).getTime());
+          setDirty(true);
+          syncStatus('busy','Merging…');
+          setTimeout(syncToServer,0);
+          return;
+        }
+      }catch(e){}
+      setDirty(true); syncStatus('bad','✕ Not saved — tap to retry');
+      return;
+    }
     if(!res.ok || !res.j || res.j.error || !res.j.success) throw new Error((res.j&&res.j.error)||'save failed');
     // A change made while the previous save was in flight was only flagged
     // dirty; nothing re-sent it, so it was lost and the server's older value
     // came back on the next refresh. Coalesce: if anything changed during the
     // request, send again immediately.
     var again = PT_DIRTY;
+    PT_REBASE=0;
     setDirty(false);
     ptLog('SAVE-OK', res.j.saved||'');
     if(again) setTimeout(syncToServer, 0);

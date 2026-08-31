@@ -103,10 +103,43 @@ document.getElementById('app').onload=function(){
     w.loadFromServer().then(function(){
       var y=w.accs.find(function(v){return v.id==='ali';});
       ok('a newer server copy is adopted, so devices do sync', y && y.name==='FROM OTHER DEVICE');
+      // A stale device must be REFUSED by the server, not allowed to clobber.
+      var staleTest = (function(){
+        var store={accs:[{id:'ali',name:'Ali',openEnded:true,type:'Lender',principal:1,pays:[],remDays:7}],saved:'2026-01-01T00:00:00.000Z'};
+        var rejected=0;
+        var keep=w.fetch;
+        w.fetch=function(u,o){
+          if(String(u).indexOf('/api/save')>=0){
+            var b=JSON.parse(o.body);
+            var stored=new Date(store.saved).getTime();
+            var claimed=b.baseVersion? new Date(+b.baseVersion||b.baseVersion).getTime():null;
+            if(claimed!==stored){ rejected++; return Promise.resolve({ok:false,status:409,json:function(){return Promise.resolve({error:'Version conflict',storedVersion:stored,claimedVersion:claimed,current:store});}}); }
+            store={accs:b.accs,saved:new Date().toISOString()};
+            return Promise.resolve({ok:true,status:200,json:function(){return Promise.resolve({success:true,saved:store.saved});}});
+          }
+          return Promise.resolve({ok:true,status:200,json:function(){return Promise.resolve({});}});
+        };
+        w.PT_BOOTED=true; w.PT_SAVING=false; w.PT_REBASE=0; LS.removeItem('pt_dirty'); w.PT_DIRTY=false;
+        LS.setItem('pt_save_time','1');
+        w.accs=[{id:'ali',name:'Ali',type:'Lender',principal:1,pays:[],remDays:7}];   // no openEnded
+        w.syncToServer();
+        return new Promise(function(done2){
+          setTimeout(function(){
+            ok('a stale device is refused and cannot clobber the server',
+               rejected===1 && store.accs[0].openEnded===true, 'rejected='+rejected);
+            ok('the stale device adopts the good copy instead',
+               w.accs[0] && w.accs[0].openEnded===true, 'local openEnded='+(w.accs[0]||{}).openEnded);
+            w.fetch=keep; done2();
+          },400);
+        });
+      })();
+
       // Last, in isolation: a change made DURING an in-flight save must still
       // be sent. This is what silently reverted edits made in quick succession.
+      return staleTest.then(function(){
       var sent=[], resolvers=[];
-      w.PT_DIRTY=false; w.PT_SAVING=false;
+      w.PT_DIRTY=false; w.PT_SAVING=false; w.PT_BOOTED=true; w.PT_REBASE=0;
+      LS.setItem('pt_save_time','0');
       if(w.PT_RETRY){ w.clearInterval(w.PT_RETRY); w.PT_RETRY=null; }
       w.fetch=function(u,o){
         if(String(u).indexOf('/api/save')>=0){
@@ -125,7 +158,8 @@ document.getElementById('app').onload=function(){
            sent.length===2 && sent[1].indexOf('AFTER')>=0, sent.length+' saves');
         w.fetch=realFetch; LS.removeItem('pt_dirty'); LS.removeItem('pt_accs');
         done();
-      }, 80);
+      }, 120);
+      });
     });
     });
   });
