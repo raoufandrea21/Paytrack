@@ -47,6 +47,14 @@ document.getElementById('app').onload=function(){
   ok('edited principal is not reset', nv && nv.principal===999);
   ok('deleted/absent demo accounts are not resurrected', w.accs.length===1, 'got '+w.accs.length);
 
+
+  // fetch the real service worker and assert it cannot cache API responses
+  fetch('/sw.js').then(function(r){return r.text();}).then(function(src){
+    ok('service worker never caches /api responses',
+       /pathname\.startsWith\('\/api\/'\)/.test(src) && /paytrack-v2/.test(src),
+       'sw.js does not exclude /api/');
+  });
+
   // ── arithmetic ──
   w.accs=[{id:'t',name:'T',type:'Cash Loan',principal:1000,remDays:7,pays:[
     {desc:'a',status:'paid',amount:100,dt:'01-01-2026',nd:'',chq:''},
@@ -58,6 +66,13 @@ document.getElementById('app').onload=function(){
   ok('unscheduled principal is counted', w.unsched({principal:1090000,pays:[]})===1090000);
   ok('interest-bearing schedule reports 0 unscheduled',
      w.unsched({principal:305000,pays:[{amount:351665}]})===0);
+
+  // ── the service worker must never answer /api from cache ──
+  (function(){
+    var src = null;
+    try { src = w.__swSource; } catch(e){}
+    // parsed from the deployed sw.js below instead; placeholder keeps order
+  })();
 
   // ── sync precedence ──
   var realFetch=w.fetch;

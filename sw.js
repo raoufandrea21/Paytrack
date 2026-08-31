@@ -1,4 +1,4 @@
-const CACHE = 'paytrack-v1';
+const CACHE = 'paytrack-v2';
 const ASSETS = ['/', '/index.html'];
 
 self.addEventListener('install', e => {
@@ -14,6 +14,18 @@ self.addEventListener('activate', e => {
 // Network-first for the app itself (always fresh when online), cache fallback offline
 self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return;
+  const url = new URL(e.request.url);
+
+  // NEVER cache the API. Serving a stale /api/load from cache makes the app
+  // adopt old data as if it were the server's current state, and the next save
+  // then pushes that old data back -- silently destroying newer edits.
+  // Data goes to the network or it fails; it is never answered from cache.
+  if (url.pathname.startsWith('/api/')) {
+    e.respondWith(fetch(e.request));
+    return;
+  }
+
+  // Static shell: network first, cache only as an offline fallback.
   e.respondWith(
     fetch(e.request).then(res => {
       const copy = res.clone();

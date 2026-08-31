@@ -1353,12 +1353,18 @@ function tick(){document.getElementById('clk').textContent=new Date().toLocaleDa
 setInterval(tick,1000);tick();
 setInterval(function(){
   if(!stocks.length)return;
+  // Only write back when a price actually moved. This used to save every 60s
+  // unconditionally, so any device left open pushed its whole dataset over the
+  // server once a minute -- a stale tab could silently undo edits made elsewhere.
+  var changed=false;
   var ps=stocks.map(function(s,i){
     return fetchLivePrice(s.yfSym||s.ticker,s.mkt).then(function(live){
+      if(live&&live.price&&live.price!==stocks[i].cp){changed=true;}
       if(live&&live.price){stocks[i].cp=live.price;stocks[i].livePrice=live.price;stocks[i].liveAt=Date.now();stocks[i].prevClose=live.prev||stocks[i].prevClose;}
     }).catch(function(){});
   });
   Promise.all(ps).then(function(){
+    if(!changed){ var pg0=document.getElementById('p-stk'); if(pg0&&pg0.classList.contains('on'))renderStocks(); return; }
     var pg=document.getElementById('p-stk');
     if(pg&&pg.classList.contains('on')){saveState();renderStocks();}
     else{saveState();}
@@ -1468,7 +1474,7 @@ setInterval(function(){
 
 async function loadFromServer(){
   try{
-    var res=await fetch('/api/load');
+    var res=await fetch('/api/load',{cache:'no-store'});
     if(!res.ok)return;
     var raw=await res.json();
     var data=raw;
