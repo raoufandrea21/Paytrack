@@ -1,0 +1,97 @@
+<!doctype html><meta charset="utf-8"><title>PayTrack self-test</title>
+<style>
+body{font:14px/1.6 system-ui,sans-serif;background:#0d0d12;color:#eee;margin:0;padding:24px}
+h1{font-size:18px;margin:0 0 4px}p.sub{color:#8888a0;margin:0 0 18px;font-size:12px}
+.r{padding:7px 10px;border-radius:6px;margin-bottom:5px;font-family:ui-monospace,monospace;font-size:12.5px}
+.pass{background:rgba(62,207,142,.12);color:#3ecf8e}
+.fail{background:rgba(242,107,107,.15);color:#f26b6b;font-weight:600}
+#sum{margin:16px 0;font-size:15px;font-weight:600}
+iframe{display:none}
+</style>
+<h1>PayTrack self-test</h1>
+<p class="sub">Regression checks for the ways a change can silently disappear. Run this before deploying.</p>
+<div id="sum">Running…</div><div id="out"></div>
+<iframe id="app" src="/index.html?selftest=1"></iframe>
+<script>
+var out=document.getElementById('out'), R=[];
+function ok(n,c,d){ R.push({n:n,c:!!c,d:d});
+  out.insertAdjacentHTML('beforeend','<div class="r '+(c?'pass':'fail')+'">'+(c?'PASS':'FAIL')+' — '+n+(!c&&d?'  ['+d+']':'')+'</div>'); }
+function done(){
+  var f=R.filter(function(x){return !x.c;}).length;
+  document.getElementById('sum').innerHTML = f
+    ? '<span style="color:#f26b6b">'+f+' of '+R.length+' FAILED</span>'
+    : '<span style="color:#3ecf8e">All '+R.length+' checks passed</span>';
+}
+document.getElementById('app').onload=function(){
+  var w=document.getElementById('app').contentWindow, LS=w.localStorage;
+  function seed(l){ LS.setItem('pt_accs',JSON.stringify(l)); }
+
+  // ── persistence: fields must survive a reload ──
+  seed([{id:'ali',name:'Ali',type:'Lender',principal:1090000,pays:[],openEnded:true,remDays:7}]);
+  w.loadState();
+  var a=w.accs.find(function(x){return x.id==='ali';});
+  ok('openEnded survives reload', a && a.openEnded===true);
+
+  seed([{id:'school',name:'School',type:'School Fees',principal:62200,remDays:7,pays:[
+    {desc:'Term 1',status:'paid',amount:23200,dt:'01-08-2025',nd:'',chq:''}]}]);
+  w.loadState();
+  var sc=w.accs.find(function(x){return x.id==='school';});
+  ok('a payment marked paid stays paid', sc && sc.pays[0].status==='paid');
+  ok('an edited date survives reload', sc && sc.pays[0].dt==='01-08-2025');
+
+  seed([{id:'nawayef',name:'RENAMED',type:'Installments',principal:999,remDays:7,
+    pays:[{desc:'x',status:'notpaid',amount:5,dt:'01-01-2027',nd:'',chq:''}]}]);
+  w.loadState();
+  var nv=w.accs.find(function(x){return x.id==='nawayef';});
+  ok('renamed account keeps its name', nv && nv.name==='RENAMED');
+  ok('edited principal is not reset', nv && nv.principal===999);
+  ok('deleted/absent demo accounts are not resurrected', w.accs.length===1, 'got '+w.accs.length);
+
+  // ── arithmetic ──
+  w.accs=[{id:'t',name:'T',type:'Cash Loan',principal:1000,remDays:7,pays:[
+    {desc:'a',status:'paid',amount:100,dt:'01-01-2026',nd:'',chq:''},
+    {desc:'b',status:'deferred',amount:100,dt:'01-02-2026',nd:'',chq:''},
+    {desc:'c',status:'notpaid',amount:100,dt:'01-03-2026',nd:'',chq:''},
+    {desc:'end',status:'notpaid',amount:100,dt:'01-04-2026',nd:'',chq:'',deferAdded:true}]}];
+  var owedTotal=w.accs[0].pays.filter(w.owed).reduce(function(s,p){return s+p.amount;},0);
+  ok('a deferred instalment is not owed twice', owedTotal===200, 'owed='+owedTotal);
+  ok('unscheduled principal is counted', w.unsched({principal:1090000,pays:[]})===1090000);
+  ok('interest-bearing schedule reports 0 unscheduled',
+     w.unsched({principal:305000,pays:[{amount:351665}]})===0);
+
+  // ── sync precedence ──
+  var realFetch=w.fetch;
+  LS.removeItem('pt_dirty'); LS.removeItem('pt_user_save_time');
+  w.accs=[{id:'ali',name:'Ali',type:'Lender',principal:1090000,pays:[],openEnded:true,remDays:7}];
+  w.fetch=function(){ return Promise.reject(new Error('offline')); };
+  w.saveState();
+  ok('a failed save is recorded on disk', LS.getItem('pt_dirty')==='1');
+
+  var older={accs:[{id:'ali',name:'Ali',type:'Lender',principal:1090000,pays:[],remDays:7}],saved:'2020-01-01T00:00:00Z'};
+  w.fetch=function(u){ return String(u).indexOf('/api/load')>=0
+    ? Promise.resolve({ok:true,json:function(){return Promise.resolve(older);}})
+    : Promise.resolve({ok:true,json:function(){return Promise.resolve({error:'offline'});}}); };
+  w.loadFromServer().then(function(){
+    var x=w.accs.find(function(v){return v.id==='ali';});
+    ok('an older server copy cannot overwrite my unsaved edit', x && x.openEnded===true);
+
+    // isolate: the previous case leaves a save promise in flight, and its late
+    // rejection re-marks the data dirty. Let it settle first, then reset.
+    return new Promise(function(go){ setTimeout(go,150); }).then(function(){
+    LS.removeItem('pt_dirty'); w.PT_DIRTY=false; w.PT_SAVING=false;
+    if(w.PT_RETRY){ w.clearInterval(w.PT_RETRY); w.PT_RETRY=null; }
+    LS.setItem('pt_user_save_time','1000'); LS.setItem('pt_save_time','1000');
+    var newer={accs:[{id:'ali',name:'FROM OTHER DEVICE',type:'Lender',principal:1090000,pays:[],remDays:7}],saved:new Date().toISOString()};
+    w.fetch=function(u){ return String(u).indexOf('/api/load')>=0
+      ? Promise.resolve({ok:true,json:function(){return Promise.resolve(newer);}})
+      : Promise.resolve({ok:true,json:function(){return Promise.resolve({success:true,saved:new Date().toISOString()});}}); };
+    w.loadFromServer().then(function(){
+      var y=w.accs.find(function(v){return v.id==='ali';});
+      ok('a newer server copy is adopted, so devices do sync', y && y.name==='FROM OTHER DEVICE');
+      w.fetch=realFetch; LS.removeItem('pt_dirty'); LS.removeItem('pt_accs');
+      done();
+    });
+    });
+  });
+};
+</script>
