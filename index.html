@@ -169,6 +169,10 @@ label{display:block;font-size:11px;color:var(--t2);margin-bottom:4px;font-weight
 .sync.ok{background:rgba(62,207,142,.14);color:var(--green)}
 .sync.busy{background:rgba(136,136,160,.16);color:var(--t2)}
 .sync.bad{background:rgba(242,107,107,.16);color:var(--red);cursor:pointer}
+
+.stk-cell{min-width:0}
+.stk-cell>div:last-child{overflow-wrap:anywhere;line-height:1.35}
+#stk-grid .stk-cell{display:flex;flex-direction:column;justify-content:flex-start}
 .remrow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 14px;border-bottom:1px solid var(--b1);font-size:12px;color:var(--t2)}
 .remrow input{width:64px;min-height:34px}
 </style>
@@ -268,9 +272,15 @@ label{display:block;font-size:11px;color:var(--t2);margin-bottom:4px;font-weight
     </div>
     <div onclick="go('stk',null)" style="background:linear-gradient(135deg,rgba(45,212,191,0.15),rgba(45,212,191,0.05));border:1px solid rgba(45,212,191,0.3);border-radius:14px;padding:1.25rem;cursor:pointer;position:relative;overflow:hidden">
       <div style="position:absolute;top:-20px;right:-20px;width:80px;height:80px;background:rgba(45,212,191,0.1);border-radius:50%"></div>
-      <div style="font-size:10px;font-weight:700;color:var(--teal);text-transform:uppercase;letter-spacing:1px;margin-bottom:.5rem">Net Balance</div>
+      <div style="font-size:10px;font-weight:700;color:var(--teal);text-transform:uppercase;letter-spacing:1px;margin-bottom:.5rem">Savings</div>
+      <div style="font-size:22px;font-weight:700;color:var(--t1);font-family:var(--m);letter-spacing:-1px" id="m-sav">—</div>
+      <div style="font-size:11px;color:var(--t2);margin-top:.5rem" id="m-sav-sub">Cash at banks</div>
+    </div>
+    <div onclick="go('accs',null)" style="background:linear-gradient(135deg,rgba(45,212,191,0.15),rgba(45,212,191,0.05));border:1px solid rgba(45,212,191,0.3);border-radius:14px;padding:1.25rem;cursor:pointer;position:relative;overflow:hidden">
+      <div style="position:absolute;top:-20px;right:-20px;width:80px;height:80px;background:rgba(45,212,191,0.1);border-radius:50%"></div>
+      <div style="font-size:10px;font-weight:700;color:var(--teal);text-transform:uppercase;letter-spacing:1px;margin-bottom:.5rem">Net worth</div>
       <div style="font-size:22px;font-weight:700;font-family:var(--m);letter-spacing:-1px" id="m-bal">—</div>
-      <div style="font-size:11px;color:var(--t2);margin-top:.5rem">Stocks minus Outstanding</div>
+      <div style="font-size:11px;color:var(--t2);margin-top:.5rem" id="m-bal-sub">Own minus owe</div>
     </div>
   </div>
 
@@ -332,7 +342,7 @@ label{display:block;font-size:11px;color:var(--t2);margin-bottom:4px;font-weight
 </div>
 
 <div id="p-monthly" class="pg">
-  <div class="sh"><div class="st">Monthly breakdown</div><select id="mo-yr" onchange="renderMonthly()" style="width:110px"><option value="2026">2026</option><option value="2027">2027</option><option value="2028">2028</option><option value="2029">2029</option></select></div>
+  <div class="sh"><div class="st">Monthly breakdown</div><select id="mo-yr" onchange="renderMonthly()" style="width:110px"><option value="all" selected>All years</option><option value="2026">2026</option><option value="2027">2027</option><option value="2028">2028</option><option value="2029">2029</option></select></div>
   <div id="mo-body"></div>
 </div>
 
@@ -810,11 +820,24 @@ function renderDash(){
   var mnLbl=document.getElementById('m-next-lbl');
   if(mnLbl)mnLbl.textContent=MNS[nextMo]+' '+nextYr;
   var snw=sv+(typeof savTotal==='function'?savTotal():0)-(typeof stkMargin!=='undefined'?stkMargin:0);
-  document.getElementById('m6').textContent=sv>0?fmt(snw):'AED 0';
+  document.getElementById('m6').textContent=sv>0?fmt(sv):'AED 0';
+  var _sav=savTotal(), _asset=assetTotal(), _nw=netWorthTotal();
+  var savEl=document.getElementById('m-sav');
+  if(savEl){
+    savEl.textContent=_sav>0?fmt(_sav):'AED 0';
+    document.getElementById('m-sav-sub').textContent = savings.length
+      ? savings.length+' account'+(savings.length>1?'s':'') : 'Add on the Stocks page';
+  }
+  var nwEl2=document.getElementById('m-bal');
+  if(nwEl2){
+    nwEl2.innerHTML='<span style="color:'+(_nw>=0?'var(--green)':'var(--red)')+'">'+fmt(_nw)+'</span>';
+    document.getElementById('m-bal-sub').innerHTML = _asset>0
+      ? 'Property '+fmt(_asset)+' + stocks + savings &minus; debts'
+      : '<span style="color:var(--amber)">No property values set &mdash; add \u201cWorth today\u201d on your accounts</span>';
+  }
   var glEl=document.getElementById('m6-gl');
   if(glEl){if(gl!==0)glEl.innerHTML='G/L: <span style="color:'+(gl>=0?'var(--green)':'var(--red)')+'"> '+(gl>=0?'+':'')+fmt(gl)+'</span>';else glEl.textContent='Click to view stocks';}
-  var balEl=document.getElementById('m-bal');
-  if(balEl){balEl.textContent=(bal<0?'-':'')+fmt(Math.abs(bal));balEl.style.color=bal>=0?'var(--green)':'var(--red)';}
+  // (the old stocks-minus-outstanding figure is written above as net worth)
   if(document.getElementById('m5'))document.getElementById('m5').textContent=accs.length;
   ['ov-dot','ov-dot-m'].forEach(function(id){var e=document.getElementById(id);if(e){e.textContent=ovc;e.style.display=ovc?'':'none';}});
   renderCharts();
@@ -876,7 +899,7 @@ function renderAccs(){
       var fcRow=p.forecast?'background:rgba(167,139,250,.05);border-left:2px solid var(--purple)':'';var delBtn=' <button class="btn-s btn-d" onclick="delPay(\''+a.id+'\','+i+')" title="Delete this payment">✕</button>';var acts=(p.forecast?'<button class="btn-s" onclick="confirmForecast(\''+a.id+'\','+i+')" style="color:var(--purple)">✓ Confirm real</button> <button class="btn-s" onclick="opEdit(\''+a.id+'\','+i+')">✎ Edit</button>':(payActions(a.id,p,i)+''+(a.defer&&owed(p)?' <button class="btn-s" onclick="deferP(\''+a.id+'\','+i+')">Defer</button>':'')+' <button class="btn-s" onclick="opEdit(\''+a.id+'\','+i+')">✎ Edit</button>'))+delBtn;return'<tr style="'+fcRow+'"><td style="color:var(--t3);font-family:var(--m);font-size:10px">'+(i+1)+'</td><td style="font-family:var(--m);font-size:11px">'+eff(p)+(hn?'<br><span style="font-size:10px;color:var(--t3);text-decoration:line-through">'+p.dt+'</span>':'')+'</td><td style="color:var(--t2)">'+p.desc+(p.forecast?fcTag():'')+'</td><td style="font-family:var(--m);font-size:10px;color:var(--t3)">'+(p.chq||'—')+'</td><td style="text-align:right;font-family:var(--m);font-weight:600">'+fmt(p.amount)+'</td><td style="color:var(--t3);font-size:11px">'+(p.pct||'')+'</td><td>'+(p.forecast?'':sbdg(p.status))+'</td><td style="white-space:nowrap">'+acts+'</td></tr>';
     }).join('');
     var sb=uns>0?'<span style="font-size:10px;font-weight:600;color:var(--amber);background:rgba(245,166,35,.14);padding:2px 7px;border-radius:100px;margin-left:6px">'+fmt(uns)+' unscheduled</span>':'';
-    return'<div class="ar"><div class="ah" onclick="togAcc(\'d-'+a.id+'\')"><div style="display:flex;align-items:center;gap:12px"><div style="width:36px;height:36px;border-radius:10px;background:rgba(91,156,246,.1);color:'+tcl(a.type)+';display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0"><i class="ti ti-'+tic(a.type)+'"></i></div><div><div style="font-weight:600;font-size:14px">'+a.name+' '+sb+'</div><div style="font-size:11px;color:var(--t2);margin-top:2px">'+a.type+' · Principal: '+fmt(a.principal)+(a.defer?' · <span style="color:var(--blue)">defer on</span>':'')+'</div><div class="prog"><div class="prog-f" style="width:'+pct+'%"></div></div><div style="font-size:10px;color:var(--t3);margin-top:2px">'+pct+'% paid</div></div></div><div style="text-align:right;display:flex;align-items:center;gap:12px"><div><div style="font-weight:600;font-size:15px;font-family:var(--m);color:var(--red)">'+fmt(debt)+'</div><div style="font-size:11px;color:var(--t2);margin-top:2px">'+fmt(paid)+' paid'+(ov?' · <span style="color:var(--red)">'+fmt(ov)+' overdue</span>':'')+'</div></div><button class="btn-d btn-s" onclick="event.stopPropagation();opDel(\''+a.id+'\')">Delete</button></div></div><div class="adet" id="d-'+a.id+'"><div style="padding:8px 14px;border-bottom:1px solid var(--b1);display:flex;gap:8px"><button class="btn-s" onclick="opAddPay(\''+a.id+'\')">+ Add payment</button><button class="btn-s" onclick="openAutoForecast(\''+a.id+'\')" style="color:var(--purple)"><i class="ti ti-wand"></i> Auto-forecast</button><div id="pselbar-'+a.id+'" style="display:none;align-items:center;gap:8px;margin-left:auto"><span id="psellbl-'+a.id+'" style="font-size:11px;color:var(--t2)">0 selected</span><button class="btn-s btn-d" onclick="cfDelSelected(\''+a.id+'\')"><i class="ti ti-trash"></i> Delete selected</button></div></div><div class="remrow"><label style="display:flex;align-items:center;gap:7px;cursor:pointer;margin-right:auto"><input type="checkbox" style="width:auto;min-height:0" '+(a.openEnded?'checked':'')+' onchange="setOpenEnded(\''+a.id+'\',this.checked)"> Open-ended — no agreed repayment date</label></div><div class="remrow">🔔 Remind me <input type="number" min="0" max="90" value="'+(a.remDays||7)+'" onchange="setRem(\''+a.id+'\',this.value)"> days before each due date</div>'+(a.pays.length?'<div style="overflow-x:auto"><table><thead><tr><th style="width:24px"><input type="checkbox" onchange="cfSelAll(\''+a.id+'\',this.checked)" style="width:auto" title="Select all"></th><th>#</th><th>Date</th><th>Description</th><th>Chq</th><th style="text-align:right">Amount</th><th>%</th><th>Status</th><th></th></tr></thead><tbody>'+rows+'</tbody></table></div>':'<p style="padding:1rem;font-size:12px;color:var(--t2)">'+(uns>0?'No payment schedule. The '+fmt(uns)+' principal counts toward your totals, but with no dates it can never appear in the monthly view or trigger a reminder. Add payments to schedule it.':'No payments yet.')+'</p>')+'</div></div>';
+    return'<div class="ar"><div class="ah" onclick="togAcc(\'d-'+a.id+'\')"><div style="display:flex;align-items:center;gap:12px"><div style="width:36px;height:36px;border-radius:10px;background:rgba(91,156,246,.1);color:'+tcl(a.type)+';display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0"><i class="ti ti-'+tic(a.type)+'"></i></div><div><div style="font-weight:600;font-size:14px">'+a.name+' '+sb+'</div><div style="font-size:11px;color:var(--t2);margin-top:2px">'+a.type+' · Principal: '+fmt(a.principal)+(a.defer?' · <span style="color:var(--blue)">defer on</span>':'')+'</div><div class="prog"><div class="prog-f" style="width:'+pct+'%"></div></div><div style="font-size:10px;color:var(--t3);margin-top:2px">'+pct+'% paid</div></div></div><div style="text-align:right;display:flex;align-items:center;gap:12px"><div><div style="font-weight:600;font-size:15px;font-family:var(--m);color:var(--red)">'+fmt(debt)+'</div><div style="font-size:11px;color:var(--t2);margin-top:2px">'+fmt(paid)+' paid'+(ov?' · <span style="color:var(--red)">'+fmt(ov)+' overdue</span>':'')+'</div></div><button class="btn-d btn-s" onclick="event.stopPropagation();opDel(\''+a.id+'\')">Delete</button></div></div><div class="adet" id="d-'+a.id+'"><div style="padding:8px 14px;border-bottom:1px solid var(--b1);display:flex;gap:8px"><button class="btn-s" onclick="opAddPay(\''+a.id+'\')">+ Add payment</button><button class="btn-s" onclick="openAutoForecast(\''+a.id+'\')" style="color:var(--purple)"><i class="ti ti-wand"></i> Auto-forecast</button><div id="pselbar-'+a.id+'" style="display:none;align-items:center;gap:8px;margin-left:auto"><span id="psellbl-'+a.id+'" style="font-size:11px;color:var(--t2)">0 selected</span><button class="btn-s btn-d" onclick="cfDelSelected(\''+a.id+'\')"><i class="ti ti-trash"></i> Delete selected</button></div></div><div class="remrow"><label style="display:flex;align-items:center;gap:7px;cursor:pointer;margin-right:auto"><input type="checkbox" style="width:auto;min-height:0" '+(a.openEnded?'checked':'')+' onchange="setOpenEnded(\''+a.id+'\',this.checked)"> Open-ended — no agreed repayment date</label></div><div class="remrow">🏠 Worth today <input type="number" min="0" placeholder="0" value="'+(a.assetValue||'')+'" onchange="setAssetValue(\''+a.id+'\',this.value)"> AED &mdash; leave blank if this is not an asset you own</div><div class="remrow">🔔 Remind me <input type="number" min="0" max="90" value="'+(a.remDays||7)+'" onchange="setRem(\''+a.id+'\',this.value)"> days before each due date</div>'+(a.pays.length?'<div style="overflow-x:auto"><table><thead><tr><th style="width:24px"><input type="checkbox" onchange="cfSelAll(\''+a.id+'\',this.checked)" style="width:auto" title="Select all"></th><th>#</th><th>Date</th><th>Description</th><th>Chq</th><th style="text-align:right">Amount</th><th>%</th><th>Status</th><th></th></tr></thead><tbody>'+rows+'</tbody></table></div>':'<p style="padding:1rem;font-size:12px;color:var(--t2)">'+(uns>0?'No payment schedule. The '+fmt(uns)+' principal counts toward your totals, but with no dates it can never appear in the monthly view or trigger a reminder. Add payments to schedule it.':'No payments yet.')+'</p>')+'</div></div>';
   }).join('');
   // restore expanded panels after re-render
   Object.keys(cfOpenAccs).forEach(function(id){ if(cfOpenAccs[id]){ var el=document.getElementById(id); if(el) el.classList.add('on'); } });
@@ -893,21 +916,25 @@ var cfOpenAccs={};
 function togAcc(id){var el=document.getElementById(id);if(!el)return;el.classList.toggle('on');cfOpenAccs[id]=el.classList.contains('on');}
 
 function renderMonthly(){
-  var yr=parseInt(document.getElementById('mo-yr').value)||2026;
+  var raw=document.getElementById('mo-yr').value;
+  var allYears=(raw==='all');
+  var yr=parseInt(raw)||2026;
   var mm={};
   accs.forEach(function(a){
     a.pays.forEach(function(p,i){
       if(p.forecast && !fcVisible()) return;
-      var d=pd(eff(p));if(!d||d.getFullYear()!==yr)return;
-      var k=d.getMonth();
+      var d=pd(eff(p));if(!d)return;
+      if(!allYears&&d.getFullYear()!==yr)return;
+      var k=d.getFullYear()*12+d.getMonth();
       if(!mm[k])mm[k]=[];
       mm[k].push(Object.assign({},p,{acc:a.name,aid:a.id,pi:i,defer:a.defer,_d:d}));
     });
   });
   var months=Object.keys(mm).map(Number).sort(function(a,b){return a-b;});
-  if(!months.length){document.getElementById('mo-body').innerHTML='<p style="color:var(--t2);padding:2rem;text-align:center">No payments found for '+yr+'.</p>';return;}
-  document.getElementById('mo-body').innerHTML=months.map(function(m){
-    var pays=mm[m].sort(function(a,b){return a._d-b._d;});
+  if(!months.length){document.getElementById('mo-body').innerHTML='<p style="color:var(--t2);padding:2rem;text-align:center">No payments found'+(allYears?'.':' for '+yr+'.')+'</p>';return;}
+  document.getElementById('mo-body').innerHTML=months.map(function(k){
+    var m=k%12, ky=Math.floor(k/12);
+    var pays=mm[k].sort(function(a,b){return a._d-b._d;});
     var total=pays.filter(function(p){return owed(p);}).reduce(function(s,p){return s+p.amount;},0);
     var paid=pays.filter(function(p){return p.status==='paid';}).reduce(function(s,p){return s+p.amount;},0);
     var ovc=pays.filter(function(p){return p.status==='overdue';}).length;
@@ -915,7 +942,7 @@ function renderMonthly(){
       var hn=p.nd&&p.nd.trim();
       return'<tr style="'+(p.forecast?'background:rgba(167,139,250,.05)':'')+'"><td style="font-weight:500">'+p.acc+'</td><td style="font-family:var(--m);font-size:11px">'+eff(p)+(hn?'<br><span style="font-size:10px;color:var(--t3);text-decoration:line-through">'+p.dt+'</span>':'')+'</td><td style="color:var(--t2)">'+p.desc+(p.forecast?fcTag():'')+'</td><td style="font-family:var(--m);font-size:10px;color:var(--t3)">'+(p.chq||'—')+'</td><td style="text-align:right;font-family:var(--m);font-weight:600">'+fmt(p.amount)+'</td><td>'+(p.forecast?'':sbdg(p.status))+'</td><td style="white-space:nowrap">'+payActions(p.aid,p,p.pi)+''+(p.defer&&owed(p)?' <button class="btn-s" onclick="deferP(\''+p.aid+'\','+p.pi+')">Defer</button>':'')+' <button class="btn-s" onclick="opEdit(\''+p.aid+'\','+p.pi+')">✎ Edit</button></td></tr>';
     }).join('');
-    return'<div class="ar" style="margin-bottom:10px"><div class="mh" onclick="this.nextElementSibling.classList.toggle(\'on\')"><div style="display:flex;align-items:center;gap:10px"><div style="width:36px;height:36px;background:rgba(91,156,246,.1);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--blue)">'+M3[m]+'</div><div><div style="font-size:13px;font-weight:600">'+MNS[m]+' '+yr+'<span class="mbadge">'+pays.length+' payments</span></div><div style="font-size:11px;color:var(--t2);margin-top:2px">'+fmt(paid)+' paid · '+(ovc>0?'<span style="color:var(--red)">'+ovc+' overdue</span>':'all on track')+'</div></div></div><div style="font-size:13px;font-weight:600;color:var(--amber);font-family:var(--m)">'+fmt(total)+'</div></div><div class="mb"><div style="overflow-x:auto"><table><thead><tr><th>Account</th><th>Date</th><th>Description</th><th>Chq</th><th style="text-align:right">Amount</th><th>Status</th><th></th></tr></thead><tbody>'+rows+'</tbody></table></div></div></div>';
+    return'<div class="ar" style="margin-bottom:10px"><div class="mh" onclick="this.nextElementSibling.classList.toggle(\'on\')"><div style="display:flex;align-items:center;gap:10px"><div style="width:36px;height:36px;background:rgba(91,156,246,.1);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--blue)">'+M3[m]+'</div><div><div style="font-size:13px;font-weight:600">'+MNS[m]+' '+ky+'<span class="mbadge">'+pays.length+' payments</span></div><div style="font-size:11px;color:var(--t2);margin-top:2px">'+fmt(paid)+' paid · '+(ovc>0?'<span style="color:var(--red)">'+ovc+' overdue</span>':'all on track')+'</div></div></div><div style="font-size:13px;font-weight:600;color:var(--amber);font-family:var(--m)">'+fmt(total)+'</div></div><div class="mb"><div style="overflow-x:auto"><table><thead><tr><th>Account</th><th>Date</th><th>Description</th><th>Chq</th><th style="text-align:right">Amount</th><th>Status</th><th></th></tr></thead><tbody>'+rows+'</tbody></table></div></div></div>';
   }).join('');
 }
 
@@ -954,6 +981,24 @@ function priceAge(s){
 }
 // ── Savings ───────────────────────────────────────────────────────────────
 // Cash held at a bank. Counted as an asset in net worth alongside stocks.
+// What you OWN. PayTrack was only ever tracking what you owe, so the villas
+// you are paying for counted as debt with no matching asset. assetValue is the
+// account's worth today, entered by you.
+function assetTotal(){ return accs.reduce(function(t,a){return t+(+a.assetValue||0);},0); }
+function debtTotal(){
+  var d=0;
+  accs.forEach(function(a){
+    a.pays.forEach(function(p){ if(owed(p)) d+=p.amount; });
+    d+=unsched(a);
+  });
+  return d+(+stkMargin||0);
+}
+function stockTotal(){ return stocks.reduce(function(t,x){return t+x.qty*(x.cp||0);},0); }
+function netWorthTotal(){ return assetTotal()+stockTotal()+savTotal()-debtTotal(); }
+function setAssetValue(id,v){
+  var a=accs.find(function(x){return x.id===id;}); if(!a)return;
+  a.assetValue=Math.max(0,+v||0); saveState(); renderDash(); renderAccs();
+}
 function savTotal(){ return savings.reduce(function(t,x){return t+(+x.amount||0);},0); }
 function addSaving(){
   var bank=(document.getElementById('sv-bank').value||'').trim();
@@ -1033,7 +1078,7 @@ function renderStocks(){
     card.appendChild(priceRow);
     // stats
     var stats=document.createElement('div');
-    stats.style.cssText='display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:8px';
+    stats.style.cssText='display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-bottom:8px';
     stats.innerHTML=[
       ['Qty',s.qty.toLocaleString(),'var(--t1)'],
       ['Avg buy',s.cur+' '+(s.bp||0).toFixed(2),'var(--t1)'],
@@ -1042,9 +1087,11 @@ function renderStocks(){
       s.broker?['Broker',s.broker,'var(--t2)']:null,
       dayChg!==null?['Day chg',(dayChg>=0?'+':'')+dayChg.toFixed(2)+'%',(dayChg>=0?'var(--green)':'var(--red)')]:null
     ].filter(Boolean).map(function(x){
-      return '<div style="background:var(--bg1);border-radius:8px;padding:7px 10px">'
-        +'<div style="font-size:10px;color:var(--t3);margin-bottom:2px">'+x[0]+'</div>'
-        +'<div style="font-size:12px;font-weight:600;font-family:var(--m);color:'+x[2]+'">'+x[1]+'</div></div>';
+      // one line per value: wrapping made the cells different heights and threw
+      // the grid out of alignment. Long values ellipsis with the full text on hover.
+      return '<div style="background:var(--bg1);border-radius:8px;padding:7px 10px;min-width:0">'
+        +'<div style="font-size:10px;color:var(--t3);margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+x[0]+'</div>'
+        +'<div title="'+String(x[1]).replace(/"/g,'&quot;')+'" style="font-size:12px;font-weight:600;font-family:var(--m);color:'+x[2]+';white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+x[1]+'</div></div>';
     }).join('');
     card.appendChild(stats);
     // buttons
