@@ -1607,6 +1607,21 @@ function lkInit(){
 }
 function lkSetup(){ lkShow('setup'); }
 
+// Entry point from the More sheet: set a passcode, or lock the app now.
+function lkSecurity(){
+  fetch('/api/auth?action=status',{cache:'no-store'}).then(function(r){return r.json();}).then(function(j){
+    if(!j.configured){ lkSetup(); return; }
+    var cred=null; try{ cred=localStorage.getItem('pt_cred'); }catch(e){}
+    var msg='A passcode is set.'+(cred?' Fingerprint unlock is on for this device.':'');
+    if(!cred && hasWebAuthn()){
+      if(confirm(msg+'\n\nSet up fingerprint unlock on this device?')){ lkOfferBiometric(); return; }
+    }
+    if(confirm(msg+'\n\nLock PayTrack now?')){
+      fetch('/api/auth?action=logout',{method:'POST'}).then(function(){ location.reload(); });
+    }
+  }).catch(function(){ alert('Could not reach the server.'); });
+}
+
 function refreshSafe(){
   if(PT_DIRTY||PT_SAVING)return;
   if(document.hidden)return;
@@ -1877,6 +1892,7 @@ function urlB64ToUint8(base64String){
     <div class="msheet-grip"></div>
     <div class="msheet-r" onclick="closeMore();go('stk',null)"><span><svg class="ic"><use href="#ic-stocks"/></svg></span><div><div class="msheet-t">Stocks</div><div class="msheet-s">Portfolio &amp; live prices</div></div></div>
     <div class="msheet-r" onclick="closeMore();go('ai',null)"><span><svg class="ic"><use href="#ic-ai"/></svg></span><div><div class="msheet-t">AI assistant</div><div class="msheet-s">Ask about your finances</div></div></div>
+    <div class="msheet-r" onclick="closeMore();lkSecurity()"><span><svg class="ic"><use href="#ic-more"/></svg></span><div><div class="msheet-t">Security</div><div class="msheet-s" id="msheet-sec">Passcode &amp; fingerprint</div></div></div>
     <div class="msheet-r" onclick="closeMore();go('exp',null)"><span><svg class="ic"><use href="#ic-export"/></svg></span><div><div class="msheet-t">Export</div><div class="msheet-s">Report, Excel, print</div></div></div>
   </div>
 </div>
