@@ -18,9 +18,12 @@ async function doRecover(res) {
 
     const done = [];
 
-    if (!data.accs.some(a => a.id === 'ammar' || a.name === 'Ammar')) {
+    if (!data.accs.some(a => a.id === 'ammar' || a.id === 'ammar2026' || a.name === 'Ammar')) {
+      // Fresh id: a device may still hold a deletion tombstone for 'ammar'
+      // (they survive PWA reinstalls), which would filter the account out and
+      // push its deletion server-wide again on that device's next save.
       data.accs.push({
-        id: 'ammar', name: 'Ammar', type: 'Lender', principal: 40500,
+        id: 'ammar2026', name: 'Ammar', type: 'Lender', principal: 40500,
         url: '', defer: false, remDays: 1,
         pays: [
           { desc: '1st installment', status: 'notpaid', amount: 13500, dt: '01-09-2026', nd: '', chq: '' },
@@ -52,15 +55,42 @@ async function doRecover(res) {
     markPaid('nawayef', 'Commencement of Construction');
     markPaid('mayar', '50% of foundation works');
 
-    data.saved = new Date().toISOString();
-    const w = await fetch(`${kv}/set/paytrack_data`, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'text/plain' },
-      body: JSON.stringify({ value: JSON.stringify(data) })
-    });
-    if (!w.ok) throw new Error('write failed ' + w.status);
+    // No changes -> no write. Rewriting an identical copy still bumped the
+    // version, which forced every device stale and made their next dirty save
+    // conflict and drop an edit.
+    const changed = done.some(m => !/already|untouched/.test(m));
+    if (!changed) {
+      return res.status(200).json({ ok: true, done, note: 'Nothing to change; nothing written.' });
+    }
 
-    return res.status(200).json({ ok: true, done, savedAt: data.saved,
+    // Write through the same atomic compare-and-set as /api/save, claiming the
+    // version this copy was read at, so a save landing meanwhile wins and this
+    // recovery is refused instead of silently erasing it.
+    const claimed = data.saved ? String(new Date(data.saved).getTime()) : '';
+    if (claimed) {
+      await fetch(kv, { method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(['SETNX', 'pt_data_ver', claimed]) });
+    }
+    const savedIso = new Date().toISOString();
+    data.saved = savedIso;
+    const CAS_LUA =
+      "local v = redis.call('GET', KEYS[1]) " +
+      "if ((v == false) and (ARGV[1] == '')) or (v == ARGV[1]) then " +
+      "redis.call('SET', KEYS[1], ARGV[2]) redis.call('SET', KEYS[2], ARGV[3]) return 1 " +
+      "else return 0 end";
+    const w = await fetch(kv, { method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(['EVAL', CAS_LUA, '2', 'pt_data_ver', 'paytrack_data',
+        claimed, String(new Date(savedIso).getTime()),
+        JSON.stringify({ value: JSON.stringify(data) })]) });
+    if (!w.ok) throw new Error('write failed ' + w.status);
+    const win = (await w.json()).result;
+    if (win !== 1) {
+      return res.status(409).json({ error: 'A device saved while recovering. Nothing was overwritten — just open this URL again.' });
+    }
+
+    return res.status(200).json({ ok: true, done, savedAt: savedIso,
       note: 'Now hard-refresh PayTrack on the PC; it will adopt this version.' });
   } catch (e) {
     return res.status(500).json({ error: e.message });

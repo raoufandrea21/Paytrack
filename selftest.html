@@ -120,7 +120,7 @@ document.getElementById('app').onload=function(){
           return Promise.resolve({ok:true,status:200,json:function(){return Promise.resolve({});}});
         };
         w.PT_BOOTED=true; w.PT_SAVING=false; w.PT_REBASE=0; LS.removeItem('pt_dirty'); w.PT_DIRTY=false;
-        LS.setItem('pt_save_time','1');
+        LS.setItem('pt_save_time','1'); w.PT_BASE='1';
         w.accs=[{id:'ali',name:'Ali',type:'Lender',principal:1,pays:[],remDays:7}];   // no openEnded
         w.syncToServer();
         return new Promise(function(done2){
@@ -139,7 +139,7 @@ document.getElementById('app').onload=function(){
       return staleTest.then(function(){
       var sent=[], resolvers=[];
       w.PT_DIRTY=false; w.PT_SAVING=false; w.PT_BOOTED=true; w.PT_REBASE=0;
-      LS.setItem('pt_save_time','0');
+      LS.setItem('pt_save_time','0'); w.PT_BASE='0';
       if(w.PT_RETRY){ w.clearInterval(w.PT_RETRY); w.PT_RETRY=null; }
       w.fetch=function(u,o){
         if(String(u).indexOf('/api/save')>=0){
