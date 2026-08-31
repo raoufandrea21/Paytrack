@@ -926,6 +926,16 @@ function renderRem(){
   document.getElementById('r3').innerHTML=remTbl(n90,'No payments due in 31–90 days.');
 }
 
+// A price that was live once is not live now. Show how old it is, so a frozen
+// quote is visible instead of wearing a green LIVE badge for days.
+function priceAge(s){
+  if(!s.livePrice) return '<span style="font-size:9px;color:var(--amber);background:rgba(245,166,35,.14);padding:2px 7px;border-radius:3px;font-weight:600" title="No live feed for this symbol. You are seeing a price you typed in.">MANUAL</span>';
+  var age=s.liveAt?Date.now()-s.liveAt:null;
+  if(age===null) return '<span style="font-size:9px;color:var(--t3)" title="Fetched before the app tracked timing">live (time unknown)</span>';
+  var m=Math.round(age/60000), lbl = m<1?'just now' : m<60?(m+'m ago') : (m<1440?(Math.round(m/60)+'h ago'):(Math.round(m/1440)+'d ago'));
+  var fresh = age < 30*60000;
+  return '<span style="font-size:9px;background:'+(fresh?'rgba(62,207,142,0.15)':'rgba(136,136,160,.16)')+';color:'+(fresh?'var(--green)':'var(--t2)')+';padding:2px 7px;border-radius:3px;font-weight:600">'+(fresh?'● LIVE':'○ '+lbl)+'</span>';
+}
 function renderStocks(){
   var total=stocks.reduce(function(s,x){return s+x.qty*(x.cp||0);},0);
   var gl=stocks.reduce(function(s,x){return s+x.qty*((x.cp||0)-(x.bp||0));},0);
@@ -957,7 +967,7 @@ function renderStocks(){
       +s.ticker+'</div><div style="font-size:11px;color:var(--t2);margin-top:2px">'
       +s.name+'</div><span style="display:inline-block;background:rgba(91,156,246,0.12);color:var(--blue);font-size:10px;padding:1px 7px;border-radius:4px;font-weight:600;margin-top:4px">'
       +s.mkt+'</span></div>'
-      +'<div>'+(s.livePrice?'<span style="font-size:9px;background:rgba(62,207,142,0.15);color:var(--green);padding:2px 7px;border-radius:3px;font-weight:600">● LIVE</span>':'<span style="font-size:9px;color:var(--t3)">manual</span>')+'</div>';
+      +'<div>'+priceAge(s)+'</div>';
     card.appendChild(hdr);
     // price
     var priceRow=document.createElement('div');
@@ -1328,7 +1338,7 @@ function go(pg,el){
   if(pg==='dash'){renderDash();renderRem();}
   if(pg==='stk'){renderStocks();setTimeout(function(){
     if(!stocks.length)return;
-    var ps=stocks.map(function(s,i){return fetchLivePrice(s.yfSym||s.ticker,s.mkt).then(function(live){if(live&&live.price&&live.price>0){stocks[i].cp=live.price;stocks[i].livePrice=live.price;stocks[i].prevClose=live.prev||stocks[i].prevClose;}}).catch(function(){});});
+    var ps=stocks.map(function(s,i){return fetchLivePrice(s.yfSym||s.ticker,s.mkt).then(function(live){if(live&&live.price&&live.price>0){stocks[i].cp=live.price;stocks[i].livePrice=live.price;stocks[i].liveAt=Date.now();stocks[i].prevClose=live.prev||stocks[i].prevClose;}}).catch(function(){});});
     Promise.all(ps).then(function(){saveState();renderStocks();});
   },800);}
   if(pg==='exp')renderExport();
@@ -1345,7 +1355,7 @@ setInterval(function(){
   if(!stocks.length)return;
   var ps=stocks.map(function(s,i){
     return fetchLivePrice(s.yfSym||s.ticker,s.mkt).then(function(live){
-      if(live&&live.price){stocks[i].cp=live.price;stocks[i].livePrice=live.price;stocks[i].prevClose=live.prev||stocks[i].prevClose;}
+      if(live&&live.price){stocks[i].cp=live.price;stocks[i].livePrice=live.price;stocks[i].liveAt=Date.now();stocks[i].prevClose=live.prev||stocks[i].prevClose;}
     }).catch(function(){});
   });
   Promise.all(ps).then(function(){
@@ -1420,7 +1430,7 @@ async function refreshAllPrices(){
     return fetchLivePrice(sym,s.mkt).then(function(live){
       if(live&&live.price&&live.price>0){
         stocks[i].cp=live.price;
-        stocks[i].livePrice=live.price;
+        stocks[i].livePrice=live.price;stocks[i].liveAt=Date.now();
         stocks[i].prevClose=live.prev||stocks[i].prevClose;
         updated++;
       }
@@ -1442,7 +1452,7 @@ setInterval(function(){
     fetchLivePrice(s.yfSym||s.ticker,s.mkt).then(function(live){
       if(live&&live.price&&live.price>0){
         stocks[i].cp=live.price;
-        stocks[i].livePrice=live.price;
+        stocks[i].livePrice=live.price;stocks[i].liveAt=Date.now();
         stocks[i].prevClose=live.prev||stocks[i].prevClose;
       }
     }).catch(function(){});
