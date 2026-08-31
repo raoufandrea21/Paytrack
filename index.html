@@ -315,21 +315,6 @@ label{display:block;font-size:11px;color:var(--t2);margin-bottom:4px;font-weight
     <div class="card-t" style="color:var(--red)">⚠ Overdue now</div><div id="r1"></div>
     <div class="card-t" style="margin-top:1rem">⏱ Due in 30 days</div><div id="r2"></div>
     <div class="card-t" style="margin-top:1rem">📅 Due in 31–90 days</div><div id="r3"></div>
-  </div>
-
-  <div style="display:grid;grid-template-columns:1.2fr 1fr;gap:1.25rem;margin-bottom:1.25rem">
-    <div class="card">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">
-        <div style="font-size:11px;font-weight:600;color:var(--t2);text-transform:uppercase;letter-spacing:.5px">Debt breakdown</div>
-        <div id="pleg" style="display:flex;flex-wrap:wrap;gap:6px;font-size:10px;color:var(--t2)"></div>
-      </div>
-      <div style="position:relative;height:180px"><canvas id="pc"></canvas></div>
-    </div>
-    <div class="card">
-      <div style="font-size:11px;font-weight:600;color:var(--t2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:1rem">Monthly obligations</div>
-      <div style="position:relative;height:180px"><canvas id="bc"></canvas></div>
-    </div>
-  </div>
 
   <div class="card" style="margin-bottom:1.25rem">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">
@@ -337,6 +322,20 @@ label{display:block;font-size:11px;color:var(--t2);margin-bottom:4px;font-weight
       <button class="btn-s" onclick="go('monthly',null)">Full breakdown →</button>
     </div>
     <div id="mo-strip" style="display:flex;gap:8px;overflow-x:auto;padding-bottom:4px"></div>
+  </div>
+
+  
+  </div>
+
+  <div class="card" style="margin-bottom:1.25rem">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;gap:12px;flex-wrap:wrap">
+      <div style="font-size:11px;font-weight:600;color:var(--t2);text-transform:uppercase;letter-spacing:.5px">Monthly obligations</div>
+      <div style="display:flex;gap:14px;font-size:10px;color:var(--t3)">
+        <span style="display:flex;align-items:center;gap:5px"><span style="width:9px;height:9px;border-radius:2px;background:#3ecf8e;display:inline-block"></span>Paid</span>
+        <span style="display:flex;align-items:center;gap:5px"><span style="width:9px;height:9px;border-radius:2px;background:#5b9cf6;display:inline-block"></span>Due</span>
+      </div>
+    </div>
+    <div style="position:relative;height:230px"><canvas id="bc"></canvas></div>
   </div>
 
   <div style="display:grid;grid-template-columns:1.6fr 1fr;gap:1.25rem">
@@ -724,28 +723,51 @@ var delId=null,editId=null,editIdx=null,payId=null;
 
 var pi=null,bi=null;
 function renderCharts(){
-  var cats={};
+  // A year behind and a year ahead. History shows what has actually been paid,
+  // which is the context missing from a forward-only chart.
+  var now=new Date(), base=now.getFullYear()*12+now.getMonth();
+  var paidBy={}, dueBy={};
   accs.forEach(function(a){
-    var d=visPays(a).filter(function(p){return owed(p);}).reduce(function(s,p){return s+p.amount;},0);
-    if(d>0)cats[a.type]=(cats[a.type]||0)+d;
-  });
-  var lb=Object.keys(cats),dt=Object.values(cats);
-  var cl=['#5b9cf6','#f5a623','#3ecf8e','#a78bfa','#f26b6b','#2dd4bf','#e879f9','#fb923c'];
-  if(pi)pi.destroy();
-  pi=new Chart(document.getElementById('pc'),{type:'doughnut',data:{labels:lb,datasets:[{data:dt,backgroundColor:cl.slice(0,lb.length),borderWidth:2,borderColor:'#1a1a24'}]},options:{responsive:true,maintainAspectRatio:false,cutout:'62%',plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return' '+fmt(c.raw);}},backgroundColor:'#22222e',titleColor:'#eeeef5',bodyColor:'#8888a0',borderColor:'rgba(255,255,255,.1)',borderWidth:1}}}});
-  document.getElementById('pleg').innerHTML=lb.map(function(l,i){return'<span style="display:flex;align-items:center;gap:4px"><span style="width:8px;height:8px;border-radius:2px;background:'+cl[i]+'"></span><span style="color:#8888a0">'+l+'</span></span>';}).join('');
-  var mm={};
-  accs.forEach(function(a){
-    a.pays.forEach(function(p){
-      if(p.status==='paid')return;
-      var d=pd(eff(p));if(!d)return;
-      var k=d.getFullYear()+'-'+(d.getMonth()+1).toString().padStart(2,'0');
-      mm[k]=(mm[k]||0)+p.amount;
+    (a.pays||[]).forEach(function(p){
+      var d=pd(eff(p)); if(!d) return;
+      var k=d.getFullYear()*12+d.getMonth();
+      if(k<base-12||k>base+12) return;
+      if(p.status==='paid') paidBy[k]=(paidBy[k]||0)+p.amount;
+      else if(owed(p))       dueBy[k]=(dueBy[k]||0)+p.amount;
     });
   });
-  var sm=Object.keys(mm).sort().slice(0,14);
+  var keys=[], labels=[], paidData=[], dueData=[];
+  for(var k=base-12;k<=base+12;k++){
+    keys.push(k);
+    var y=Math.floor(k/12), m=k%12;
+    labels.push(M3[m]+(m===0||k===base-12?" '"+String(y).slice(2):''));
+    paidData.push(paidBy[k]||0);
+    dueData.push(dueBy[k]||0);
+  }
   if(bi)bi.destroy();
-  bi=new Chart(document.getElementById('bc'),{type:'bar',data:{labels:sm.map(function(m){var p=m.split('-');return M3[+p[1]-1]+' '+p[0].slice(2);}),datasets:[{data:sm.map(function(k){return mm[k];}),backgroundColor:sm.map(function(k){var p=k.split('-');return(+p[0]===2026&&+p[1]-1===4)?'#5b9cf6':'rgba(91,156,246,.4)';}),borderRadius:4,borderSkipped:false}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return' '+fmt(c.raw);}},backgroundColor:'#22222e',titleColor:'#eeeef5',bodyColor:'#8888a0',borderColor:'rgba(255,255,255,.1)',borderWidth:1}},scales:{y:{ticks:{callback:function(v){return'AED '+(v>=1e6?(v/1e6).toFixed(1)+'M':(v/1000).toFixed(0)+'k');},color:'#44445a',font:{size:10}},grid:{color:'rgba(255,255,255,.04)'},border:{display:false}},x:{ticks:{autoSkip:false,maxRotation:50,font:{size:9},color:'#44445a'},grid:{display:false},border:{display:false}}}}});
+  bi=new Chart(document.getElementById('bc'),{
+    type:'bar',
+    data:{labels:labels,datasets:[
+      {label:'Paid',data:paidData,backgroundColor:'rgba(62,207,142,.55)',borderRadius:3,stack:'s'},
+      {label:'Due', data:dueData, backgroundColor:'rgba(91,156,246,.85)',borderRadius:3,stack:'s'}
+    ]},
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      interaction:{mode:'index',intersect:false},
+      plugins:{
+        legend:{display:false},
+        tooltip:{callbacks:{label:function(c){ return c.dataset.label+': '+fmt(c.raw); }}}
+      },
+      scales:{
+        x:{stacked:true,grid:{display:false},ticks:{color:'#6b7280',font:{size:10},maxRotation:0,autoSkip:true,maxTicksLimit:13}},
+        y:{stacked:true,grid:{color:'rgba(255,255,255,.05)'},ticks:{color:'#6b7280',font:{size:10},callback:function(v){ return v>=1000?('AED '+Math.round(v/1000)+'k'):('AED '+v); }}}
+      }
+    }
+  });
+  // mark where today sits
+  var todayIdx=12;
+  if(bi.options.plugins.tooltip) bi.__todayIdx=todayIdx;
+
 }
 
 function renderMoStrip(){
