@@ -890,8 +890,9 @@ function renderDash(){
   var nwEl2=document.getElementById('m-bal');
   if(nwEl2){
     nwEl2.innerHTML='<span style="color:'+(_nw>=0?'var(--green)':'var(--red)')+'">'+fmt(_nw)+'</span>';
-    document.getElementById('m-bal-sub').innerHTML = _asset>0
-      ? 'Paid into property '+fmt(_asset)+' + savings + stocks'
+    var _bor=borrowedDebt(), _mg=marginTotal();
+    document.getElementById('m-bal-sub').innerHTML = (_asset>0||_bor>0)
+      ? 'Property '+fmt(_asset)+' + savings + stocks'+(_mg>0?' &minus; '+fmt(_mg)+' margin':'')+(_bor>0?' &minus; '+fmt(_bor)+' borrowed':'')
       : '<span style="color:var(--amber)">Mark an account as \u201cBuying\u201d to build equity here</span>';
   }
   var glEl=document.getElementById('m6-gl');
@@ -1090,7 +1091,18 @@ function stockTotal(){ return stocks.reduce(function(t,x){return t+x.qty*(x.cp||
 // Property equity + savings + stocks, less money borrowed against the shares.
 // Remaining instalments are NOT subtracted: equity already counts only what has
 // been paid, so subtracting the unpaid balance would charge you for it twice.
-function netWorthTotal(){ return propertyEquity()+savTotal()+stockTotal()-marginTotal(); }
+// Money borrowed from a person is cash you received and still owe, with no
+// matching asset recorded here, so it comes off. Instalments on a property do
+// NOT come off: equity counts only what has been paid, so subtracting the
+// unpaid balance too would charge for it twice.
+function borrowedDebt(){
+  return accs.reduce(function(t,a){
+    if(a.type!=='Lender' && !a.openEnded) return t;
+    var o=(a.pays||[]).reduce(function(x,p){return x+(owed(p)?p.amount:0);},0);
+    return t+o+unsched(a);
+  },0);
+}
+function netWorthTotal(){ return propertyEquity()+savTotal()+stockTotal()-marginTotal()-borrowedDebt(); }
 function setAssetValue(id,v){
   var a=accs.find(function(x){return x.id===id;}); if(!a)return;
   a.assetValue=Math.max(0,+v||0); saveState(); renderDash(); renderAccs();
