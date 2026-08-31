@@ -2134,7 +2134,7 @@ async function loadFromServer(){
     if(!res.ok){ ptBootDone('nothing to adopt'); return; }
     var raw=await res.json();
     var data=raw;
-    if(raw&&raw.value&&typeof raw.value==='string'){try{data=JSON.parse(raw.value);}catch(ex){return;}}
+    if(raw&&raw.value&&typeof raw.value==='string'){try{data=JSON.parse(raw.value);}catch(ex){ ptBootDone('corrupt payload'); return; }}
     if(!data||!data.accs||!Array.isArray(data.accs)||!data.accs.length){ ptBootDone('nothing to adopt'); return; }
     var serverAccs=convertDates(data.accs);
     var serverTime=data.saved?new Date(data.saved).getTime():0;

@@ -20,18 +20,28 @@ export default async function handler(req, res) {
     // This is what makes a stale device structurally incapable of overwriting
     // newer data: it cannot know a version it has never read. Without it, every
     // code path that saves is another chance to clobber.
-    let current = null;
+    // FAIL CLOSED. If we cannot read the current copy we cannot know whether
+    // this write is stale, so we must refuse it -- not wave it through. The old
+    // catch treated any read hiccup (rate limit, transient error, parse
+    // failure) as "no stored copy" and skipped the version check entirely,
+    // which let a stale device overwrite newer data whenever Upstash blinked.
+    let current = null, storeEmpty = false;
     try {
       const cur = await fetch(`${kv}/get/paytrack_data`, { headers: { Authorization: `Bearer ${token}` } });
-      if (cur.ok) {
-        const cj = await cur.json();
-        if (cj.result) {
-          let parsed = JSON.parse(cj.result);
-          if (parsed && typeof parsed.value === 'string') parsed = JSON.parse(parsed.value);
-          current = parsed;
-        }
+      if (!cur.ok) throw new Error('conflict-read ' + cur.status);
+      const cj = await cur.json();
+      if (cj.result == null) storeEmpty = true;
+      else {
+        let parsed = JSON.parse(cj.result);
+        if (parsed && typeof parsed.value === 'string') parsed = JSON.parse(parsed.value);
+        current = parsed;
       }
-    } catch (e) { /* treat as no stored copy */ }
+    } catch (e) {
+      return res.status(503).json({ error: 'Could not verify the current version; save refused. Try again.', detail: e.message });
+    }
+    if (current == null && !storeEmpty) {
+      return res.status(503).json({ error: 'Could not verify the current version; save refused. Try again.' });
+    }
 
     if (current && current.saved) {
       const storedVersion = new Date(current.saved).getTime();
