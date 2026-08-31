@@ -1605,7 +1605,7 @@ function lkOfferBiometric(){
 function lkBiometric(){
   var id = null;
   try { id = localStorage.getItem('pt_cred'); } catch(e){}
-  if (!id || !hasWebAuthn()) return lkErr('Fingerprint is not set up on this device.');
+  if (!id || !hasWebAuthn()) return lkErr('No fingerprint on this device yet. Enter your passcode once, then accept the fingerprint prompt.');
   var raw = Uint8Array.from(atob(id.replace(/-/g,'+').replace(/_/g,'/')), function(c){ return c.charCodeAt(0); });
   var ch = new Uint8Array(32); crypto.getRandomValues(ch);
   navigator.credentials.get({publicKey: {
@@ -1621,9 +1621,9 @@ function lkInit(){
     .then(function(r){ return r.json(); })
     .then(function(j){
       if (!j.configured) return;              // no passcode set: open, as before
+      var cred = null;
+      try { cred = localStorage.getItem('pt_cred'); } catch(e){}
       if (j.authenticated){                    // server session already valid
-        var cred = null;
-        try { cred = localStorage.getItem('pt_cred'); } catch(e){}
         if (cred){
           lkShow('login', 'Unlock to continue.');
           document.getElementById('lk-bio').style.display = '';
@@ -1632,6 +1632,8 @@ function lkInit(){
         return;
       }
       lkShow('login');
+      // A fingerprint is registered per device. Only offer it where one exists.
+      if (cred) document.getElementById('lk-bio').style.display = '';
     })
     .catch(function(){ /* offline: local data still readable */ });
 }
