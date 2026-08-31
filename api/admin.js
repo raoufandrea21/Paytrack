@@ -23,13 +23,22 @@ async function doRecover(res) {
         id: 'ammar', name: 'Ammar', type: 'Lender', principal: 40500,
         url: '', defer: false, remDays: 1,
         pays: [
-          { desc: '1st installment', status: 'notpaid', amount: 11500, dt: '01-09-2026', nd: '', chq: '' },
-          { desc: '2nd installment', status: 'notpaid', amount: 11500, dt: '01-10-2026', nd: '', chq: '' },
-          { desc: '3rd installment', status: 'notpaid', amount: 11500, dt: '01-11-2026', nd: '', chq: '' }
+          { desc: '1st installment', status: 'notpaid', amount: 13500, dt: '01-09-2026', nd: '', chq: '' },
+          { desc: '2nd installment', status: 'notpaid', amount: 13500, dt: '01-10-2026', nd: '', chq: '' },
+          { desc: '3rd installment', status: 'notpaid', amount: 13500, dt: '01-11-2026', nd: '', chq: '' }
         ]
       });
       done.push('Ammar account restored (40,500 across 3 instalments)');
-    } else done.push('Ammar already present — untouched');
+    } else {
+      // Correct the amounts if an earlier pass (or the original entry) used
+      // 11,500: three instalments of 13,500 equal the 40,500 principal exactly.
+      const am = data.accs.find(x => x.id === 'ammar' || x.name === 'Ammar');
+      let fixed = 0;
+      (am.pays || []).forEach(p => {
+        if (p.amount === 11500 && /installment/i.test(p.desc || '')) { p.amount = 13500; fixed++; }
+      });
+      done.push(fixed ? ('Ammar instalments corrected to 13,500 (' + fixed + ' rows)') : 'Ammar already present — untouched');
+    }
 
     const markPaid = (accId, descStart) => {
       const a = data.accs.find(x => x.id === accId);
