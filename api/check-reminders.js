@@ -21,10 +21,12 @@ export default async function handler(req, res) {
     );
 
     // 1. Load app state
-    const stateRes = await fetch(`${KV_URL}/get/pt_state`, { headers: { Authorization: `Bearer ${KV_TOKEN}` } });
+    const stateRes = await fetch(`${KV_URL}/get/paytrack_data`, { headers: { Authorization: `Bearer ${KV_TOKEN}` } });
     const stateJson = await stateRes.json();
     if (!stateJson.result) return res.status(200).json({ ok: true, note: 'no state' });
-    const state = JSON.parse(stateJson.result);
+    let state = JSON.parse(stateJson.result);
+    // save.js writes the body as the value, so it comes back wrapped
+    if (state && typeof state.value === 'string') state = JSON.parse(state.value);
     const accs = state.accs || [];
 
     // 2. Find payments due (today or within remDays)

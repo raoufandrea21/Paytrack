@@ -82,10 +82,11 @@ function getFallbackAccounts() {
 
 export default async function handler(req, res) {
   const authHeader = req.headers['authorization'];
-  const secret = process.env.CRON_SECRET || 'paytrack2026';
-  const isTest = req.method === 'GET' && req.query && req.query.test === '1';
-
-  if (!isTest && authHeader !== `Bearer ${secret}`) {
+  // No hardcoded fallback: without CRON_SECRET set, only Vercel's own cron
+  // (which sends the header) can run this. The old ?test=1 escape hatch let
+  // anyone trigger an email send from a plain URL.
+  const secret = process.env.CRON_SECRET;
+  if (!secret || authHeader !== `Bearer ${secret}`) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
@@ -94,9 +95,13 @@ export default async function handler(req, res) {
   const email = process.env.REMINDER_EMAIL || 'mr.raouf@gmail.com';
 
   // Try to get live data from KV, fallback to hardcoded
-  let accounts = await getAccounts();
-  const source = accounts ? 'live (KV)' : 'fallback (hardcoded)';
-  if (!accounts) accounts = getFallbackAccounts();
+  // If storage is unreachable, say so. The old behaviour substituted a
+  // hardcoded schedule and emailed it as if it were real.
+  const accounts = await getAccounts();
+  const source = 'live (KV)';
+  if (!accounts) {
+    return res.status(503).json({ error: 'Could not read your data; no reminder sent.' });
+  }
 
   const overdue = [];
   const upcoming = [];

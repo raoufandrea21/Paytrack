@@ -48,9 +48,8 @@ self.addEventListener('push', e => {
     tag: data.tag || 'paytrack-reminder',
     data: { url: data.url || '/', accId: data.accId, payIdx: data.payIdx },
     actions: [
-      { action: 'paid',    title: '✓ Paid' },
-      { action: 'snooze1', title: '⏰ 1 hour' },
-      { action: 'open',    title: '✎ Open' }
+      { action: 'paid', title: '✓ Paid' },
+      { action: 'open', title: '✎ Open' }
     ]
   };
   e.waitUntil(self.registration.showNotification(title, options));
@@ -61,16 +60,6 @@ self.addEventListener('notificationclick', e => {
   const d = e.notification.data || {};
   let target = '/';
   if (e.action === 'paid')    target = '/?confirm=' + (d.accId||'') + ':' + (d.payIdx||'') + ':paid';
-  else if (e.action === 'snooze1') {
-    // re-show in 1 hour (best-effort while SW alive; server cron re-sends anyway)
-    e.waitUntil(new Promise(res => setTimeout(() => {
-      self.registration.showNotification(e.notification.title, {
-        body: e.notification.body, icon: '/icon-192.png', tag: 'paytrack-snooze',
-        data: d, actions: [{action:'paid',title:'✓ Paid'},{action:'open',title:'✎ Open'}]
-      }); res();
-    }, 60*60*1000)));
-    return;
-  }
   else target = '/?open=' + (d.accId||'');
   e.waitUntil(clients.matchAll({ type: 'window' }).then(list => {
     for (const c of list) { if ('focus' in c) { c.navigate(target); return c.focus(); } }

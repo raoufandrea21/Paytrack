@@ -651,6 +651,16 @@ function migrateMargin(){
   }
 }
 function setMargin(v){ /* superseded by per-broker margins */ }
+// Live prices refresh on a timer and are re-fetched on every load, so they do
+// not need to reach the server. Writing them there made three background timers
+// push the WHOLE dataset from whichever tab happened to be open, silently
+// overwriting edits made elsewhere. Prices are cached locally instead.
+function saveLocal(){
+  try{
+    localStorage.setItem('pt_accs',JSON.stringify(accs));
+    localStorage.setItem('pt_stk',JSON.stringify(stocks));
+  }catch(e){}
+}
 function saveState(){
   setDirty(true);
   try{ cfoInvalidate(); }catch(e){}   // figures changed: CFO must not serve a stale cache   // cleared only when the server confirms the write
@@ -1825,7 +1835,7 @@ function go(pg,el){
   if(pg==='stk'){renderStocks();try{renderSavings();}catch(e){}setTimeout(function(){
     if(!stocks.length)return;
     var ps=stocks.map(function(s,i){return fetchLivePrice(s.yfSym||s.ticker,s.mkt).then(function(live){if(live&&live.price&&live.price>0){stocks[i].cp=live.price;stocks[i].livePrice=live.price;stocks[i].liveAt=Date.now();stocks[i].prevClose=live.prev||stocks[i].prevClose;}}).catch(function(){});});
-    Promise.all(ps).then(function(){saveState();renderStocks();});
+    Promise.all(ps).then(function(){saveLocal();renderStocks();});
   },800);}
   if(pg==='exp')renderExport();
   if(pg==='ai'){try{cfoOpen();}catch(e){}}
@@ -1853,8 +1863,8 @@ setInterval(function(){
   Promise.all(ps).then(function(){
     if(!changed){ var pg0=document.getElementById('p-stk'); if(pg0&&pg0.classList.contains('on'))renderStocks(); return; }
     var pg=document.getElementById('p-stk');
-    if(pg&&pg.classList.contains('on')){saveState();renderStocks();}
-    else{saveState();}
+    saveLocal();
+    if(pg&&pg.classList.contains('on'))renderStocks();
   });
 },60000);
 
@@ -1940,7 +1950,7 @@ async function refreshAllPrices(){
     }).catch(function(){});
   });
   Promise.all(promises).then(function(){
-    saveState();renderStocks();
+    saveLocal();renderStocks();
     if(btn){btn.textContent='↻ Refresh prices';btn.disabled=false;}
     if(updated>0)alert('Updated '+updated+' stock'+(updated>1?'s':'')+' from live data.');
     else if(stocks.length>0)alert('No live prices found. Check ticker symbols or try again later.');
@@ -1960,7 +1970,7 @@ setInterval(function(){
       }
     }).catch(function(){});
   });
-  setTimeout(function(){saveState();renderStocks();},3000);
+  setTimeout(function(){saveLocal();renderStocks();},3000);
 },60000);
 
 
