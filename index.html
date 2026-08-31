@@ -679,11 +679,41 @@ function ptFingerprint(){
              brokers:Object.keys(margins||{}).join(',')||'(none)' };
   }catch(e){ return {err:String(e)}; }
 }
+// Stable name per device, so PC and phone are distinguishable in the log.
+function ptDevice(){
+  try{
+    var d=localStorage.getItem('pt_device');
+    if(!d){
+      var ua=navigator.userAgent;
+      var kind = /Android/i.test(ua) ? 'android' : /iPhone|iPad/i.test(ua) ? 'ios'
+               : /Windows/i.test(ua) ? 'pc' : /Mac/i.test(ua) ? 'mac' : 'other';
+      d = kind + '-' + Math.random().toString(36).slice(2,6);
+      localStorage.setItem('pt_device', d);
+    }
+    return d;
+  }catch(e){ return 'unknown'; }
+}
+// Describe an incoming server payload the same way, so like compares with like.
+function ptFpOf(list, mg){
+  try{
+    var sch=null, open=[];
+    (list||[]).forEach(function(a){
+      if(a.openEnded) open.push(a.id);
+      (a.pays||[]).forEach(function(p){
+        if(String(p.desc||'').indexOf('Term 1 2026')===0) sch=(p.nd||p.dt||'(none)');
+      });
+    });
+    return { accs:(list||[]).length,
+             pays:(list||[]).reduce(function(n,a){return n+((a.pays||[]).length);},0),
+             paid:(list||[]).reduce(function(n,a){return n+(a.pays||[]).filter(function(p){return p.status==='paid';}).length;},0),
+             openEnded:open.join(',')||'(none)', schoolTerm1:sch };
+  }catch(e){ return {err:String(e)}; }
+}
 function ptLog(kind,note){
   try{
     var log=JSON.parse(localStorage.getItem('pt_log')||'[]');
     log.push({ t:new Date().toISOString(), kind:kind, note:note||'',
-               tab:(window.__ptTab=window.__ptTab||Math.random().toString(36).slice(2,7)),
+               dev:ptDevice(), tab:(window.__ptTab=window.__ptTab||Math.random().toString(36).slice(2,7)),
                fp:ptFingerprint() });
     while(log.length>60) log.shift();
     localStorage.setItem('pt_log',JSON.stringify(log));
@@ -2043,7 +2073,14 @@ async function loadFromServer(){
     if(serverTime===parseInt(localStorage.getItem('pt_save_time')||'0'))return;
     var deletedRaw=localStorage.getItem('pt_deleted');
     var deletedIds=deletedRaw?JSON.parse(deletedRaw):[];
-    ptLog('ADOPT-SERVER','version '+new Date(serverTime).toISOString());
+    var incoming = ptFpOf(serverAccs, data.margins);
+    var mineNow  = ptFingerprint();
+    var differs = (incoming.openEnded!==mineNow.openEnded) || (incoming.schoolTerm1!==mineNow.schoolTerm1) || (incoming.paid!==mineNow.paid);
+    ptLog('ADOPT-SERVER',
+      'server=' + new Date(serverTime).toISOString()
+      + ' | incoming open=' + incoming.openEnded + ' school=' + incoming.schoolTerm1 + ' paid=' + incoming.paid
+      + ' | mine open=' + mineNow.openEnded + ' school=' + mineNow.schoolTerm1 + ' paid=' + mineNow.paid
+      + (differs ? '  <<< OVERWROTE LOCAL DATA' : '  (identical)'));
     accs=serverAccs.filter(function(a){return deletedIds.indexOf(a.id)===-1;});
     if(data.stocks&&Array.isArray(data.stocks)&&data.stocks.length)stocks=data.stocks;
     if(Array.isArray(data.savings))savings=data.savings;

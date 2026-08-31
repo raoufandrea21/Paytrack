@@ -17,7 +17,7 @@ button{padding:11px 16px;border-radius:9px;border:none;background:#5b9cf6;color:
 <div id="out">Loading…</div>
 <button onclick="copyAll()">Copy everything</button>
 <button onclick="location.reload()">Refresh</button>
-<h2>Event log</h2>
+<h2>Event log &mdash; newest last</h2><p class="sub">ADOPT-SERVER means this device replaced its data with the server's. If it says OVERWROTE LOCAL DATA, that is the moment your change was lost, and the device name shows where the older copy came from.</p>
 <pre id="log">…</pre>
 <script>
 function fp(accs, margins){
@@ -52,10 +52,11 @@ meta={
 };
 document.getElementById('log').textContent =
   (localStorage.getItem('pt_log')
-    ? JSON.parse(localStorage.getItem('pt_log')).slice(-25).map(function(e){
-        return e.t.slice(11,19)+'  tab:'+e.tab+'  '+e.kind.padEnd(13)
-             + ' accs:'+e.fp.accs+' pays:'+e.fp.pays+' paid:'+e.fp.paid
-             + ' open:'+e.fp.openEnded+' school:'+e.fp.schoolTerm1;
+    ? JSON.parse(localStorage.getItem('pt_log')).slice(-40).map(function(e){
+        return e.t.slice(5,19).replace('T',' ')+'  '+(e.dev||'?')+'/'+e.tab+'  '+String(e.kind).padEnd(13)
+             + ' open:'+e.fp.openEnded+' school:'+e.fp.schoolTerm1+' paid:'+e.fp.paid
+             + (e.note? '
+                 '+e.note : '');
       }).join('\n')
     : 'No events recorded yet. Open PayTrack, make a change, then come back.');
 
