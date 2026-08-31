@@ -8,7 +8,7 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
   if (!(await guard(req, res))) return;
   try {
-    const { accs, stocks } = req.body;
+    const { accs, stocks, savings } = req.body;
     if (!accs || !Array.isArray(accs)) return res.status(400).json({ error: 'Invalid data' });
     const kv = process.env.KV_REST_API_URL;
     const token = process.env.KV_REST_API_TOKEN;
@@ -16,6 +16,7 @@ export default async function handler(req, res) {
     const data = JSON.stringify({ 
       accs, 
       stocks: stocks || [], 
+      savings: savings || [], 
       saved: new Date().toISOString() 
     });
     const r = await fetch(`${kv}/set/paytrack_data`, {

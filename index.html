@@ -337,7 +337,7 @@ label{display:block;font-size:11px;color:var(--t2);margin-bottom:4px;font-weight
 </div>
 
 <div id="p-stk" class="pg">
-  <div class="sh"><div class="st">Stock portfolio</div><div style="display:flex;gap:8px;flex-wrap:wrap">
+  <div class="sh"><div class="st">Stocks &amp; savings</div><div style="display:flex;gap:8px;flex-wrap:wrap">
   <button id="refresh-prices-btn" onclick="refreshAllPrices()" style="background:rgba(62,207,142,0.15);color:var(--green);border-color:rgba(62,207,142,0.3)">↻ Refresh prices</button>
   <button id="excel-view-btn" onclick="toggleExcelView()" style="background:rgba(167,139,250,0.15);color:var(--purple);border-color:rgba(167,139,250,0.3)">↗ Open Excel</button>
   <button onclick="openAddStk()">+ Add stock</button>
@@ -354,6 +354,18 @@ label{display:block;font-size:11px;color:var(--t2);margin-bottom:4px;font-weight
   </div>
   <div id="stk-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(255px,1fr));gap:12px"></div>
   <div id="stk-empty" style="text-align:center;padding:3rem;color:var(--t2)"><i class="ti ti-chart-line" style="font-size:48px;opacity:.25;display:block;margin-bottom:1rem"></i>No stocks yet. Click Add stock to begin.</div>
+
+  <div class="card" style="margin-top:1.25rem">
+    <div class="card-t">Savings <span id="sv-total" style="float:right;font-family:var(--m);color:var(--green)">AED 0</span></div>
+    <p style="font-size:11px;color:var(--t2);margin-bottom:12px">Cash held at a bank. Counted as an asset in your net balance.</p>
+    <div class="fr2" style="margin-bottom:10px">
+      <div><label>Bank</label><input id="sv-bank" placeholder="e.g. NBF"></div>
+      <div><label>Amount (AED)</label><input id="sv-amt" type="number" placeholder="0"></div>
+    </div>
+    <div style="margin-bottom:10px"><label>Note (optional)</label><input id="sv-label" placeholder="e.g. emergency fund"></div>
+    <button class="btn-p" onclick="addSaving()" style="margin-bottom:12px">+ Add savings</button>
+    <div id="sv-list"></div>
+  </div>
 </div>
 
 <div id="p-ai" class="pg">
@@ -514,6 +526,7 @@ var accs=[
   {id:'ali',name:'Ali Al Gebely',type:'Lender',principal:1090000,url:'',defer:false,remDays:7,pays:[]}
 ];
 var stocks=[];
+var savings=[];   // {bank, label, amount}
 var stkMargin=0;
 try{ stkMargin=+localStorage.getItem('pt_margin')||0; }catch(e){}
 function setMargin(v){ stkMargin=v||0; try{ localStorage.setItem('pt_margin',stkMargin); }catch(e){} saveState(); renderStocks(); renderDash(); }
@@ -524,6 +537,7 @@ function saveState(){
     // tagged forecast:true). They must survive reloads.
     localStorage.setItem('pt_accs',JSON.stringify(accs));
     localStorage.setItem('pt_stk',JSON.stringify(stocks));
+    localStorage.setItem('pt_sav',JSON.stringify(savings));
   }catch(e){}
   // Sync to server so reminders always have latest data
   syncToServer();
@@ -546,7 +560,7 @@ function syncToServer(){
   fetch('/api/save',{
     method:'POST',
     headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({accs:accs,stocks:stocks})
+    body:JSON.stringify({accs:accs,stocks:stocks,savings:savings})
   }).then(function(r){
     return r.json().then(function(j){ return {ok:r.ok,j:j}; });
   }).then(function(res){
@@ -602,6 +616,7 @@ function loadState(){
         accs=parsed.filter(function(a){return deletedIds.indexOf(a.id)===-1;});
       }
     }
+    try{ var sv0=localStorage.getItem('pt_sav'); if(sv0){ var pv=JSON.parse(sv0); if(Array.isArray(pv)) savings=pv; } }catch(e){}
     var s=localStorage.getItem('pt_stk');
     if(s){var ps=JSON.parse(s);if(ps&&Array.isArray(ps))stocks=ps;}
     // Auto-flag overdue on load
@@ -794,7 +809,7 @@ function renderDash(){
   if(mnEl)mnEl.textContent=fmt(nmo);
   var mnLbl=document.getElementById('m-next-lbl');
   if(mnLbl)mnLbl.textContent=MNS[nextMo]+' '+nextYr;
-  var snw=sv-(typeof stkMargin!=='undefined'?stkMargin:0);
+  var snw=sv+(typeof savTotal==='function'?savTotal():0)-(typeof stkMargin!=='undefined'?stkMargin:0);
   document.getElementById('m6').textContent=sv>0?fmt(snw):'AED 0';
   var glEl=document.getElementById('m6-gl');
   if(glEl){if(gl!==0)glEl.innerHTML='G/L: <span style="color:'+(gl>=0?'var(--green)':'var(--red)')+'"> '+(gl>=0?'+':'')+fmt(gl)+'</span>';else glEl.textContent='Click to view stocks';}
@@ -937,10 +952,46 @@ function priceAge(s){
   var fresh = age < 30*60000;
   return '<span style="font-size:9px;background:'+(fresh?'rgba(62,207,142,0.15)':'rgba(136,136,160,.16)')+';color:'+(fresh?'var(--green)':'var(--t2)')+';padding:2px 7px;border-radius:3px;font-weight:600">'+(fresh?'● LIVE':'○ '+lbl)+'</span>';
 }
+// ── Savings ───────────────────────────────────────────────────────────────
+// Cash held at a bank. Counted as an asset in net worth alongside stocks.
+function savTotal(){ return savings.reduce(function(t,x){return t+(+x.amount||0);},0); }
+function addSaving(){
+  var bank=(document.getElementById('sv-bank').value||'').trim();
+  var amt=+document.getElementById('sv-amt').value||0;
+  var lbl=(document.getElementById('sv-label').value||'').trim();
+  if(!bank) return alert('Enter the bank name.');
+  if(!(amt>0)) return alert('Enter an amount greater than zero.');
+  savings.push({bank:bank,label:lbl,amount:amt});
+  document.getElementById('sv-bank').value='';
+  document.getElementById('sv-amt').value='';
+  document.getElementById('sv-label').value='';
+  saveState(); renderSavings(); renderStocks(); renderDash();
+}
+function delSaving(i){
+  if(!confirm('Remove '+savings[i].bank+' ('+fmt(savings[i].amount)+')?'))return;
+  savings.splice(i,1); saveState(); renderSavings(); renderStocks(); renderDash();
+}
+function editSaving(i,v){
+  var n=+v||0; if(n<0)return;
+  savings[i].amount=n; saveState(); renderSavings(); renderStocks(); renderDash();
+}
+function renderSavings(){
+  var body=document.getElementById('sv-list'); if(!body)return;
+  var t=document.getElementById('sv-total'); if(t) t.textContent=fmt(savTotal());
+  if(!savings.length){ body.innerHTML='<p style="font-size:12px;color:var(--t2);padding:.75rem 0">No savings added yet.</p>'; return; }
+  body.innerHTML='<div style="overflow-x:auto"><table><thead><tr><th>Bank</th><th>Note</th><th style="text-align:right">Amount</th><th></th></tr></thead><tbody>'
+    + savings.map(function(x,i){
+      return '<tr><td style="font-weight:500">'+x.bank+'</td>'
+        +'<td style="color:var(--t2)">'+(x.label||'—')+'</td>'
+        +'<td style="text-align:right"><input type="number" value="'+(x.amount||0)+'" onchange="editSaving('+i+',this.value)" style="width:130px;text-align:right;font-family:var(--m)"></td>'
+        +'<td><button class="btn-s btn-d" onclick="delSaving('+i+')">Remove</button></td></tr>';
+    }).join('')+'</tbody></table></div>';
+}
 function renderStocks(){
+  try{renderSavings();}catch(e){}
   var total=stocks.reduce(function(s,x){return s+x.qty*(x.cp||0);},0);
   var gl=stocks.reduce(function(s,x){return s+x.qty*((x.cp||0)-(x.bp||0));},0);
-  var netWorth=total-stkMargin;
+  var netWorth=total+savTotal()-stkMargin;
   document.getElementById('st1').textContent=total>0?fmt(total):'AED 0';
   var glEl=document.getElementById('st2');
   glEl.innerHTML=gl===0?'AED 0':'<span style="color:'+(gl>=0?'var(--green)':'var(--red)')+'"> '+(gl>=0?'+':'')+fmt(gl)+'</span>';
@@ -1098,7 +1149,7 @@ function expStocks(){
 // Excel/PDF are reports; this is the only lossless copy of the data.
 function backupJSON(){
   var payload={app:'paytrack',version:2,exported:new Date().toISOString(),
-               accs:accs,stocks:stocks,stkMargin:stkMargin};
+               accs:accs,stocks:stocks,savings:savings,stkMargin:stkMargin};
   var blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
   var d=new Date(),stamp=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
   var a=document.createElement('a');
@@ -1123,6 +1174,7 @@ function restoreJSON(input){
     if(!confirm('Restore '+d.accs.length+' accounts / '+np+' payments?\n\nThis REPLACES what is on this device right now ('+accs.length+' accounts / '+cur+' payments).\n\nThis cannot be undone.'))return;
     accs=convertDates(d.accs);
     if(Array.isArray(d.stocks))stocks=d.stocks;
+    if(Array.isArray(d.savings))savings=d.savings;
     if(typeof d.stkMargin==='number'){stkMargin=d.stkMargin;try{localStorage.setItem('pt_margin',stkMargin);}catch(e){}}
     try{ localStorage.removeItem('pt_deleted'); }catch(e){}
     autoFlagOverdue();
@@ -1337,7 +1389,7 @@ function go(pg,el){
   if(pg==='accs')renderAccs();
   if(pg==='monthly')renderMonthly();
   if(pg==='dash'){renderDash();renderRem();}
-  if(pg==='stk'){renderStocks();setTimeout(function(){
+  if(pg==='stk'){renderStocks();try{renderSavings();}catch(e){}setTimeout(function(){
     if(!stocks.length)return;
     var ps=stocks.map(function(s,i){return fetchLivePrice(s.yfSym||s.ticker,s.mkt).then(function(live){if(live&&live.price&&live.price>0){stocks[i].cp=live.price;stocks[i].livePrice=live.price;stocks[i].liveAt=Date.now();stocks[i].prevClose=live.prev||stocks[i].prevClose;}}).catch(function(){});});
     Promise.all(ps).then(function(){saveState();renderStocks();});
@@ -1507,10 +1559,12 @@ async function loadFromServer(){
     var deletedIds=deletedRaw?JSON.parse(deletedRaw):[];
     accs=serverAccs.filter(function(a){return deletedIds.indexOf(a.id)===-1;});
     if(data.stocks&&Array.isArray(data.stocks)&&data.stocks.length)stocks=data.stocks;
+    if(Array.isArray(data.savings))savings=data.savings;
     autoFlagOverdue();
     try{
       localStorage.setItem('pt_accs',JSON.stringify(accs));
       localStorage.setItem('pt_stk',JSON.stringify(stocks));
+      localStorage.setItem('pt_sav',JSON.stringify(savings));
       localStorage.setItem('pt_save_time',serverTime.toString());
     }catch(e2){}
     rAll();
