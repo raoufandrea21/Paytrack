@@ -162,6 +162,11 @@ label{display:block;font-size:11px;color:var(--t2);margin-bottom:4px;font-weight
 .tbi-i .ic{width:22px;height:22px}
 .ni .ic{width:18px;height:18px}
 .msheet-r>span .ic{width:22px;height:22px}
+.sync{font-family:var(--f);font-size:11px;font-weight:600;padding:3px 9px;border-radius:100px;white-space:nowrap;display:none;align-items:center;gap:5px}
+.sync.on{display:inline-flex}
+.sync.ok{background:rgba(62,207,142,.14);color:var(--green)}
+.sync.busy{background:rgba(136,136,160,.16);color:var(--t2)}
+.sync.bad{background:rgba(242,107,107,.16);color:var(--red);cursor:pointer}
 .remrow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 14px;border-bottom:1px solid var(--b1);font-size:12px;color:var(--t2)}
 .remrow input{width:64px;min-height:34px}
 </style>
@@ -207,6 +212,7 @@ label{display:block;font-size:11px;color:var(--t2);margin-bottom:4px;font-weight
 <div class="main">
 <div class="topbar">
   <div class="tb-title" id="pg-title">Home</div>
+  <div id="sync-indicator" class="sync" title="Sync status"></div>
   <div class="tb-clock" id="clk"></div>
   <button onclick="go('exp',null)">↓ Export</button>
 </div>
@@ -487,15 +493,39 @@ function saveState(){
   // Sync to server so reminders always have latest data
   syncToServer();
 }
-function syncToServer(){
-  try{
-    fetch('/api/save',{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({accs:accs,stocks:stocks})
-    }).catch(function(){});
-  }catch(e){}
+// ── Server sync ────────────────────────────────────────────────────────
+// Every write is verified. A failed save is never silent: it sets the dirty
+// flag, shows a red chip, and retries on a timer, on reconnect and on focus.
+var PT_DIRTY=false, PT_SAVING=false, PT_RETRY=null;
+function syncStatus(kind,text){
+  var e=document.getElementById('sync-indicator'); if(!e)return;
+  e.className='sync on '+kind; e.textContent=text;
+  e.onclick = kind==='bad' ? function(){ syncToServer(); } : null;
+  if(kind==='ok') setTimeout(function(){ if(!PT_DIRTY && e.className.indexOf('ok')>=0) e.className='sync'; },3000);
 }
+function syncToServer(){
+  if(PT_SAVING){ PT_DIRTY=true; return; }
+  PT_SAVING=true; syncStatus('busy','Saving…');
+  fetch('/api/save',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({accs:accs,stocks:stocks})
+  }).then(function(r){
+    return r.json().then(function(j){ return {ok:r.ok,j:j}; });
+  }).then(function(res){
+    PT_SAVING=false;
+    if(!res.ok || !res.j || res.j.error || !res.j.success) throw new Error((res.j&&res.j.error)||'save failed');
+    PT_DIRTY=false;
+    if(res.j.saved){ try{ localStorage.setItem('pt_user_save_time', new Date(res.j.saved).getTime()); }catch(e){} }
+    syncStatus('ok','✓ Saved');
+    if(PT_RETRY){ clearInterval(PT_RETRY); PT_RETRY=null; }
+  }).catch(function(){
+    PT_SAVING=false; PT_DIRTY=true;
+    syncStatus('bad','✕ Not saved — tap to retry');
+    if(!PT_RETRY) PT_RETRY=setInterval(function(){ if(PT_DIRTY && navigator.onLine) syncToServer(); },20000);
+  });
+}
+window.addEventListener('online',function(){ if(PT_DIRTY) syncToServer(); });
 function convertDates(accsArr){
   // Convert any YYYY-MM-DD dates to DD-MM-YYYY in loaded data
   if(!accsArr)return accsArr;
@@ -1346,8 +1376,11 @@ async function loadFromServer(){
     var serverAccs=convertDates(data.accs);
     var serverTime=data.saved?new Date(data.saved).getTime():0;
     if(!serverTime)return;
+    // Never overwrite local state that has not reached the server yet.
+    if(PT_DIRTY||PT_SAVING)return;
     var userSaveTime=parseInt(localStorage.getItem('pt_user_save_time')||'0');
     if(userSaveTime>serverTime)return;
+    if(serverTime===parseInt(localStorage.getItem('pt_save_time')||'0'))return; // already current
     var deletedRaw=localStorage.getItem('pt_deleted');
     var deletedIds=deletedRaw?JSON.parse(deletedRaw):[];
     accs=serverAccs.filter(function(a){return deletedIds.indexOf(a.id)===-1;});
@@ -1359,10 +1392,25 @@ async function loadFromServer(){
       localStorage.setItem('pt_save_time',serverTime.toString());
     }catch(e2){}
     rAll();
-    var si=document.getElementById('sync-indicator');
-    if(si){si.textContent='✓ Synced';si.style.color='#3ecf8e';setTimeout(function(){si.textContent='';},4000);}
+    syncStatus('ok','✓ Updated');
   }catch(e){console.log('loadFromServer:',e);}
 }
+
+// Refresh from the server when returning to the app, and every 60s while open.
+// Skipped while a dialog is open, while typing, or with unsaved local changes,
+// so an incoming refresh can never wipe work in progress.
+function refreshSafe(){
+  if(PT_DIRTY||PT_SAVING)return;
+  if(document.hidden)return;
+  var ae=document.activeElement;
+  if(ae&&/^(INPUT|SELECT|TEXTAREA)$/.test(ae.tagName))return;
+  var open=[].slice.call(document.querySelectorAll('.ovlay')).some(function(o){return o.style.display==='flex';});
+  if(open)return;
+  loadFromServer();
+}
+document.addEventListener('visibilitychange',function(){ if(!document.hidden) refreshSafe(); });
+window.addEventListener('focus',refreshSafe);
+setInterval(refreshSafe,60000);
 
 window.addEventListener('load', function() {
   try { loadState(); } catch(e) { console.log('loadState error:', e); }
