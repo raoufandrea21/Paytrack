@@ -12,6 +12,12 @@ function pd(s) {
 const eff = p => (p.nd && p.nd.trim()) ? p.nd : p.dt;
 
 export default async function handler(req, res) {
+  // Vercel's cron sends Authorization: Bearer CRON_SECRET automatically once
+  // the env var exists. Without this check anyone could trigger push sends.
+  const secret = process.env.CRON_SECRET;
+  if (!secret || req.headers['authorization'] !== `Bearer ${secret}`) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
   try {
     const KV_URL = process.env.KV_REST_API_URL, KV_TOKEN = process.env.KV_REST_API_TOKEN;
     webpush.setVapidDetails(

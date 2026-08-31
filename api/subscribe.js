@@ -1,5 +1,8 @@
 // Stores the device's push subscription in KV so the cron can send to it.
+import { guard } from './_auth.js';
+
 export default async function handler(req, res) {
+  if (!(await guard(req, res))) return;
   if (req.method !== 'POST') return res.status(405).json({ error: 'POST only' });
   try {
     const sub = req.body;
