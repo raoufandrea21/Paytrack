@@ -220,7 +220,7 @@ label{display:block;font-size:11px;color:var(--t2);margin-bottom:4px;font-weight
   <div class="ni" onclick="go('accs',this)"><svg class="ic"><use href="#ic-accounts"/></svg><span>Accounts</span></div>
   <div class="ni" onclick="go('monthly',this)"><svg class="ic"><use href="#ic-monthly"/></svg><span>Monthly view</span></div>
   <div class="nl">Investments</div>
-  <div class="ni" onclick="go('stk',this)"><svg class="ic"><use href="#ic-stocks"/></svg><span>Stocks</span></div>
+  <div class="ni" onclick="go('stk',this)"><svg class="ic"><use href="#ic-stocks"/></svg><span>Stocks &amp; savings</span></div>
   <div class="nl">Tools</div>
   <div class="ni" onclick="go('ai',this)"><svg class="ic"><use href="#ic-ai"/></svg><span>AI assistant</span></div>
   <div class="ni" onclick="go('exp',this)"><svg class="ic"><use href="#ic-export"/></svg><span>Export</span></div>
@@ -364,6 +364,12 @@ label{display:block;font-size:11px;color:var(--t2);margin-bottom:4px;font-weight
   </div>
   <div id="stk-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(255px,1fr));gap:12px"></div>
   <div id="stk-empty" style="text-align:center;padding:3rem;color:var(--t2)"><i class="ti ti-chart-line" style="font-size:48px;opacity:.25;display:block;margin-bottom:1rem"></i>No stocks yet. Click Add stock to begin.</div>
+
+  <div class="card" style="margin-top:1.25rem">
+    <div class="card-t">Margin owed <span id="mg-total" style="float:right;font-family:var(--m);color:var(--red)">AED 0</span></div>
+    <p style="font-size:11px;color:var(--t2);margin-bottom:12px">Money borrowed from a broker against your shares. Recorded per brokerage account and subtracted from net worth.</p>
+    <div id="mg-list"></div>
+  </div>
 
   <div class="card" style="margin-top:1.25rem">
     <div class="card-t">Savings <span id="sv-total" style="float:right;font-family:var(--m);color:var(--green)">AED 0</span></div>
@@ -537,9 +543,37 @@ var accs=[
 ];
 var stocks=[];
 var savings=[];   // {bank, label, amount}
-var stkMargin=0;
+var stkMargin=0;                       // legacy single figure, kept for migration
+var margins={};                        // {broker: amount} -- margin is owed per brokerage account
 try{ stkMargin=+localStorage.getItem('pt_margin')||0; }catch(e){}
-function setMargin(v){ stkMargin=v||0; try{ localStorage.setItem('pt_margin',stkMargin); }catch(e){} saveState(); renderStocks(); renderDash(); }
+try{ var mg=localStorage.getItem('pt_margins'); if(mg) margins=JSON.parse(mg)||{}; }catch(e){}
+function brokerList(){
+  var out=[]; stocks.forEach(function(s){ var b=(s.broker||'').trim(); if(b&&out.indexOf(b)<0)out.push(b); });
+  Object.keys(margins).forEach(function(b){ if(out.indexOf(b)<0)out.push(b); });
+  return out;
+}
+// Net value of one brokerage account: everything held there, less what is
+// owed there. Margin sits on the account, not on an individual holding.
+function brokerValue(b){ return stocks.reduce(function(t,x){return t+((x.broker||'').trim()===b?x.qty*(x.cp||0):0);},0); }
+function brokerNet(b){ return brokerValue(b)-(+margins[b]||0); }
+function marginTotal(){ return Object.keys(margins).reduce(function(t,b){return t+(+margins[b]||0);},0); }
+function setBrokerMargin(broker,v){
+  var n=+v||0;
+  if(n>0) margins[broker]=n; else delete margins[broker];
+  try{ localStorage.setItem('pt_margins',JSON.stringify(margins)); }catch(e){}
+  stkMargin=0; try{ localStorage.setItem('pt_margin','0'); }catch(e){}
+  saveState(); renderStocks(); renderDash();
+}
+// One-time move of the old single margin onto the first broker, so the figure
+// is not silently lost. Flagged in the UI so it can be corrected.
+function migrateMargin(){
+  if(stkMargin>0 && !Object.keys(margins).length){
+    var b=brokerList()[0]||'Unassigned';
+    margins[b]=stkMargin; margins.__migrated=b;
+    try{ localStorage.setItem('pt_margins',JSON.stringify(margins)); }catch(e){}
+  }
+}
+function setMargin(v){ /* superseded by per-broker margins */ }
 function saveState(){
   setDirty(true);   // cleared only when the server confirms the write
   try{
@@ -548,6 +582,7 @@ function saveState(){
     localStorage.setItem('pt_accs',JSON.stringify(accs));
     localStorage.setItem('pt_stk',JSON.stringify(stocks));
     localStorage.setItem('pt_sav',JSON.stringify(savings));
+    localStorage.setItem('pt_margins',JSON.stringify(margins));
   }catch(e){}
   // Sync to server so reminders always have latest data
   syncToServer();
@@ -570,7 +605,7 @@ function syncToServer(){
   fetch('/api/save',{
     method:'POST',
     headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({accs:accs,stocks:stocks,savings:savings})
+    body:JSON.stringify({accs:accs,stocks:stocks,savings:savings,margins:margins})
   }).then(function(r){
     return r.json().then(function(j){ return {ok:r.ok,j:j}; });
   }).then(function(res){
@@ -819,7 +854,7 @@ function renderDash(){
   if(mnEl)mnEl.textContent=fmt(nmo);
   var mnLbl=document.getElementById('m-next-lbl');
   if(mnLbl)mnLbl.textContent=MNS[nextMo]+' '+nextYr;
-  var snw=sv+(typeof savTotal==='function'?savTotal():0)-(typeof stkMargin!=='undefined'?stkMargin:0);
+  var snw=sv+(typeof savTotal==='function'?savTotal():0)-marginTotal();
   document.getElementById('m6').textContent=sv>0?fmt(sv):'AED 0';
   var _sav=savTotal(), _asset=assetTotal(), _nw=netWorthTotal();
   var savEl=document.getElementById('m-sav');
@@ -1009,13 +1044,13 @@ function debtTotal(){
     a.pays.forEach(function(p){ if(owed(p)) d+=p.amount; });
     d+=unsched(a);
   });
-  return d+(+stkMargin||0);
+  return d+marginTotal();
 }
 function stockTotal(){ return stocks.reduce(function(t,x){return t+x.qty*(x.cp||0);},0); }
 // Property equity + savings + stocks, less money borrowed against the shares.
 // Remaining instalments are NOT subtracted: equity already counts only what has
 // been paid, so subtracting the unpaid balance would charge you for it twice.
-function netWorthTotal(){ return propertyEquity()+savTotal()+stockTotal()-(+stkMargin||0); }
+function netWorthTotal(){ return propertyEquity()+savTotal()+stockTotal()-marginTotal(); }
 function setAssetValue(id,v){
   var a=accs.find(function(x){return x.id===id;}); if(!a)return;
   a.assetValue=Math.max(0,+v||0); saveState(); renderDash(); renderAccs();
@@ -1041,6 +1076,19 @@ function editSaving(i,v){
   var n=+v||0; if(n<0)return;
   savings[i].amount=n; saveState(); renderSavings(); renderStocks(); renderDash();
 }
+function renderMargins(){
+  migrateMargin();
+  var box=document.getElementById('mg-list'); if(!box)return;
+  var t=document.getElementById('mg-total'); if(t) t.textContent=fmt(marginTotal());
+  var list=brokerList().filter(function(b){return b!=='__migrated';});
+  if(!list.length){ box.innerHTML='<p style="font-size:12px;color:var(--t2);padding:.75rem 0">Add a stock with a broker name first.</p>'; return; }
+  box.innerHTML='<div style="overflow-x:auto"><table><thead><tr><th>Broker</th><th style="text-align:right">Margin owed</th></tr></thead><tbody>'
+    + list.map(function(b){
+        var flag = margins.__migrated===b ? ' <span style="font-size:10px;color:var(--amber)">moved from the old total &mdash; check it</span>' : '';
+        return '<tr><td style="font-weight:500">'+b+flag+'</td>'
+          +'<td style="text-align:right"><input type="number" min="0" value="'+(+margins[b]||0)+'" onchange="setBrokerMargin(this.getAttribute(\'data-b\'),this.value)" data-b="'+b.replace(/"/g,'&quot;')+'" style="width:140px;text-align:right;font-family:var(--m)"></td></tr>';
+      }).join('')+'</tbody></table></div>';
+}
 function renderSavings(){
   var body=document.getElementById('sv-list'); if(!body)return;
   var t=document.getElementById('sv-total'); if(t) t.textContent=fmt(savTotal());
@@ -1055,9 +1103,10 @@ function renderSavings(){
 }
 function renderStocks(){
   try{renderSavings();}catch(e){}
+  try{renderMargins();}catch(e){}
   var total=stocks.reduce(function(s,x){return s+x.qty*(x.cp||0);},0);
   var gl=stocks.reduce(function(s,x){return s+x.qty*((x.cp||0)-(x.bp||0));},0);
-  var netWorth=total+savTotal()-stkMargin;
+  var netWorth=total+savTotal()-marginTotal();
   document.getElementById('st1').textContent=total>0?fmt(total):'AED 0';
   var glEl=document.getElementById('st2');
   glEl.innerHTML=gl===0?'AED 0':'<span style="color:'+(gl>=0?'var(--green)':'var(--red)')+'"> '+(gl>=0?'+':'')+fmt(gl)+'</span>';
@@ -1106,6 +1155,7 @@ function renderStocks(){
       ['Value',fmt(val),'var(--t1)'],
       ['G/L',(gl2>=0?'+':'')+fmt(gl2),(gl2>=0?'var(--green)':'var(--red)')],
       s.broker?['Broker',s.broker,'var(--t2)']:null,
+      s.broker?['Net · '+s.broker, fmt(brokerNet((s.broker||'').trim())), (brokerNet((s.broker||'').trim())>=0?'var(--green)':'var(--red)')]:null,
       dayChg!==null?['Day chg',(dayChg>=0?'+':'')+dayChg.toFixed(2)+'%',(dayChg>=0?'var(--green)':'var(--red)')]:null
     ].filter(Boolean).map(function(x){
       // one line per value: wrapping made the cells different heights and threw
@@ -1217,7 +1267,7 @@ function expStocks(){
 // Excel/PDF are reports; this is the only lossless copy of the data.
 function backupJSON(){
   var payload={app:'paytrack',version:2,exported:new Date().toISOString(),
-               accs:accs,stocks:stocks,savings:savings,stkMargin:stkMargin};
+               accs:accs,stocks:stocks,savings:savings,margins:margins};
   var blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
   var d=new Date(),stamp=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
   var a=document.createElement('a');
@@ -1243,6 +1293,7 @@ function restoreJSON(input){
     accs=convertDates(d.accs);
     if(Array.isArray(d.stocks))stocks=d.stocks;
     if(Array.isArray(d.savings))savings=d.savings;
+    if(d.margins&&typeof d.margins==='object')margins=d.margins;
     if(typeof d.stkMargin==='number'){stkMargin=d.stkMargin;try{localStorage.setItem('pt_margin',stkMargin);}catch(e){}}
     try{ localStorage.removeItem('pt_deleted'); }catch(e){}
     autoFlagOverdue();
@@ -1441,7 +1492,7 @@ async function doAI(){
 }
 function askC(q){document.getElementById('ai-in').value=q;doAI();}
 
-var pgTitles={dash:'Home',accs:'Accounts',monthly:'Monthly view',stk:'Stocks',ai:'AI assistant',exp:'Export'};
+var pgTitles={dash:'Home',accs:'Accounts',monthly:'Monthly view',stk:'Stocks & savings',ai:'AI assistant',exp:'Export'};
 var bnPage={dash:0,accs:1,monthly:2};
 function bnSet(i){var b=document.querySelectorAll('.tbi');b.forEach(function(n,k){n.classList.toggle('on',k===i);});}
 function openMore(){document.getElementById('more-sheet').classList.add('on');}
@@ -1628,6 +1679,7 @@ async function loadFromServer(){
     accs=serverAccs.filter(function(a){return deletedIds.indexOf(a.id)===-1;});
     if(data.stocks&&Array.isArray(data.stocks)&&data.stocks.length)stocks=data.stocks;
     if(Array.isArray(data.savings))savings=data.savings;
+    if(data.margins&&typeof data.margins==='object')margins=data.margins;
     autoFlagOverdue();
     try{
       localStorage.setItem('pt_accs',JSON.stringify(accs));
@@ -2060,7 +2112,7 @@ function urlB64ToUint8(base64String){
 <div class="msheet" id="more-sheet" onclick="if(event.target===this)closeMore()">
   <div class="msheet-in">
     <div class="msheet-grip"></div>
-    <div class="msheet-r" onclick="closeMore();go('stk',null)"><span><svg class="ic"><use href="#ic-stocks"/></svg></span><div><div class="msheet-t">Stocks</div><div class="msheet-s">Portfolio &amp; live prices</div></div></div>
+    <div class="msheet-r" onclick="closeMore();go('stk',null)"><span><svg class="ic"><use href="#ic-stocks"/></svg></span><div><div class="msheet-t">Stocks &amp; savings</div><div class="msheet-s">Portfolio &amp; live prices</div></div></div>
     <div class="msheet-r" onclick="closeMore();go('ai',null)"><span><svg class="ic"><use href="#ic-ai"/></svg></span><div><div class="msheet-t">AI assistant</div><div class="msheet-s">Ask about your finances</div></div></div>
     <div class="msheet-r" onclick="closeMore();lkSecurity()"><span><svg class="ic"><use href="#ic-more"/></svg></span><div><div class="msheet-t">Security</div><div class="msheet-s" id="msheet-sec">Passcode &amp; fingerprint</div></div></div>
     <div class="msheet-r" onclick="closeMore();go('exp',null)"><span><svg class="ic"><use href="#ic-export"/></svg></span><div><div class="msheet-t">Export</div><div class="msheet-s">Report, Excel, print</div></div></div>
