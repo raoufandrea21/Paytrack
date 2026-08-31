@@ -345,6 +345,21 @@ label{display:block;font-size:11px;color:var(--t2);margin-bottom:4px;font-weight
     <div class="card"><div class="card-t"><i class="ti ti-file-text" style="color:var(--red);margin-right:5px"></i>Export to PDF</div><p style="font-size:12px;color:var(--t2);margin-bottom:1rem;line-height:1.7">Full PDF report with all accounts and payment schedules.</p><button class="btn-p" onclick="expPDF()">📄 Generate PDF report</button></div>
   </div>
 
+  <div class="card" style="margin-top:1.25rem;border-color:rgba(62,207,142,.35)">
+    <div class="card-t"><svg class="ic" style="color:var(--green);margin-right:5px;display:inline-block;vertical-align:-2px"><use href="#ic-export"/></svg>Backup &amp; restore (JSON)</div>
+    <p style="font-size:12px;color:var(--t2);margin-bottom:1rem;line-height:1.7">
+      Excel and PDF are <strong>reports</strong> &mdash; they cannot be loaded back in.
+      This is the real backup: an exact copy of every account, payment, status and stock.
+      Keep a copy somewhere safe, and use Restore to move your data to another device.
+    </p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn-p" onclick="backupJSON()">↓ Download backup</button>
+      <button onclick="document.getElementById('restore-file').click()">↑ Restore from backup</button>
+      <input type="file" id="restore-file" accept="application/json,.json" style="display:none" onchange="restoreJSON(this)">
+    </div>
+    <div id="backup-msg" style="font-size:11px;color:var(--t2);margin-top:10px"></div>
+  </div>
+
 </div>
 
 
@@ -385,7 +400,7 @@ label{display:block;font-size:11px;color:var(--t2);margin-bottom:4px;font-weight
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
-var TODAY=new Date();
+var TODAY=(function(){var n=new Date();return new Date(n.getFullYear(),n.getMonth(),n.getDate());})(); // midnight: a payment due today must count as due, not future
 var MNS=['January','February','March','April','May','June','July','August','September','October','November','December'];
 var M3=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 function fd(d){if(!d)return'';if(typeof d==='string')return d;return d.getDate().toString().padStart(2,'0')+'-'+(d.getMonth()+1).toString().padStart(2,'0')+'-'+d.getFullYear();}
@@ -948,6 +963,46 @@ function expStocks(){
   XLSX.writeFile(wb,'paytrack_stocks.xlsx');
 }
 
+
+// ── JSON backup / restore ──────────────────────────────────────────────
+// Excel/PDF are reports; this is the only lossless copy of the data.
+function backupJSON(){
+  var payload={app:'paytrack',version:2,exported:new Date().toISOString(),
+               accs:accs,stocks:stocks,stkMargin:stkMargin};
+  var blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
+  var d=new Date(),stamp=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  var a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='paytrack-backup-'+stamp+'.json';
+  document.body.appendChild(a);a.click();
+  setTimeout(function(){URL.revokeObjectURL(a.href);a.remove();},1000);
+  bmsg('✓ Backup downloaded ('+accs.length+' accounts, '+accs.reduce(function(n,x){return n+(x.pays?x.pays.length:0);},0)+' payments).','var(--green)');
+}
+function bmsg(t,c){var e=document.getElementById('backup-msg');if(e){e.textContent=t;e.style.color=c||'var(--t2)';}}
+function restoreJSON(input){
+  var f=input.files&&input.files[0];input.value='';
+  if(!f)return;
+  var rd=new FileReader();
+  rd.onload=function(){
+    var d;
+    try{ d=JSON.parse(rd.result); }
+    catch(e){ bmsg('✗ That file is not valid JSON.','var(--red)'); return; }
+    if(!d||!Array.isArray(d.accs)||!d.accs.length){ bmsg('✗ No accounts found in that file.','var(--red)'); return; }
+    var np=d.accs.reduce(function(n,x){return n+(x.pays?x.pays.length:0);},0);
+    var cur=accs.reduce(function(n,x){return n+(x.pays?x.pays.length:0);},0);
+    if(!confirm('Restore '+d.accs.length+' accounts / '+np+' payments?\n\nThis REPLACES what is on this device right now ('+accs.length+' accounts / '+cur+' payments).\n\nThis cannot be undone.'))return;
+    accs=convertDates(d.accs);
+    if(Array.isArray(d.stocks))stocks=d.stocks;
+    if(typeof d.stkMargin==='number'){stkMargin=d.stkMargin;try{localStorage.setItem('pt_margin',stkMargin);}catch(e){}}
+    try{ localStorage.removeItem('pt_deleted'); }catch(e){}
+    autoFlagOverdue();
+    saveState();
+    rAll();
+    bmsg('✓ Restored '+accs.length+' accounts / '+np+' payments'+(d.exported?' (backup from '+new Date(d.exported).toLocaleString()+')':'')+'.','var(--green)');
+  };
+  rd.readAsText(f);
+}
+
 function renderExport(){
   document.getElementById('exp-acc').innerHTML=accs.map(function(a){return'<button onclick="expOneExcel(\''+a.id+'\')">📊 '+a.name+'</button>';}).join('');
 }
@@ -1124,7 +1179,7 @@ async function doAI(){
   ms.appendChild(ld);ms.scrollTop=ms.scrollHeight;
   ah.push({role:'user',content:q});
   try{
-    var r=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1024,system:ASYS,messages:ah.slice(-10)})});
+    var r=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({system:ASYS,messages:ah.slice(-10),accs:accs,stocks:stocks})});
     var d=await r.json();
     var reply=(d.content&&d.content[0]&&d.content[0].text)||'Error.';
     ah.push({role:'assistant',content:reply});ld.remove();
