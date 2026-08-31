@@ -1,0 +1,59 @@
+<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PayTrack fingerprint check</title>
+<style>
+body{font:15px/1.6 system-ui,sans-serif;background:#0d0d12;color:#eee;margin:0;padding:20px}
+h1{font-size:17px;margin:0 0 14px}
+.r{padding:9px 12px;border-radius:8px;margin-bottom:6px;font-size:13.5px;display:flex;justify-content:space-between;gap:12px}
+.ok{background:rgba(62,207,142,.13);color:#3ecf8e}
+.no{background:rgba(242,107,107,.15);color:#f26b6b}
+.info{background:rgba(136,136,160,.15);color:#aab}
+b{font-family:ui-monospace,monospace;font-weight:600;text-align:right;word-break:break-all}
+button{width:100%;padding:14px;margin-top:14px;border-radius:10px;border:none;background:#5b9cf6;color:#fff;font-size:15px;font-weight:600}
+#out{margin-top:14px;padding:12px;border-radius:8px;background:#1a1a24;font-size:13px;white-space:pre-wrap;word-break:break-word}
+</style>
+<h1>Fingerprint check</h1>
+<div id="rows"></div>
+<button onclick="tryReg()">Try to register fingerprint</button>
+<div id="out">Tap the button, then send me this screen.</div>
+<script>
+function row(label, value, cls){
+  document.getElementById('rows').insertAdjacentHTML('beforeend',
+    '<div class="r '+cls+'"><span>'+label+'</span><b>'+value+'</b></div>');
+}
+row('Secure (https)', window.isSecureContext ? 'yes' : 'NO', window.isSecureContext?'ok':'no');
+row('WebAuthn API', window.PublicKeyCredential ? 'yes' : 'NO', window.PublicKeyCredential?'ok':'no');
+row('Installed app mode', (window.matchMedia('(display-mode: standalone)').matches || navigator.standalone) ? 'yes' : 'no (browser tab)', 'info');
+var cred=null; try{ cred=localStorage.getItem('pt_cred'); }catch(e){}
+row('Credential saved here', cred ? 'yes' : 'no', cred?'ok':'info');
+row('Origin', location.hostname, 'info');
+row('Browser', (navigator.userAgentData && navigator.userAgentData.brands
+  ? navigator.userAgentData.brands.map(function(b){return b.brand;}).join(', ')
+  : navigator.userAgent.slice(0,60)), 'info');
+
+if (window.PublicKeyCredential && PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable){
+  PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable()
+    .then(function(a){ row('Fingerprint available', a ? 'yes' : 'NO', a?'ok':'no'); })
+    .catch(function(e){ row('Fingerprint available', 'error: '+e.message, 'no'); });
+} else {
+  row('Fingerprint available', 'API missing', 'no');
+}
+
+function tryReg(){
+  var out=document.getElementById('out');
+  out.textContent='Asking for fingerprint…';
+  if(!window.PublicKeyCredential){ out.textContent='WebAuthn not supported in this browser.'; return; }
+  var ch=new Uint8Array(32); crypto.getRandomValues(ch);
+  navigator.credentials.create({publicKey:{
+    challenge: ch,
+    rp: {name:'PayTrack'},
+    user: {id:new TextEncoder().encode('paytrack-user'), name:'PayTrack', displayName:'PayTrack'},
+    pubKeyCredParams: [{type:'public-key',alg:-7},{type:'public-key',alg:-257}],
+    authenticatorSelection: {authenticatorAttachment:'platform', userVerification:'required', residentKey:'preferred'},
+    timeout: 60000, attestation:'none'
+  }}).then(function(c){
+    out.textContent='SUCCESS — fingerprint works here.\nCredential id length: '+c.rawId.byteLength;
+  }).catch(function(e){
+    out.textContent='FAILED\nname: '+e.name+'\nmessage: '+e.message;
+  });
+}
+</script>
