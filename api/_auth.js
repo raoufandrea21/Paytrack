@@ -14,15 +14,24 @@ export async function kvGet(key) {
   const r = await fetch(`${KV()}/get/${key}`, { headers: { Authorization: `Bearer ${TOKEN()}` } });
   if (!r.ok) throw new Error('kv get failed');
   const j = await r.json();
-  return j.result ?? null;
+  let v = j.result ?? null;
+  if (v === null) return null;
+  // Upstash stores the raw POST body, so a value written as {"value":"..."}
+  // comes back wrapped. Unwrap it so old and new writes both read correctly.
+  if (typeof v === 'string' && v.startsWith('{"value":')) {
+    try { const w = JSON.parse(v); if (typeof w.value === 'string') v = w.value; } catch (e) {}
+  }
+  return v;
 }
 
 export async function kvSet(key, value, ttlSeconds) {
   const path = ttlSeconds ? `${KV()}/setex/${key}/${ttlSeconds}` : `${KV()}/set/${key}`;
+  // Upstash takes the request body AS the value. Wrapping it in {"value":...}
+  // stores the wrapper itself, which is what broke passcode verification.
   const r = await fetch(path, {
     method: 'POST',
-    headers: { Authorization: `Bearer ${TOKEN()}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ value: String(value) })
+    headers: { Authorization: `Bearer ${TOKEN()}`, 'Content-Type': 'text/plain' },
+    body: String(value)
   });
   if (!r.ok) throw new Error('kv set failed');
   return true;

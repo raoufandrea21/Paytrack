@@ -1558,10 +1558,13 @@ function lkSubmit(){
     .then(function(res){
       if (!res.ok || !res.j.ok){ lkErr(res.j.error || 'Could not sign in.'); return; }
       document.getElementById('lk-pc').value = '';
-      var wasSetup = LK_MODE === 'setup';
       lkHide();
       loadFromServer();
-      if (wasSetup) setTimeout(lkOfferBiometric, 600);
+      // Offer fingerprint after any sign-in on a device that has not set it up,
+      // so it becomes the normal way in rather than a one-off at setup.
+      var cred = null;
+      try { cred = localStorage.getItem('pt_cred'); } catch(e){}
+      if (!cred) setTimeout(lkOfferBiometric, 600);
     })
     .catch(function(){ lkErr('Connection problem. Try again.'); })
     .then(function(){ btn.disabled = false; });
