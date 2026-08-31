@@ -832,8 +832,8 @@ function renderDash(){
   if(nwEl2){
     nwEl2.innerHTML='<span style="color:'+(_nw>=0?'var(--green)':'var(--red)')+'">'+fmt(_nw)+'</span>';
     document.getElementById('m-bal-sub').innerHTML = _asset>0
-      ? 'Property '+fmt(_asset)+' + stocks + savings &minus; debts'
-      : '<span style="color:var(--amber)">No property values set &mdash; add \u201cWorth today\u201d on your accounts</span>';
+      ? 'Paid into property '+fmt(_asset)+' + savings + stocks'
+      : '<span style="color:var(--amber)">Mark an account as \u201cBuying\u201d to build equity here</span>';
   }
   var glEl=document.getElementById('m6-gl');
   if(glEl){if(gl!==0)glEl.innerHTML='G/L: <span style="color:'+(gl>=0?'var(--green)':'var(--red)')+'"> '+(gl>=0?'+':'')+fmt(gl)+'</span>';else glEl.textContent='Click to view stocks';}
@@ -899,7 +899,7 @@ function renderAccs(){
       var fcRow=p.forecast?'background:rgba(167,139,250,.05);border-left:2px solid var(--purple)':'';var delBtn=' <button class="btn-s btn-d" onclick="delPay(\''+a.id+'\','+i+')" title="Delete this payment">✕</button>';var acts=(p.forecast?'<button class="btn-s" onclick="confirmForecast(\''+a.id+'\','+i+')" style="color:var(--purple)">✓ Confirm real</button> <button class="btn-s" onclick="opEdit(\''+a.id+'\','+i+')">✎ Edit</button>':(payActions(a.id,p,i)+''+(a.defer&&owed(p)?' <button class="btn-s" onclick="deferP(\''+a.id+'\','+i+')">Defer</button>':'')+' <button class="btn-s" onclick="opEdit(\''+a.id+'\','+i+')">✎ Edit</button>'))+delBtn;return'<tr style="'+fcRow+'"><td style="color:var(--t3);font-family:var(--m);font-size:10px">'+(i+1)+'</td><td style="font-family:var(--m);font-size:11px">'+eff(p)+(hn?'<br><span style="font-size:10px;color:var(--t3);text-decoration:line-through">'+p.dt+'</span>':'')+'</td><td style="color:var(--t2)">'+p.desc+(p.forecast?fcTag():'')+'</td><td style="font-family:var(--m);font-size:10px;color:var(--t3)">'+(p.chq||'—')+'</td><td style="text-align:right;font-family:var(--m);font-weight:600">'+fmt(p.amount)+'</td><td style="color:var(--t3);font-size:11px">'+(p.pct||'')+'</td><td>'+(p.forecast?'':sbdg(p.status))+'</td><td style="white-space:nowrap">'+acts+'</td></tr>';
     }).join('');
     var sb=uns>0?'<span style="font-size:10px;font-weight:600;color:var(--amber);background:rgba(245,166,35,.14);padding:2px 7px;border-radius:100px;margin-left:6px">'+fmt(uns)+' unscheduled</span>':'';
-    return'<div class="ar"><div class="ah" onclick="togAcc(\'d-'+a.id+'\')"><div style="display:flex;align-items:center;gap:12px"><div style="width:36px;height:36px;border-radius:10px;background:rgba(91,156,246,.1);color:'+tcl(a.type)+';display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0"><i class="ti ti-'+tic(a.type)+'"></i></div><div><div style="font-weight:600;font-size:14px">'+a.name+' '+sb+'</div><div style="font-size:11px;color:var(--t2);margin-top:2px">'+a.type+' · Principal: '+fmt(a.principal)+(a.defer?' · <span style="color:var(--blue)">defer on</span>':'')+'</div><div class="prog"><div class="prog-f" style="width:'+pct+'%"></div></div><div style="font-size:10px;color:var(--t3);margin-top:2px">'+pct+'% paid</div></div></div><div style="text-align:right;display:flex;align-items:center;gap:12px"><div><div style="font-weight:600;font-size:15px;font-family:var(--m);color:var(--red)">'+fmt(debt)+'</div><div style="font-size:11px;color:var(--t2);margin-top:2px">'+fmt(paid)+' paid'+(ov?' · <span style="color:var(--red)">'+fmt(ov)+' overdue</span>':'')+'</div></div><button class="btn-d btn-s" onclick="event.stopPropagation();opDel(\''+a.id+'\')">Delete</button></div></div><div class="adet" id="d-'+a.id+'"><div style="padding:8px 14px;border-bottom:1px solid var(--b1);display:flex;gap:8px"><button class="btn-s" onclick="opAddPay(\''+a.id+'\')">+ Add payment</button><button class="btn-s" onclick="openAutoForecast(\''+a.id+'\')" style="color:var(--purple)"><i class="ti ti-wand"></i> Auto-forecast</button><div id="pselbar-'+a.id+'" style="display:none;align-items:center;gap:8px;margin-left:auto"><span id="psellbl-'+a.id+'" style="font-size:11px;color:var(--t2)">0 selected</span><button class="btn-s btn-d" onclick="cfDelSelected(\''+a.id+'\')"><i class="ti ti-trash"></i> Delete selected</button></div></div><div class="remrow"><label style="display:flex;align-items:center;gap:7px;cursor:pointer;margin-right:auto"><input type="checkbox" style="width:auto;min-height:0" '+(a.openEnded?'checked':'')+' onchange="setOpenEnded(\''+a.id+'\',this.checked)"> Open-ended — no agreed repayment date</label></div><div class="remrow">🏠 Worth today <input type="number" min="0" placeholder="0" value="'+(a.assetValue||'')+'" onchange="setAssetValue(\''+a.id+'\',this.value)"> AED &mdash; leave blank if this is not an asset you own</div><div class="remrow">🔔 Remind me <input type="number" min="0" max="90" value="'+(a.remDays||7)+'" onchange="setRem(\''+a.id+'\',this.value)"> days before each due date</div>'+(a.pays.length?'<div style="overflow-x:auto"><table><thead><tr><th style="width:24px"><input type="checkbox" onchange="cfSelAll(\''+a.id+'\',this.checked)" style="width:auto" title="Select all"></th><th>#</th><th>Date</th><th>Description</th><th>Chq</th><th style="text-align:right">Amount</th><th>%</th><th>Status</th><th></th></tr></thead><tbody>'+rows+'</tbody></table></div>':'<p style="padding:1rem;font-size:12px;color:var(--t2)">'+(uns>0?'No payment schedule. The '+fmt(uns)+' principal counts toward your totals, but with no dates it can never appear in the monthly view or trigger a reminder. Add payments to schedule it.':'No payments yet.')+'</p>')+'</div></div>';
+    return'<div class="ar"><div class="ah" onclick="togAcc(\'d-'+a.id+'\')"><div style="display:flex;align-items:center;gap:12px"><div style="width:36px;height:36px;border-radius:10px;background:rgba(91,156,246,.1);color:'+tcl(a.type)+';display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0"><i class="ti ti-'+tic(a.type)+'"></i></div><div><div style="font-weight:600;font-size:14px">'+a.name+' '+sb+'</div><div style="font-size:11px;color:var(--t2);margin-top:2px">'+a.type+' · Principal: '+fmt(a.principal)+(a.defer?' · <span style="color:var(--blue)">defer on</span>':'')+'</div><div class="prog"><div class="prog-f" style="width:'+pct+'%"></div></div><div style="font-size:10px;color:var(--t3);margin-top:2px">'+pct+'% paid</div></div></div><div style="text-align:right;display:flex;align-items:center;gap:12px"><div><div style="font-weight:600;font-size:15px;font-family:var(--m);color:var(--red)">'+fmt(debt)+'</div><div style="font-size:11px;color:var(--t2);margin-top:2px">'+fmt(paid)+' paid'+(ov?' · <span style="color:var(--red)">'+fmt(ov)+' overdue</span>':'')+'</div></div><button class="btn-d btn-s" onclick="event.stopPropagation();opDel(\''+a.id+'\')">Delete</button></div></div><div class="adet" id="d-'+a.id+'"><div style="padding:8px 14px;border-bottom:1px solid var(--b1);display:flex;gap:8px"><button class="btn-s" onclick="opAddPay(\''+a.id+'\')">+ Add payment</button><button class="btn-s" onclick="openAutoForecast(\''+a.id+'\')" style="color:var(--purple)"><i class="ti ti-wand"></i> Auto-forecast</button><div id="pselbar-'+a.id+'" style="display:none;align-items:center;gap:8px;margin-left:auto"><span id="psellbl-'+a.id+'" style="font-size:11px;color:var(--t2)">0 selected</span><button class="btn-s btn-d" onclick="cfDelSelected(\''+a.id+'\')"><i class="ti ti-trash"></i> Delete selected</button></div></div><div class="remrow"><label style="display:flex;align-items:center;gap:7px;cursor:pointer;margin-right:auto"><input type="checkbox" style="width:auto;min-height:0" '+(a.openEnded?'checked':'')+' onchange="setOpenEnded(\''+a.id+'\',this.checked)"> Open-ended — no agreed repayment date</label></div><div class="remrow">🏠 This account is <select onchange="setPurpose(\''+a.id+'\',this.value)" style="width:auto;min-width:190px">'+['buy','expense'].map(function(v){return '<option value="'+v+'"'+(acctPurpose(a)===v?' selected':'')+'>'+(v==='buy'?'Buying \u2014 builds equity':'Rent / fees \u2014 no equity')+'</option>';}).join('')+'</select><span style="color:var(--t3)">'+(acctPurpose(a)==='buy'?'paid so far: '+fmt(equityOf(a)):'')+'</span></div><div class="remrow">🔔 Remind me <input type="number" min="0" max="90" value="'+(a.remDays||7)+'" onchange="setRem(\''+a.id+'\',this.value)"> days before each due date</div>'+(a.pays.length?'<div style="overflow-x:auto"><table><thead><tr><th style="width:24px"><input type="checkbox" onchange="cfSelAll(\''+a.id+'\',this.checked)" style="width:auto" title="Select all"></th><th>#</th><th>Date</th><th>Description</th><th>Chq</th><th style="text-align:right">Amount</th><th>%</th><th>Status</th><th></th></tr></thead><tbody>'+rows+'</tbody></table></div>':'<p style="padding:1rem;font-size:12px;color:var(--t2)">'+(uns>0?'No payment schedule. The '+fmt(uns)+' principal counts toward your totals, but with no dates it can never appear in the monthly view or trigger a reminder. Add payments to schedule it.':'No payments yet.')+'</p>')+'</div></div>';
   }).join('');
   // restore expanded panels after re-render
   Object.keys(cfOpenAccs).forEach(function(id){ if(cfOpenAccs[id]){ var el=document.getElementById(id); if(el) el.classList.add('on'); } });
@@ -984,7 +984,25 @@ function priceAge(s){
 // What you OWN. PayTrack was only ever tracking what you owe, so the villas
 // you are paying for counted as debt with no matching asset. assetValue is the
 // account's worth today, entered by you.
-function assetTotal(){ return accs.reduce(function(t,a){return t+(+a.assetValue||0);},0); }
+// Is this account buying something you keep, or paying for something you don't?
+// Rent and school fees leave nothing behind; instalments on a villa build equity.
+// Inferred from the account type until you set it explicitly.
+function acctPurpose(a){
+  if(a && a.purpose) return a.purpose;
+  return (a && (a.type==='Installments' || a.type==='Mortgage')) ? 'buy' : 'expense';
+}
+function setPurpose(id,v){
+  var a=accs.find(function(x){return x.id===id;}); if(!a)return;
+  a.purpose=v; saveState(); renderDash(); renderAccs();
+}
+// Equity = what you have actually paid into things you own. Money paid on rent
+// or fees is spent, not held, so it never counts.
+function equityOf(a){
+  if(acctPurpose(a)!=='buy') return 0;
+  return (a.pays||[]).reduce(function(t,p){ return t + (p.status==='paid' ? (p.amount||0) : 0); },0);
+}
+function propertyEquity(){ return accs.reduce(function(t,a){return t+equityOf(a);},0); }
+function assetTotal(){ return propertyEquity(); }
 function debtTotal(){
   var d=0;
   accs.forEach(function(a){
@@ -994,7 +1012,10 @@ function debtTotal(){
   return d+(+stkMargin||0);
 }
 function stockTotal(){ return stocks.reduce(function(t,x){return t+x.qty*(x.cp||0);},0); }
-function netWorthTotal(){ return assetTotal()+stockTotal()+savTotal()-debtTotal(); }
+// Property equity + savings + stocks, less money borrowed against the shares.
+// Remaining instalments are NOT subtracted: equity already counts only what has
+// been paid, so subtracting the unpaid balance would charge you for it twice.
+function netWorthTotal(){ return propertyEquity()+savTotal()+stockTotal()-(+stkMargin||0); }
 function setAssetValue(id,v){
   var a=accs.find(function(x){return x.id===id;}); if(!a)return;
   a.assetValue=Math.max(0,+v||0); saveState(); renderDash(); renderAccs();
@@ -1680,6 +1701,12 @@ function hasWebAuthn(){
   return !!(window.PublicKeyCredential && navigator.credentials && navigator.credentials.create);
 }
 
+// Only one WebAuthn request may be outstanding per page. The auto-unlock fired
+// on load stays pending until answered, so starting setup on top of it fails
+// with "a request is already pending". Cancel the previous one first.
+var WA_ABORT=null;
+function waCancel(){ try{ if(WA_ABORT) WA_ABORT.abort(); }catch(e){} WA_ABORT=(typeof AbortController!=='undefined')?new AbortController():null; return WA_ABORT?WA_ABORT.signal:undefined; }
+
 function lkOfferBiometric(force){
   var cred=null; try{ cred=localStorage.getItem('pt_cred'); }catch(e){}
   if(cred && !force){ return; }
@@ -1691,8 +1718,9 @@ function lkOfferBiometric(force){
       return;
     }
     if(!confirm('Unlock PayTrack with your fingerprint on this device?')) return;
+    var sig=waCancel();
     var ch=new Uint8Array(32); crypto.getRandomValues(ch);
-    return navigator.credentials.create({publicKey:{
+    return navigator.credentials.create({signal:sig,publicKey:{
       challenge:ch,
       rp:{name:'PayTrack'},
       user:{id:new TextEncoder().encode('paytrack-user'),name:'PayTrack',displayName:'PayTrack'},
@@ -1706,6 +1734,7 @@ function lkOfferBiometric(force){
         .then(function(){ alert('Fingerprint unlock is on for this device.'); });
     });
   }).catch(function(err){
+    if(err && (err.name==='AbortError'||err.name==='NotAllowedError')) return;
     alert('Could not set up fingerprint on this device.\n\n'+(err && err.message ? err.message : err));
   });
 }
@@ -1715,12 +1744,14 @@ function lkBiometric(){
   try { id = localStorage.getItem('pt_cred'); } catch(e){}
   if (!id || !hasWebAuthn()) return lkErr('No fingerprint on this device yet. Enter your passcode once, then accept the fingerprint prompt.');
   var raw = Uint8Array.from(atob(id.replace(/-/g,'+').replace(/_/g,'/')), function(c){ return c.charCodeAt(0); });
+  var sig = waCancel();
   var ch = new Uint8Array(32); crypto.getRandomValues(ch);
-  navigator.credentials.get({publicKey: {
+  navigator.credentials.get({signal: sig, publicKey: {
     challenge: ch, allowCredentials: [{type:'public-key', id: raw}],
     userVerification: 'required', timeout: 60000
   }}).then(function(){ lkHide(); loadFromServer(); })
-    .catch(function(){ lkErr('Fingerprint not recognised. Use your passcode.'); });
+    .catch(function(err){ if(err && err.name==='AbortError') return;
+      lkErr('Fingerprint not recognised. Use your passcode.'); });
 }
 
 // Decide on boot whether the app should be locked.
