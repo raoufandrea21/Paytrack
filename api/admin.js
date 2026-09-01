@@ -181,9 +181,52 @@ async function doWidget(req, res) {
       if (!next || days < next.days) next = { days, account: a.name, desc: p.desc, amount: p.amount, date: effDate(p) };
     }));
 
+    // ── per-stock rows ────────────────────────────────────────────────────
+    // Margin is owed to a BROKERAGE ACCOUNT, not to a share. With one holding
+    // per broker that distinction is invisible; with two it matters, so each
+    // stock carries its share of its broker's margin in proportion to value.
+    // That keeps the per-stock nets summing to the true total either way.
+    const stocks = Array.isArray(data.stocks) ? data.stocks : [];
+    const margins = (data.margins && typeof data.margins === 'object') ? data.margins : {};
+    const brokerValue = {};
+    stocks.forEach(st => {
+      const b = String(st.broker || '').trim();
+      brokerValue[b] = (brokerValue[b] || 0) + (st.qty || 0) * (st.cp || 0);
+    });
+    const rows = stocks.map(st => {
+      const b = String(st.broker || '').trim();
+      const value = (st.qty || 0) * (st.cp || 0);
+      const bv = brokerValue[b] || 0;
+      const share = (b && margins[b] && bv > 0) ? (+margins[b] * (value / bv)) : 0;
+      const net = value - share;
+      const dayPct = (st.prevClose && st.cp) ? ((st.cp - st.prevClose) / st.prevClose * 100) : null;
+      const arrow = dayPct === null ? '' : (dayPct >= 0 ? '▲ +' : '▼ ');
+      const ageMin = st.liveAt ? Math.round((Date.now() - st.liveAt) / 60000) : null;
+      return {
+        ticker: st.ticker, broker: b || null,
+        price: st.cp || 0, pricef: (st.cur || 'AED') + ' ' + Number(st.cp || 0).toFixed(2),
+        dayPct: dayPct === null ? null : +dayPct.toFixed(2),
+        dayf: dayPct === null ? '—' : (arrow + Math.abs(dayPct).toFixed(2) + '%'),
+        value, valuef: fmtAED(value),
+        margin: Math.round(share), marginf: fmtAED(share),
+        net: Math.round(net), netf: fmtAED(net),
+        live: !!st.livePrice,
+        // one ready-made line per stock, so the widget needs no formatting
+        line: st.ticker + '  ' + Number(st.cp || 0).toFixed(2) + '  '
+              + (dayPct === null ? '' : (arrow + Math.abs(dayPct).toFixed(2) + '%  '))
+              + fmtAED(net),
+        stale: ageMin !== null && ageMin > 60
+      };
+    });
+    const stockNetTotal = rows.reduce((t, r) => t + r.net, 0);
+
     const o = ctx.obligations, s = ctx.summary;
     return res.status(200).json({
       updated: new Date().toISOString(),
+      updatedf: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Dubai' }),
+      stocks: rows,
+      stock1: rows[0] || null, stock2: rows[1] || null, stock3: rows[2] || null,
+      stockNet: stockNetTotal, stockNetf: fmtAED(stockNetTotal),
       due30: o.next30, due30f: fmtAED(o.next30),
       due90: o.next90, due90f: fmtAED(o.next90),
       overdueCount: o.overdue.count, overdueValue: o.overdue.value,
