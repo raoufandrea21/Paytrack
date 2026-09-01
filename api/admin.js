@@ -4,8 +4,10 @@
 //   ?action=test-push  send a test notification to every registered device
 // All session-guarded.
 
+import crypto from 'node:crypto';
 import webpush from 'web-push';
-import { guard, kvGet } from './_auth.js';
+import { guard, kvGet, kvSet } from './_auth.js';
+import { buildCFOContext, parseDate, effDate, isOwed } from './_cfo.js';
 
 async function doRecover(res) {
   try {
@@ -146,16 +148,89 @@ async function doTestPush(res) {
   }
 }
 
+// ── home-screen widget feed ───────────────────────────────────────────────
+// A widget app (KWGT) cannot hold the passcode session, so this one action is
+// authenticated by a random capability token instead: minted only from an
+// unlocked session (?action=widget-token), checked in constant time, and
+// rotatable at will. It serves a SUMMARY (totals, next payment), never the
+// full records, and every other action stays session-guarded.
+const fmtAED = n => 'AED ' + Math.round(n || 0).toLocaleString('en-US');
+
+async function doWidget(req, res) {
+  try {
+    const stored = await kvGet('pt_widget_token');
+    const given = String((req.query && req.query.token) || '');
+    if (!stored) return res.status(403).json({ error: 'Widget feed not enabled. Open ?action=widget-token in the app first.' });
+    const okTok = stored.length === given.length &&
+      crypto.timingSafeEqual(Buffer.from(stored), Buffer.from(given));
+    if (!okTok) return res.status(403).json({ error: 'Bad token' });
+
+    const raw = await kvGet('paytrack_data');
+    if (!raw) return res.status(200).json({ error: 'No data' });
+    let data = JSON.parse(raw);
+    if (data && typeof data.value === 'string') data = JSON.parse(data.value);
+    const ctx = buildCFOContext(data);
+
+    // soonest upcoming dated payment
+    let next = null;
+    (data.accs || []).forEach(a => (a.pays || []).forEach(p => {
+      if (!isOwed(p)) return;
+      const d = parseDate(effDate(p)); if (!d) return;
+      const days = Math.round((d - new Date(new Date().setHours(0,0,0,0))) / 86400000);
+      if (days < 0) return;
+      if (!next || days < next.days) next = { days, account: a.name, desc: p.desc, amount: p.amount, date: effDate(p) };
+    }));
+
+    const o = ctx.obligations, s = ctx.summary;
+    return res.status(200).json({
+      updated: new Date().toISOString(),
+      due30: o.next30, due30f: fmtAED(o.next30),
+      due90: o.next90, due90f: fmtAED(o.next90),
+      overdueCount: o.overdue.count, overdueValue: o.overdue.value,
+      overduef: o.overdue.count ? (o.overdue.count + ' · ' + fmtAED(o.overdue.value)) : 'None',
+      netWorth: s.netWorth, netWorthf: fmtAED(s.netWorth),
+      portfolio: s.portfolioValue, portfoliof: fmtAED(s.portfolioValue),
+      savings: s.savings, savingsf: fmtAED(s.savings),
+      next: next ? {
+        days: next.days, amount: next.amount, date: next.date,
+        line: (next.days === 0 ? 'TODAY' : 'in ' + next.days + 'd') + ' · ' + next.account + ' · ' + fmtAED(next.amount)
+      } : null,
+      nextf: next ? ((next.days === 0 ? 'TODAY' : 'in ' + next.days + 'd') + ' · ' + next.account + ' · ' + fmtAED(next.amount)) : 'Nothing scheduled'
+    });
+  } catch (e) {
+    return res.status(500).json({ error: e.message });
+  }
+}
+
 export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
-  if (!(await guard(req, res))) return;
   const action = (req.query && req.query.action) || '';
+
+  // token-authenticated, session-free: the widget feed only
+  if (action === 'widget') return doWidget(req, res);
+
+  if (!(await guard(req, res))) return;
   if (action === 'recover') return doRecover(res);
   if (action === 'test-push') return doTestPush(res);
   if (action === 'writes') {
     try {
       const raw = await kvGet('pt_write_log');
       return res.status(200).json({ writes: raw ? JSON.parse(raw) : [] });
+    } catch (e) { return res.status(500).json({ error: e.message }); }
+  }
+  if (action === 'widget-token') {
+    try {
+      let tok = await kvGet('pt_widget_token');
+      const rotate = req.query && req.query.rotate === '1';
+      if (!tok || rotate) {
+        tok = crypto.randomBytes(24).toString('hex');
+        await kvSet('pt_widget_token', tok);
+      }
+      const url = 'https://paytrack-ashy.vercel.app/api/admin?action=widget&token=' + tok;
+      return res.status(200).json({
+        url,
+        note: 'Paste this URL into your widget app. Anyone holding it can read your summary figures (not the full records) — keep it private. Add &rotate=1 to this page to invalidate it and mint a new one.'
+      });
     } catch (e) { return res.status(500).json({ error: e.message }); }
   }
   return res.status(400).json({ error: 'Unknown action' });
