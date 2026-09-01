@@ -222,13 +222,13 @@ async function doWidget(req, res) {
 
     const o = ctx.obligations, s = ctx.summary;
 
-    // ── one ready-made block ──────────────────────────────────────────────
+    // -- one ready-made block ---------------------------------------------
     // So the widget needs a single text item and a single formula. Padded for
-    // a monospace font so the columns line up; 
- renders as a line break in
-    // a KWGT text item.
+    // a monospace font so the columns line up; newlines render as line breaks
+    // inside a KWGT text item.
     const pad = (str, n) => String(str).padEnd(n, ' ');
     const padL = (str, n) => String(str).padStart(n, ' ');
+    const NLC = String.fromCharCode(10);
     const nextLine = next
       ? (next.days === 0 ? 'TODAY' : 'in ' + next.days + 'd') + ' · ' + next.account + ' · ' + fmtAED(next.amount)
       : 'Nothing scheduled';
@@ -236,25 +236,17 @@ async function doWidget(req, res) {
       pad(r.ticker, 14) + pad(Number(r.price).toFixed(2), 6) + pad(r.dayf, 9) + padL(r.netf, 14)
     );
     const overdueLine = o.overdue.count
-      ? ('⚠ OVERDUE ' + o.overdue.count + ' · ' + fmtAED(o.overdue.value) + '
-')
+      ? ('⚠ OVERDUE ' + o.overdue.count + ' · ' + fmtAED(o.overdue.value) + NLC)
       : '';
     const all =
-      'NEXT PAYMENT
-' + nextLine + '
-' +
-      overdueLine + '
-' +
-      stockLines.join('
-') + '
-' +
-      pad('Net of margin', 14) + padL(fmtAED(stockNetTotal), 29) + '
-' +
+      'NEXT PAYMENT' + NLC + nextLine + NLC +
+      overdueLine + NLC +
+      stockLines.join(NLC) + NLC +
+      pad('Net of margin', 14) + padL(fmtAED(stockNetTotal), 29) + NLC +
       'Updated ' + new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Dubai' });
 
     // compact variant for a 4x1 widget
-    const compact = nextLine + '
-' + pad('Stocks net', 14) + padL(fmtAED(stockNetTotal), 20);
+    const compact = nextLine + NLC + pad('Stocks net', 14) + padL(fmtAED(stockNetTotal), 20);
 
     // ── rendered widget page ──────────────────────────────────────────────
     // A widget app that displays a web page needs no formulas and no preset
