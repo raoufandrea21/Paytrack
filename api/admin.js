@@ -248,6 +248,13 @@ async function doWidget(req, res) {
     // compact variant for a 4x1 widget
     const compact = nextLine + NLC + pad('Stocks net', 14) + padL(fmtAED(stockNetTotal), 20);
 
+    // A single plain-text response is the most reliable KWGT data source.
+    if ((req.query && req.query.format) === 'text') {
+      res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+      res.setHeader('Cache-Control', 'no-store');
+      return res.status(200).send(all);
+    }
+
     // ── rendered widget page ──────────────────────────────────────────────
     // A widget app that displays a web page needs no formulas and no preset
     // format: this IS the widget, styled here and verifiable end to end.
