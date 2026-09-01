@@ -221,7 +221,43 @@ async function doWidget(req, res) {
     const stockNetTotal = rows.reduce((t, r) => t + r.net, 0);
 
     const o = ctx.obligations, s = ctx.summary;
+
+    // ── one ready-made block ──────────────────────────────────────────────
+    // So the widget needs a single text item and a single formula. Padded for
+    // a monospace font so the columns line up; 
+ renders as a line break in
+    // a KWGT text item.
+    const pad = (str, n) => String(str).padEnd(n, ' ');
+    const padL = (str, n) => String(str).padStart(n, ' ');
+    const nextLine = next
+      ? (next.days === 0 ? 'TODAY' : 'in ' + next.days + 'd') + ' · ' + next.account + ' · ' + fmtAED(next.amount)
+      : 'Nothing scheduled';
+    const stockLines = rows.map(r =>
+      pad(r.ticker, 14) + pad(Number(r.price).toFixed(2), 6) + pad(r.dayf, 9) + padL(r.netf, 14)
+    );
+    const overdueLine = o.overdue.count
+      ? ('⚠ OVERDUE ' + o.overdue.count + ' · ' + fmtAED(o.overdue.value) + '
+')
+      : '';
+    const all =
+      'NEXT PAYMENT
+' + nextLine + '
+' +
+      overdueLine + '
+' +
+      stockLines.join('
+') + '
+' +
+      pad('Net of margin', 14) + padL(fmtAED(stockNetTotal), 29) + '
+' +
+      'Updated ' + new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Dubai' });
+
+    // compact variant for a 4x1 widget
+    const compact = nextLine + '
+' + pad('Stocks net', 14) + padL(fmtAED(stockNetTotal), 20);
+
     return res.status(200).json({
+      all, compact,
       updated: new Date().toISOString(),
       updatedf: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Dubai' }),
       stocks: rows,
