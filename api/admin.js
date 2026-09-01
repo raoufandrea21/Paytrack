@@ -256,6 +256,67 @@ async function doWidget(req, res) {
     const compact = nextLine + '
 ' + pad('Stocks net', 14) + padL(fmtAED(stockNetTotal), 20);
 
+    // ── rendered widget page ──────────────────────────────────────────────
+    // A widget app that displays a web page needs no formulas and no preset
+    // format: this IS the widget, styled here and verifiable end to end.
+    if ((req.query && req.query.format) === 'html') {
+      const esc = t => String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;');
+      const stockRows = rows.map(r => {
+        const up = r.dayPct === null ? null : r.dayPct >= 0;
+        const col = up === null ? '#8888a0' : (up ? '#3ecf8e' : '#f26b6b');
+        return '<div class="s">'
+          + '<span class="tk">' + esc(r.ticker) + '</span>'
+          + '<span class="px">' + Number(r.price).toFixed(2) + '</span>'
+          + '<span class="dy" style="color:' + col + '">' + esc(r.dayf) + '</span>'
+          + '<span class="nt">' + esc(r.netf) + '</span>'
+          + '</div>';
+      }).join('');
+      const overdueBlock = o.overdue.count
+        ? '<div class="ov">⚠ ' + o.overdue.count + ' overdue · ' + fmtAED(o.overdue.value) + '</div>'
+        : '';
+      const nextDays = next ? (next.days === 0 ? 'TODAY' : 'in ' + next.days + ' day' + (next.days === 1 ? '' : 's')) : '';
+      const html = '<!doctype html><meta charset="utf-8">'
+        + '<meta name="viewport" content="width=device-width,initial-scale=1">'
+        + '<meta http-equiv="refresh" content="300">'
+        + '<title>PayTrack</title><style>'
+        + '*{margin:0;padding:0;box-sizing:border-box}'
+        + 'html,body{background:transparent}'
+        + 'body{font-family:Roboto,system-ui,sans-serif;-webkit-font-smoothing:antialiased}'
+        + '.w{background:#0d0d12;border-radius:24px;padding:16px 18px;color:#eee}'
+        + '.hd{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}'
+        + '.bd{font-size:11px;font-weight:700;letter-spacing:.8px;color:#8888a0;text-transform:uppercase}'
+        + '.up{font-size:10px;color:#44445a}'
+        + '.nx{font-size:13px;color:#8888a0}'
+        + '.nx b{color:#5b9cf6}'
+        + '.am{font-family:"Roboto Mono",monospace;font-size:25px;font-weight:700;letter-spacing:-.5px;margin:2px 0 4px}'
+        + '.ov{font-size:11px;color:#f26b6b;font-weight:600;margin-bottom:6px}'
+        + '.hr{height:1px;background:rgba(255,255,255,.08);margin:10px 0}'
+        + '.s{display:flex;align-items:baseline;font-family:"Roboto Mono",monospace;font-size:12px;padding:3px 0}'
+        + '.tk{flex:1;color:#eee;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}'
+        + '.px{width:52px;text-align:right;color:#c9c9d6}'
+        + '.dy{width:62px;text-align:right}'
+        + '.nt{width:96px;text-align:right;font-weight:600}'
+        + '.tt{display:flex;justify-content:space-between;font-family:"Roboto Mono",monospace;'
+        + 'font-size:13px;font-weight:700;margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,.08)}'
+        + '.tt span:first-child{font-family:Roboto,sans-serif;font-size:10px;color:#8888a0;'
+        + 'text-transform:uppercase;letter-spacing:.6px;align-self:center}'
+        + '</style><div class="w">'
+        + '<div class="hd"><span class="bd">PayTrack</span><span class="up">'
+        + new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',timeZone:'Asia/Dubai'})
+        + '</span></div>'
+        + (next
+            ? '<div class="nx">Next · ' + esc(next.account) + ' · <b>' + nextDays + '</b></div>'
+              + '<div class="am">' + fmtAED(next.amount) + '</div>'
+            : '<div class="nx">Nothing scheduled</div>')
+        + overdueBlock
+        + '<div class="hr"></div>'
+        + stockRows
+        + '<div class="tt"><span>Net of margin</span><span>' + fmtAED(stockNetTotal) + '</span></div>'
+        + '</div>';
+      res.setHeader('Content-Type', 'text/html; charset=utf-8');
+      return res.status(200).send(html);
+    }
+
     return res.status(200).json({
       all, compact,
       updated: new Date().toISOString(),
