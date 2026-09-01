@@ -273,6 +273,22 @@ async function doWidget(req, res) {
 
     const o = ctx.obligations, s = ctx.summary;
 
+    // Remaining unpaid obligations from today through the end of the
+    // current Dubai calendar month. Deferred dates are respected by effDate.
+    const dubai = Object.fromEntries(new Intl.DateTimeFormat('en-GB', {
+      timeZone: 'Asia/Dubai', year: 'numeric', month: 'numeric', day: 'numeric'
+    }).formatToParts(new Date()).filter(p => p.type !== 'literal').map(p => [p.type, +p.value]));
+    const monthStart = new Date(Date.UTC(dubai.year, dubai.month - 1, dubai.day));
+    const monthEnd = new Date(Date.UTC(dubai.year, dubai.month, 0, 23, 59, 59));
+    let monthPendingCount = 0, monthPendingAmount = 0;
+    (data.accs || []).forEach(a => (a.pays || []).forEach(p => {
+      if (!isOwed(p)) return;
+      const d = parseDate(effDate(p));
+      if (!d || d < monthStart || d > monthEnd) return;
+      monthPendingCount++;
+      monthPendingAmount += Number(p.amount) || 0;
+    }));
+
     // -- one ready-made block ---------------------------------------------
     // So the widget needs a single text item and a single formula. Padded for
     // a monospace font so the columns line up; newlines render as line breaks
@@ -308,6 +324,7 @@ async function doWidget(req, res) {
         paymentName: next ? next.account : 'Nothing scheduled',
         paymentCountdown: next ? (next.days === 0 ? 'DUE TODAY' : 'IN ' + next.days + ' DAYS') : 'CLEAR',
         paymentAmount: next ? fmtAED(next.amount) : '—',
+        monthPending: monthPendingCount + (monthPendingCount === 1 ? ' PENDING · ' : ' PENDING · ') + fmtAED(monthPendingAmount),
         stock1Ticker: first.ticker || '', stock1Price: first.pricef || '',
         stock1Day: first.dayf || '', stock1Net: first.netf || '',
         stock2Ticker: second.ticker || '', stock2Price: second.pricef || '',
