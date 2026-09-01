@@ -9,6 +9,56 @@ import webpush from 'web-push';
 import { guard, kvGet, kvSet } from './_auth.js';
 import { buildCFOContext, parseDate, effDate, isOwed } from './_cfo.js';
 
+async function applyLiveWidgetQuotes(data) {
+  const stocks = Array.isArray(data.stocks) ? data.stocks : [];
+  const names = [...new Set(stocks.map(s => String(s.ticker || '').toUpperCase().trim()).filter(t => /^[A-Z0-9._-]{1,24}$/.test(t)))];
+  if (!names.length) return;
+
+  let cached = null;
+  try { cached = JSON.parse(await kvGet('pt_widget_quotes') || 'null'); } catch (e) {}
+  let quotes = cached && cached.quotes;
+
+  if (!quotes || !names.every(t => quotes[t])) {
+    try {
+      const symbols = names.flatMap(t => [`ADX:${t}`, `DFM:${t}`]);
+      const r = await fetch('https://scanner.tradingview.com/uae/scan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          symbols: { tickers: symbols, query: { types: [] } },
+          columns: ['close', 'change', 'currency']
+        })
+      });
+      if (r.ok) {
+        const j = await r.json();
+        quotes = {};
+        (j.data || []).forEach(row => {
+          const ticker = String(row.s || '').split(':').pop();
+          const d = row.d || [], close = Number(d[0]), change = Number(d[1]);
+          if (!ticker || !(close > 0)) return;
+          quotes[ticker] = {
+            price: close,
+            prev: Number.isFinite(change) && change !== -100 ? close / (1 + change / 100) : null,
+            currency: d[2] || 'AED'
+          };
+        });
+        await kvSet('pt_widget_quotes', JSON.stringify({ quotes }), 300);
+      }
+    } catch (e) {}
+  }
+
+  const now = Date.now();
+  stocks.forEach(st => {
+    const q = quotes && quotes[String(st.ticker || '').toUpperCase().trim()];
+    if (!q) return;
+    st.cp = q.price;
+    st.livePrice = q.price;
+    st.liveAt = now;
+    if (q.prev) st.prevClose = q.prev;
+    if (q.currency) st.cur = q.currency;
+  });
+}
+
 async function doRecover(res) {
   try {
     const kv = process.env.KV_REST_API_URL, token = process.env.KV_REST_API_TOKEN;
@@ -169,6 +219,7 @@ async function doWidget(req, res) {
     if (!raw) return res.status(200).json({ error: 'No data' });
     let data = JSON.parse(raw);
     if (data && typeof data.value === 'string') data = JSON.parse(data.value);
+    await applyLiveWidgetQuotes(data);
     const ctx = buildCFOContext(data);
 
     // soonest upcoming dated payment
