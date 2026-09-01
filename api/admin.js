@@ -250,9 +250,23 @@ async function doWidget(req, res) {
 
     // A single plain-text response is the most reliable KWGT data source.
     if ((req.query && req.query.format) === 'text') {
+      const field = String(req.query.field || '');
+      const first = rows[0] || {};
+      const second = rows[1] || {};
+      const fields = {
+        paymentName: next ? next.account : 'Nothing scheduled',
+        paymentCountdown: next ? (next.days === 0 ? 'DUE TODAY' : 'IN ' + next.days + ' DAYS') : 'CLEAR',
+        paymentAmount: next ? fmtAED(next.amount) : '—',
+        stock1Ticker: first.ticker || '', stock1Price: first.pricef || '',
+        stock1Day: first.dayf || '', stock1Net: first.netf || '',
+        stock2Ticker: second.ticker || '', stock2Price: second.pricef || '',
+        stock2Day: second.dayf || '', stock2Net: second.netf || '',
+        stockTotal: fmtAED(stockNetTotal),
+        updated: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Dubai' })
+      };
       res.setHeader('Content-Type', 'text/plain; charset=utf-8');
       res.setHeader('Cache-Control', 'no-store');
-      return res.status(200).send(all);
+      return res.status(200).send(field && Object.prototype.hasOwnProperty.call(fields, field) ? String(fields[field]) : all);
     }
 
     // ── rendered widget page ──────────────────────────────────────────────
