@@ -1802,6 +1802,15 @@ function buildWidgetJson(){
 
   // --- stocks ---
   var pricesAt = 0;
+  // Margin is owed to a brokerage ACCOUNT, not to a share, so a broker's
+  // margin is split across its holdings in proportion to value -- the same
+  // rule the app uses for the "Net at <broker>" line. With one holding per
+  // broker this is simply the whole margin.
+  var wsBrokerValue = {};
+  (stocks || []).forEach(function(s){
+    var b = String(s.broker || '').trim();
+    wsBrokerValue[b] = (wsBrokerValue[b] || 0) + (+s.qty || 0) * (+(s.livePrice || s.cp || 0));
+  });
   var holdings = (stocks || []).map(function(s){
     var price = +(s.livePrice || s.cp || 0);
     // Without a stored previous close, treat today's move as zero rather than
@@ -1812,10 +1821,15 @@ function buildWidgetJson(){
     var dayCh = qty * (price - prev);
     var bp = +s.bp || 0;
     if(s.liveAt && s.liveAt > pricesAt) pricesAt = s.liveAt;
+    var brk = String(s.broker || '').trim();
+    var bv = wsBrokerValue[brk] || 0;
+    var brokerMargin = (brk && margins && margins[brk]) ? +margins[brk] : 0;
+    var share = (brokerMargin && bv > 0) ? (brokerMargin * (value / bv)) : 0;
     return {
       ticker: s.ticker || '', name: s.name || s.ticker || '',
-      qty: qty, price: wsNum(price), prevClose: wsNum(prev),
-      value: wsNum(value), dayChange: wsNum(dayCh),
+      broker: brk, qty: qty, price: wsNum(price), prevClose: wsNum(prev),
+      value: wsNum(value), netValue: wsNum(value - share),
+      dayChange: wsNum(dayCh),
       dayChangePct: wsNum(prev > 0 ? ((price - prev) / prev * 100) : 0),
       totalPnl: wsNum(qty * (price - bp)),
       totalPnlPct: wsNum(bp > 0 ? ((price - bp) / bp * 100) : 0),
