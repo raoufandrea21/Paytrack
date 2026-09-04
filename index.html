@@ -1839,7 +1839,10 @@ function buildWidgetJson(){
     upcoming: upcoming,
     stocks: {
       marketValue: wsNum(marketValue), marginOwed: wsNum(marginOwed),
-      savings: wsNum(sav), net: wsNum(marketValue - marginOwed + sav),
+      // net matches the Total net worth card on the Stocks & savings screen:
+      // stocks minus margin. Savings stay in the export as their own field but
+      // no longer feed net, so the widget and the app cannot disagree.
+      savings: wsNum(sav), net: wsNum(marketValue - marginOwed),
       dayChange: wsNum(dayChange),
       dayChangePct: wsNum(prevValue > 0 ? (dayChange / prevValue * 100) : 0),
       pricesAt: pricesAt ? new Date(pricesAt).toISOString() : now.toISOString(),
