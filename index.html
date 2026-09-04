@@ -481,6 +481,16 @@ label{display:block;font-size:11px;color:var(--t2);margin-bottom:4px;font-weight
     <div class="card"><div class="card-t"><i class="ti ti-file-text" style="color:var(--red);margin-right:5px"></i>Export to PDF</div><p style="font-size:12px;color:var(--t2);margin-bottom:1rem;line-height:1.7">Full PDF report with all accounts and payment schedules.</p><button class="btn-p" onclick="expPDF()">📄 Generate PDF report</button></div>
   </div>
 
+  <div class="card" style="margin-top:1.25rem">
+    <div class="card-t">Widget sync folder</div>
+    <p style="font-size:12px;color:var(--t2);margin-bottom:12px;line-height:1.7">
+      Writes a small <b>paytrack.json</b> summary to a folder on this PC whenever your data
+      changes, so a desktop widget can read it. Read-only: the widget never writes back.
+      It contains totals and your next payments only &mdash; no passcode, no account links.
+    </p>
+    <div id="ws-box"></div>
+  </div>
+
   <div class="card" style="margin-top:1.25rem;border-color:rgba(62,207,142,.35)">
     <div class="card-t"><svg class="ic" style="color:var(--green);margin-right:5px;display:inline-block;vertical-align:-2px"><use href="#ic-export"/></svg>Backup &amp; restore (JSON)</div>
     <p style="font-size:12px;color:var(--t2);margin-bottom:1rem;line-height:1.7">
@@ -738,6 +748,7 @@ function applyTombstones(list){
   }catch(e){ return list; }
 }
 function saveLocal(){
+  try{ scheduleWidgetSync(); }catch(e){}
   try{
     localStorage.setItem('pt_accs',JSON.stringify(accs));
     localStorage.setItem('pt_stk',JSON.stringify(stocks));
@@ -747,6 +758,7 @@ function saveLocal(){
 }
 function saveState(){
   setDirty(true);
+  try{ scheduleWidgetSync(); }catch(e){}
   try{ cfoInvalidate(); }catch(e){}   // figures changed: CFO must not serve a stale cache   // cleared only when the server confirms the write
   try{
     // Persist everything including forecast payments (user-created via Auto-forecast,
@@ -1667,6 +1679,259 @@ function restoreJSON(input){
   rd.readAsText(f);
 }
 
+
+// ── Widget sync ────────────────────────────────────────────────────────────
+// Writes a small read-only summary to a local folder so a desktop widget can
+// display it. PayTrack stays the single source of truth; nothing reads back.
+// The file deliberately excludes the passcode, account URLs and full payment
+// history -- it sits unencrypted on disk.
+var WS_DIR = null;              // FileSystemDirectoryHandle once granted
+var WS_TIMER = null;
+var WS_LAST = null;             // lastWidgetSync
+
+// --- handle persistence (IndexedDB; handles cannot go in localStorage) ---
+function wsDB(){
+  return new Promise(function(res, rej){
+    var r = indexedDB.open('paytrack-widget', 1);
+    r.onupgradeneeded = function(){ r.result.createObjectStore('kv'); };
+    r.onsuccess = function(){ res(r.result); };
+    r.onerror = function(){ rej(r.error); };
+  });
+}
+function wsPut(handle){
+  return wsDB().then(function(db){
+    return new Promise(function(res, rej){
+      var tx = db.transaction('kv', 'readwrite');
+      tx.objectStore('kv').put(handle, 'dir');
+      tx.oncomplete = res; tx.onerror = function(){ rej(tx.error); };
+    });
+  });
+}
+function wsGet(){
+  return wsDB().then(function(db){
+    return new Promise(function(res){
+      var tx = db.transaction('kv', 'readonly');
+      var q = tx.objectStore('kv').get('dir');
+      q.onsuccess = function(){ res(q.result || null); };
+      q.onerror = function(){ res(null); };
+    });
+  }).catch(function(){ return null; });
+}
+function wsClear(){
+  return wsDB().then(function(db){
+    return new Promise(function(res){
+      var tx = db.transaction('kv', 'readwrite');
+      tx.objectStore('kv').delete('dir');
+      tx.oncomplete = res; tx.onerror = res;
+    });
+  }).catch(function(){});
+}
+
+// --- helpers -------------------------------------------------------------
+function wsIso(d){
+  if(!d) return '';
+  var y = d.getFullYear(), m = d.getMonth() + 1, day = d.getDate();
+  return y + '-' + (m < 10 ? '0' : '') + m + '-' + (day < 10 ? '0' : '') + day;
+}
+function wsNum(n){ n = +n; return isFinite(n) ? Math.round(n * 100) / 100 : 0; }
+// The widget must agree with the app, so these mirror owed()/eff() exactly.
+function wsOwed(p){ return p && p.status !== 'paid' && p.status !== 'deferred'; }
+function wsStatus(s){
+  if(s === 'notpaid') return 'not paid';
+  if(s === 'confirm') return 'confirm cheque';
+  return s || 'not paid';
+}
+
+function buildWidgetJson(){
+  var now = new Date();
+  var today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  var MN = ['January','February','March','April','May','June','July',
+            'August','September','October','November','December'];
+
+  // every unpaid, dated obligation once
+  var rows = [];
+  accs.forEach(function(a){
+    (a.pays || []).forEach(function(p){
+      var d = pd(eff(p));
+      rows.push({
+        acc: a.name, desc: p.desc || 'Payment',
+        amount: +p.amount || 0, status: p.status || 'notpaid',
+        d: d, owed: wsOwed(p)
+      });
+    });
+  });
+
+  var dated = rows.filter(function(r){ return r.owed && r.d; });
+  dated.sort(function(x, y){ return x.d - y.d; });
+
+  var nextRow = dated.filter(function(r){ return r.d >= today; })[0] || null;
+  var next = nextRow ? {
+    date: wsIso(nextRow.d), account: nextRow.acc, desc: nextRow.desc,
+    amount: wsNum(nextRow.amount),
+    daysAway: Math.round((nextRow.d - today) / 86400000)
+  } : { date: '', account: '', desc: '', amount: 0, daysAway: 0 };
+
+  function monthBlock(offset){
+    var t = new Date(today.getFullYear(), today.getMonth() + offset, 1);
+    var sel = dated.filter(function(r){
+      return r.d.getFullYear() === t.getFullYear() && r.d.getMonth() === t.getMonth();
+    });
+    return {
+      label: MN[t.getMonth()] + ' ' + t.getFullYear(),
+      amount: wsNum(sel.reduce(function(s, r){ return s + r.amount; }, 0)),
+      count: sel.length
+    };
+  }
+
+  // Overdue: anything owed whose effective date has passed, plus rows already
+  // flagged overdue. Deferred is never overdue -- it was pushed on purpose.
+  var over = rows.filter(function(r){
+    if(!r.owed) return false;
+    if(r.status === 'overdue') return true;
+    return !!r.d && r.d < today;
+  });
+  var defer = rows.filter(function(r){ return r.status === 'deferred'; });
+
+  var upcoming = dated.filter(function(r){ return r.d >= today; }).slice(0, 6)
+    .map(function(r){
+      return { date: wsIso(r.d), account: r.acc, desc: r.desc,
+               amount: wsNum(r.amount), status: wsStatus(r.status) };
+    });
+
+  // --- stocks ---
+  var pricesAt = 0;
+  var holdings = (stocks || []).map(function(s){
+    var price = +(s.livePrice || s.cp || 0);
+    // Without a stored previous close, treat today's move as zero rather than
+    // inventing one against the buy price.
+    var prev = +(s.prevClose || price);
+    var qty = +s.qty || 0;
+    var value = qty * price;
+    var dayCh = qty * (price - prev);
+    var bp = +s.bp || 0;
+    if(s.liveAt && s.liveAt > pricesAt) pricesAt = s.liveAt;
+    return {
+      ticker: s.ticker || '', name: s.name || s.ticker || '',
+      qty: qty, price: wsNum(price), prevClose: wsNum(prev),
+      value: wsNum(value), dayChange: wsNum(dayCh),
+      dayChangePct: wsNum(prev > 0 ? ((price - prev) / prev * 100) : 0),
+      totalPnl: wsNum(qty * (price - bp)),
+      totalPnlPct: wsNum(bp > 0 ? ((price - bp) / bp * 100) : 0),
+      currency: s.cur || 'AED'
+    };
+  });
+  var marketValue = holdings.reduce(function(t, h){ return t + h.value; }, 0);
+  var prevValue = holdings.reduce(function(t, h){ return t + h.qty * h.prevClose; }, 0);
+  var dayChange = holdings.reduce(function(t, h){ return t + h.dayChange; }, 0);
+  var marginOwed = Object.keys(margins || {})
+    .filter(function(k){ return k !== '__migrated'; })
+    .reduce(function(t, b){ return t + (+margins[b] || 0); }, 0);
+  var sav = (typeof savTotal === 'function') ? savTotal() : 0;
+
+  return {
+    app: 'paytrack', schema: 1, generated: now.toISOString(),
+    next: next,
+    thisMonth: monthBlock(0), nextMonth: monthBlock(1),
+    overdue:  { amount: wsNum(over.reduce(function(s, r){ return s + r.amount; }, 0)), count: over.length },
+    deferred: { amount: wsNum(defer.reduce(function(s, r){ return s + r.amount; }, 0)), count: defer.length },
+    upcoming: upcoming,
+    stocks: {
+      marketValue: wsNum(marketValue), marginOwed: wsNum(marginOwed),
+      savings: wsNum(sav), net: wsNum(marketValue - marginOwed + sav),
+      dayChange: wsNum(dayChange),
+      dayChangePct: wsNum(prevValue > 0 ? (dayChange / prevValue * 100) : 0),
+      pricesAt: pricesAt ? new Date(pricesAt).toISOString() : now.toISOString(),
+      holdings: holdings
+    }
+  };
+}
+
+// --- writing -------------------------------------------------------------
+function widgetSyncNow(){
+  if(!WS_DIR) return Promise.resolve(false);
+  return WS_DIR.queryPermission({ mode: 'readwrite' }).then(function(perm){
+    if(perm !== 'granted'){ renderWidgetSync('reconnect'); return false; }
+    return WS_DIR.getFileHandle('paytrack.json', { create: true })
+      .then(function(fh){ return fh.createWritable(); })
+      .then(function(w){
+        return w.write(JSON.stringify(buildWidgetJson(), null, 2))
+                .then(function(){ return w.close(); });
+      })
+      .then(function(){
+        WS_LAST = new Date();
+        try{ localStorage.setItem('pt_ws_last', WS_LAST.toISOString()); }catch(e){}
+        renderWidgetSync();
+        return true;
+      });
+  }).catch(function(){ return false; });   // never surface a write failure
+}
+// Debounced so a burst of edits writes once.
+function scheduleWidgetSync(){
+  if(!WS_DIR) return;
+  if(WS_TIMER) clearTimeout(WS_TIMER);
+  WS_TIMER = setTimeout(function(){ WS_TIMER = null; widgetSyncNow(); }, 2000);
+}
+
+// --- UI ------------------------------------------------------------------
+function renderWidgetSync(state){
+  var box = document.getElementById('ws-box'); if(!box) return;
+  var last = '';
+  if(!WS_LAST){ try{ var v = localStorage.getItem('pt_ws_last'); if(v) WS_LAST = new Date(v); }catch(e){} }
+  if(WS_LAST) last = '<div style="font-size:11px;color:var(--t2);margin-top:8px">Last synced '
+    + WS_LAST.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) + '</div>';
+
+  if(state === 'reconnect'){
+    box.innerHTML = '<button class="btn-p" onclick="widgetReconnect()">Reconnect widget folder</button>'
+      + '<div style="font-size:11px;color:var(--t2);margin-top:8px">Permission needs renewing after a browser restart.</div>';
+    return;
+  }
+  if(!WS_DIR){
+    box.innerHTML = '<button class="btn-p" onclick="widgetChooseFolder()">Choose folder…</button>';
+    return;
+  }
+  box.innerHTML = '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">'
+    + '<span style="font-size:12px">Writing <b>paytrack.json</b> to <b>' + (WS_DIR.name || 'folder') + '</b></span>'
+    + '<button class="btn-s" onclick="widgetSyncNow()">Sync now</button>'
+    + '<button class="btn-s btn-d" onclick="widgetDisconnect()">Disconnect</button></div>' + last;
+}
+function widgetChooseFolder(){
+  if(!window.showDirectoryPicker){
+    alert('This browser cannot write to a local folder.\n\nUse Chrome or Edge on the desktop.');
+    return;
+  }
+  window.showDirectoryPicker({ mode: 'readwrite' }).then(function(dir){
+    return dir.requestPermission({ mode: 'readwrite' }).then(function(p){
+      if(p !== 'granted') return;
+      WS_DIR = dir;
+      return wsPut(dir).then(function(){ renderWidgetSync(); return widgetSyncNow(); });
+    });
+  }).catch(function(){ /* user cancelled */ });
+}
+function widgetReconnect(){
+  if(!WS_DIR) return widgetChooseFolder();
+  WS_DIR.requestPermission({ mode: 'readwrite' }).then(function(p){
+    if(p === 'granted'){ renderWidgetSync(); widgetSyncNow(); }
+  }).catch(function(){});
+}
+function widgetDisconnect(){
+  WS_DIR = null;
+  try{ localStorage.removeItem('pt_ws_last'); }catch(e){}
+  WS_LAST = null;
+  wsClear().then(function(){ renderWidgetSync(); });
+}
+// On load: re-attach the handle, but never prompt silently -- browsers block it.
+function widgetInit(){
+  if(!window.showDirectoryPicker) return;
+  wsGet().then(function(dir){
+    if(!dir){ renderWidgetSync(); return; }
+    WS_DIR = dir;
+    dir.queryPermission({ mode: 'readwrite' }).then(function(p){
+      if(p === 'granted'){ renderWidgetSync(); widgetSyncNow(); }
+      else renderWidgetSync('reconnect');
+    }).catch(function(){ renderWidgetSync('reconnect'); });
+  });
+}
+
 function renderExport(){
   document.getElementById('exp-acc').innerHTML=accs.map(function(a){return'<button onclick="expOneExcel(\''+a.id+'\')">📊 '+a.name+'</button>';}).join('');
 }
@@ -2011,7 +2276,7 @@ function go(pg,el){
     var ps=stocks.map(function(s,i){return fetchLivePrice(s.yfSym||s.ticker,s.mkt).then(function(live){if(live&&live.price&&live.price>0){stocks[i].cp=live.price;stocks[i].livePrice=live.price;stocks[i].liveAt=Date.now();stocks[i].prevClose=live.prev||stocks[i].prevClose;}}).catch(function(){});});
     Promise.all(ps).then(function(){saveLocal();renderStocks();});
   },800);}
-  if(pg==='exp')renderExport();
+  if(pg==='exp'){renderExport();try{renderWidgetSync();}catch(e){}}
   if(pg==='ai'){try{cfoOpen();}catch(e){}}
 }
 function rAll(){
@@ -2403,6 +2668,7 @@ window.addEventListener('load', function() {
   try { renderDash(); } catch(e) { console.log('renderDash error:', e); }
   loadFromServer();
   lkInit();
+  try{ widgetInit(); }catch(e){}
 });
 // Fallback in case load already fired
 if(document.readyState === 'complete') {
