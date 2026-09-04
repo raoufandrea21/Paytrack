@@ -1465,7 +1465,9 @@ function renderStocks(){
   try{renderMargins();}catch(e){}
   var total=stocks.reduce(function(s,x){return s+x.qty*(x.cp||0);},0);
   var gl=stocks.reduce(function(s,x){return s+x.qty*((x.cp||0)-(x.bp||0));},0);
-  var netWorth=total+savTotal()-marginTotal();
+  // Stocks only: savings are shown on their own card and counted in the Home
+  // net worth. Including them here made this card a second, different total.
+  var netWorth=total-marginTotal();
   var stEl=document.getElementById('st1'); if(stEl) stEl.textContent=total>0?fmt(total):'AED 0';
   var sub=document.getElementById('st-nw-sub');
   if(sub) sub.textContent = marginTotal()>0
