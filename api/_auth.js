@@ -12,7 +12,11 @@ const TOKEN = () => process.env.KV_REST_API_TOKEN;
 
 export async function kvGet(key) {
   const r = await fetch(`${KV()}/get/${key}`, { headers: { Authorization: `Bearer ${TOKEN()}` } });
-  if (!r.ok) throw new Error('kv get failed');
+  if (!r.ok) {
+    // Surface the store's own reason (quota, archived, bad token) -- never the token.
+    let why = ''; try { why = (await r.text()).slice(0, 160); } catch (e) {}
+    throw new Error('kv get failed ' + r.status + (why ? ': ' + why : ''));
+  }
   const j = await r.json();
   let v = j.result ?? null;
   if (v === null) return null;
