@@ -41,6 +41,22 @@ export async function kvSet(key, value, ttlSeconds) {
   return true;
 }
 
+// Send any Redis command as a JSON array. Throws on a non-OK response.
+export async function kvCmd(cmd) {
+  const r = await fetch(KV(), {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${TOKEN()}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(cmd)
+  });
+  if (!r.ok) throw new Error('kv ' + cmd[0] + ' failed ' + r.status);
+  return (await r.json()).result;
+}
+
+// Requests through the gate, counted per UTC day and kept 35 days.
+export function usageKey(d = new Date()) {
+  return 'pt_usage_' + d.toISOString().slice(0, 10).replace(/-/g, '');
+}
+
 export async function kvDel(key) {
   await fetch(`${KV()}/del/${key}`, { method: 'POST', headers: { Authorization: `Bearer ${TOKEN()}` } });
 }
@@ -92,28 +108,42 @@ export function sessionCookie(token, maxAge) {
 // ── the gate ──────────────────────────────────────────────────────────────
 // Returns {ok:true} when the request may proceed.
 // reason 'unconfigured' means no passcode has been set: open, as before.
+// The free database plan allows 500K requests a month, and running out locks
+// the app. So the gate costs ONE request instead of two: a single script checks
+// the passcode and session and bumps today's usage counter together. A request
+// with no session cookie, once a passcode is known to exist, is refused without
+// touching the database at all -- it can only be rejected, never admitted.
+const GATE_LUA =
+  "local a = redis.call('EXISTS', KEYS[1]) " +
+  "local s = redis.call('EXISTS', KEYS[2]) " +
+  "local w = redis.call('EXISTS', KEYS[4]) " +
+  "local c = redis.call('INCR', KEYS[3]) " +
+  "if c == 1 then redis.call('EXPIRE', KEYS[3], 3024000) end " +
+  "return {a, s, c, w}";
+let CONFIGURED_SEEN = 0;   // when this instance last saw a passcode configured
+
 export async function checkAuth(req) {
-  let stored;
+  const cookies = parseCookies(req.headers?.cookie || req.headers?.get?.('cookie'));
+  const token = cookies.pt_session;
+  const hasToken = !!token && /^[a-f0-9]{64}$/.test(token);
+  if (!hasToken && Date.now() - CONFIGURED_SEEN < 10 * 60 * 1000) {
+    return { ok: false, status: 401, reason: 'no-session', configured: true };
+  }
+
+  let out;
   try {
-    stored = await kvGet(AUTH_KEY);
+    out = await kvCmd(['EVAL', GATE_LUA, '4', AUTH_KEY,
+      'pt_sess_' + (hasToken ? token : 'none'), usageKey(), 'pt_webauthn']);
   } catch (e) {
     // Cannot verify => refuse. Never fail open on an error.
     return { ok: false, status: 503, reason: 'auth-unavailable' };
   }
-  if (!stored) return { ok: true, reason: 'unconfigured' };
-
-  const cookies = parseCookies(req.headers?.cookie || req.headers?.get?.('cookie'));
-  const token = cookies.pt_session;
-  if (!token || !/^[a-f0-9]{64}$/.test(token)) return { ok: false, status: 401, reason: 'no-session' };
-
-  let sess;
-  try {
-    sess = await kvGet('pt_sess_' + token);
-  } catch (e) {
-    return { ok: false, status: 503, reason: 'auth-unavailable' };
-  }
-  if (!sess) return { ok: false, status: 401, reason: 'expired' };
-  return { ok: true, reason: 'session' };
+  const [configured, session, , webauthn] = out;
+  if (!configured) { CONFIGURED_SEEN = 0; return { ok: true, reason: 'unconfigured', configured: false }; }
+  CONFIGURED_SEEN = Date.now();
+  if (!hasToken) return { ok: false, status: 401, reason: 'no-session', configured: true, webauthn: !!webauthn };
+  if (!session) return { ok: false, status: 401, reason: 'expired', configured: true, webauthn: !!webauthn };
+  return { ok: true, reason: 'session', configured: true, webauthn: !!webauthn };
 }
 
 // Convenience for the Node-style handlers.

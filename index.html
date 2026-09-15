@@ -2885,7 +2885,14 @@ function subscribePush(reg){
   fetch('/api/vapid-public').then(function(r){return r.text();}).then(function(key){
     if(!key||key.length<20) return; // server not configured yet
     return reg.pushManager.subscribe({ userVisibleOnly:true, applicationServerKey:urlB64ToUint8(key) })
-      .then(function(sub){ return fetch('/api/subscribe',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(sub)}); });
+      .then(function(sub){
+        // Re-register at most weekly per subscription: sending it on every
+        // open cost 3 database requests each time for no change.
+        var mark=sub.endpoint+'|'+Math.floor(Date.now()/(7*86400000));
+        try{ if(localStorage.getItem('pt_push_sent')===mark) return; }catch(e){}
+        return fetch('/api/subscribe',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(sub)})
+          .then(function(r){ if(r.ok){ try{ localStorage.setItem('pt_push_sent',mark); }catch(e){} } });
+      });
   }).catch(function(e){ console.log('push subscribe skipped', e); });
 }
 function urlB64ToUint8(base64String){

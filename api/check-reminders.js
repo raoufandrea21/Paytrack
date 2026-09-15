@@ -50,7 +50,21 @@ export default async function handler(req, res) {
         else if (days > 0 && days <= rem) due.push({ a, p, i, when: 'in ' + days + ' day' + (days > 1 ? 's' : '') });
       });
     });
-    if (!due.length) return res.status(200).json({ ok: true, sent: 0 });
+
+    // Database usage alarm. The free plan allows 500K requests a month and
+    // running out locks the app, as happened in September 2026. Normal use is
+    // a few hundred gated requests a day; warn well before the limit.
+    const USAGE_ALERT = 3000;
+    let usageAlert = null;
+    try {
+      const y = new Date(Date.now() - 86400000);
+      const key = 'pt_usage_' + y.toISOString().slice(0, 10).replace(/-/g, '');
+      const u = await fetch(`${KV_URL}/get/${key}`, { headers: { Authorization: `Bearer ${KV_TOKEN}` } });
+      const n = +((await u.json()).result || 0);
+      if (n > USAGE_ALERT) usageAlert = n;
+    } catch (e) {}
+
+    if (!due.length && !usageAlert) return res.status(200).json({ ok: true, sent: 0 });
 
     // 3. Load subscriptions
     const idxRes = await fetch(`${KV_URL}/smembers/pt_push_index`, { headers: { Authorization: `Bearer ${KV_TOKEN}` } });
@@ -69,6 +83,16 @@ export default async function handler(req, res) {
 
     // 4. Send one notification per due payment to every device
     let sent = 0;
+    if (usageAlert) {
+      const payload = JSON.stringify({
+        title: '⚠️ PayTrack server use is high',
+        body: `${usageAlert.toLocaleString()} requests yesterday (normal is a few hundred). Close extra PayTrack windows and remove any phone widget.`,
+        tag: 'pt-usage', url: '/'
+      });
+      for (const sub of subs) {
+        try { await webpush.sendNotification(sub, payload); sent++; } catch (e) {}
+      }
+    }
     for (const d of due) {
       const fmtAmt = 'AED ' + Math.round(d.p.amount).toLocaleString();
       const payload = JSON.stringify({

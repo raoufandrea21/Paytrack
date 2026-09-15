@@ -5,7 +5,7 @@
 // reversed into the passcode.
 
 import {
-  kvGet, kvSet, kvDel, hashPasscode, newSalt, safeEqual,
+  kvGet, kvSet, kvDel, hashPasscode, newSalt, safeEqual, checkAuth,
   AUTH_KEY, SESSION_TTL, newSessionToken, parseCookies, sessionCookie
 } from './_auth.js';
 
@@ -21,15 +21,10 @@ export default async function handler(req, res) {
   try {
     // ── status: does a passcode exist, and am I signed in? ────────────────
     if (action === 'status') {
-      const stored = await kvGet(AUTH_KEY);
-      if (!stored) return res.status(200).json({ configured: false, authenticated: true });
-      const cookies = parseCookies(req.headers.cookie);
-      const token = cookies.pt_session;
-      let ok = false;
-      if (token && /^[a-f0-9]{64}$/.test(token)) ok = !!(await kvGet('pt_sess_' + token));
-      let webauthn = false;
-      try { webauthn = !!(await kvGet('pt_webauthn')); } catch (e) {}
-      return res.status(200).json({ configured: true, authenticated: ok, webauthn });
+      const g = await checkAuth(req);
+      if (g.status === 503) return res.status(503).json({ error: 'kv get failed' });
+      if (!g.configured) return res.status(200).json({ configured: false, authenticated: true });
+      return res.status(200).json({ configured: true, authenticated: g.ok, webauthn: !!g.webauthn });
     }
 
     if (req.method !== 'POST') return res.status(405).json({ error: 'POST only' });
