@@ -2669,18 +2669,25 @@ function lkSecurity(){
   }).catch(function(){ alert('Could not reach the server.'); });
 }
 
+// Every server read costs 3 database requests (passcode, session, data). Polling
+// once a minute per open window, plus a read on every focus, used up the free
+// 500K monthly allowance in two weeks and locked the app. Read at most once a
+// minute on focus, and every 5 minutes while the window stays open.
+var PT_LAST_REFRESH=0;
 function refreshSafe(){
   if(PT_DIRTY||PT_SAVING)return;
+  if(Date.now()-PT_LAST_REFRESH<60000)return;
   if(document.hidden)return;
   var ae=document.activeElement;
   if(ae&&/^(INPUT|SELECT|TEXTAREA)$/.test(ae.tagName))return;
   var open=[].slice.call(document.querySelectorAll('.ovlay')).some(function(o){return o.style.display==='flex';});
   if(open)return;
+  PT_LAST_REFRESH=Date.now();
   loadFromServer();
 }
 document.addEventListener('visibilitychange',function(){ if(!document.hidden) refreshSafe(); });
 window.addEventListener('focus',refreshSafe);
-setInterval(refreshSafe,60000);
+setInterval(refreshSafe,300000);
 
 window.addEventListener('load', function() {
   try { loadState(); ptLog('BOOT-LOCAL'); } catch(e) { console.log('loadState error:', e); }
