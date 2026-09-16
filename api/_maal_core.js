@@ -64,7 +64,21 @@ export function scheduleView(data, todayIso, opts = {}) {
   const accounts = [];
   const payments = [];
   for (const acc of data.accs || []) {
-    accounts.push({ id: acc.id, name: acc.name, type: acc.type || 'Other', purpose: acc.purpose || null, maalId: acc.maalId || null });
+    // Per-account totals over EVERY payment, not just the ones listed below, so Maal can show
+    // "23 of 53 paid" and what is left without being sent the whole history.
+    const pays = acc.pays || [];
+    const scheduled = pays.filter((p) => p.status !== 'deferred');
+    const owedPays = scheduled.filter(OWED);
+    const nextOwed = owedPays.map((p) => toIso(effDate(p))).filter(Boolean).sort()[0] || null;
+    const scheduledTotal = scheduled.reduce((n, p) => n + Number(p.amount || 0), 0);
+    accounts.push({
+      id: acc.id, name: acc.name, type: acc.type || 'Other', purpose: acc.purpose || null, maalId: acc.maalId || null,
+      totalCount: scheduled.length,
+      paidCount: scheduled.length - owedPays.length,
+      remaining: Math.round((owedPays.reduce((n, p) => n + Number(p.amount || 0), 0) + Math.max(0, Number(acc.principal || 0) - scheduledTotal)) * 100) / 100,
+      nextDue: nextOwed,
+      nextAmount: nextOwed ? Number((owedPays.find((p) => toIso(effDate(p)) === nextOwed) || {}).amount || 0) : null,
+    });
     for (const { key, p } of keyedPayments(acc)) {
       const date = toIso(effDate(p));
       const owed = OWED(p);

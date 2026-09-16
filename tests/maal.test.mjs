@@ -46,6 +46,16 @@ test('the schedule lists what is owed plus recent payments, in date order', () =
   assert.ok(!v.payments.some((p) => p.desc === 'Old'));
 });
 
+test('each account carries its totals over every payment', () => {
+  const v = scheduleView(sample(), '2026-09-16');
+  const villa = v.accounts.find((a) => a.id === 'villa');
+  assert.deepEqual([villa.totalCount, villa.paidCount, villa.nextDue, villa.nextAmount], [5, 1, '2026-08-31', 292950]);
+  // Scheduled payments already exceed the principal, so nothing unscheduled is added.
+  assert.equal(villa.remaining, 1072806.55);
+  const loan = v.accounts.find((a) => a.id === 'loan');
+  assert.deepEqual([loan.totalCount, loan.paidCount, loan.remaining, loan.nextDue], [3, 1, 45704.12, '2026-10-10']);
+});
+
 test('a proposal must match the amount to the fils and point at an owed payment', () => {
   const d = sample();
   const key = scheduleView(d, '2026-09-16').payments.find((p) => p.desc === 'Cheque 6').key;

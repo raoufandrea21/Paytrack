@@ -117,6 +117,8 @@ async function maalCall(req, res, action) {
       version: data && data.saved ? Date.parse(data.saved) : null,
       autoMark,
       pending: inbox.items.map((x) => x.txId),
+      // The payments those proposals are for: the money has left the bank, so a forecast must not take it again.
+      pendingKeys: inbox.items.map((x) => x.key),
       rejected: inbox.rejected,
       ...view,
     });
