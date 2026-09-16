@@ -156,9 +156,12 @@ export function buildPlanAccount(input) {
   const first = String(input.firstPayment || '').slice(0, 10);
   const step = Math.max(1, Math.round(Number(input.intervalMonths || 1)));
   if (!input.maalId || !input.name || !(monthly > 0) || !/^\d{4}-\d{2}-\d{2}$/.test(first)) throw new Error('invalid-plan');
+  // A plan already part-paid in Maal arrives with only what is left; its numbering carries on from
+  // where it is, so the ninth payment of twelve is not presented as the first of four.
+  const paidBefore = Math.max(0, Math.round(Number(input.paidBefore || 0)));
   const total = input.totalAmount ? Math.round(Number(input.totalAmount) * 100) / 100 : Math.round(monthly * months * 100) / 100;
   const pays = Array.from({ length: months }, (_, k) => ({
-    desc: `Instalment ${k + 1} of ${months}`,
+    desc: `Instalment ${k + 1 + paidBefore} of ${months + paidBefore}`,
     amount: monthly,
     dt: fromIso(k === 0 ? first : addMonthsIso(first, k * step)),
     nd: '',

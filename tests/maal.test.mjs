@@ -101,6 +101,14 @@ test('a Maal plan becomes an account with its payments laid out, once', () => {
   assert.throws(() => buildPlanAccount({ ...input, firstPayment: '28-09-2026' }), /invalid-plan/);
 });
 
+test('a part-paid plan arrives with only its remaining payments, numbered where it is', () => {
+  const acc = buildPlanAccount({ maalId: 'divinci', name: 'Divinci', monthlyAmount: 584.77, months: 4, paidBefore: 8, firstPayment: '2026-10-10', totalAmount: 2339.08 });
+  assert.deepEqual(acc.pays.map((p) => p.desc), ['Instalment 9 of 12', 'Instalment 10 of 12', 'Instalment 11 of 12', 'Instalment 12 of 12']);
+  assert.equal(acc.pays[0].dt, '10-10-2026');
+  assert.equal(acc.principal, 2339.08);
+  assert.ok(acc.pays.every((p) => p.status === 'notpaid'));
+});
+
 test('month ends clamp instead of spilling into the next month', () => {
   const acc = buildPlanAccount({ maalId: 'm', name: 'x', monthlyAmount: 10, months: 3, firstPayment: '2026-01-31' });
   assert.deepEqual(acc.pays.map((p) => p.dt), ['31-01-2026', '28-02-2026', '31-03-2026']);
