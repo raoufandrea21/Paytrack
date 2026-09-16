@@ -11,16 +11,22 @@ export default async function handler(req, res) {
     const token = process.env.KV_REST_API_TOKEN;
     if (!kv || !token) return res.status(200).json({ error: 'KV not configured' });
 
-    const r = await fetch(`${kv}/get/paytrack_data`, {
-      headers: { Authorization: `Bearer ${token}` }
+    // One request for both: the data, and what Maal has proposed. Reading them
+    // together costs the same as reading the data alone did.
+    const r = await fetch(kv, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(['MGET', 'paytrack_data', 'pt_maal_inbox'])
     });
     if (!r.ok) return res.status(200).json({ error: 'KV read failed' });
 
     const json = await r.json();
-    
-
-    const raw = json.result || json.value; if (!raw) return res.status(200).json({ error: 'No data' }); const data = JSON.parse(raw);
-    return res.status(200).json(data);
+    const [raw, inboxRaw] = Array.isArray(json.result) ? json.result : [];
+    if (!raw) return res.status(200).json({ error: 'No data' });
+    const data = JSON.parse(raw);
+    let maalInbox = [];
+    try { maalInbox = (JSON.parse(inboxRaw || '{}').items) || []; } catch (e) {}
+    return res.status(200).json({ ...data, maalInbox });
   } catch (e) {
     return res.status(200).json({ error: e.message });
   }

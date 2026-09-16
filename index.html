@@ -339,6 +339,12 @@ label{display:block;font-size:11px;color:var(--t2);margin-bottom:4px;font-weight
     </div>
   </div>
 
+  <div class="card" id="maal-card" style="margin-bottom:1.25rem;display:none;border-color:rgba(45,212,191,.35)">
+    <div class="card-t" style="color:var(--teal)">Maal matched a bank payment <span id="maal-n" style="background:rgba(45,212,191,.16);padding:1px 7px;border-radius:100px;font-size:11px;margin-left:4px">0</span></div>
+    <div style="font-size:11px;color:var(--t2);margin-bottom:6px">Maal saw this money leave your bank. Mark the scheduled payment as paid?</div>
+    <div id="maal-body"></div>
+  </div>
+
   <div class="card" id="issues-card" style="margin-bottom:1.25rem;display:none;border-color:rgba(245,166,35,.35)">
     <div class="card-t" style="color:var(--amber)">⚠ Needs attention <span id="issues-n" style="background:rgba(245,166,35,.16);padding:1px 7px;border-radius:100px;font-size:11px;margin-left:4px">0</span></div>
     <div style="font-size:11px;color:var(--t3);margin-bottom:2px">Payments that are missing from your totals, the monthly view or your reminders. Tap one to open the account.</div>
@@ -2448,6 +2454,7 @@ async function loadFromServer(){
     var res=await fetch('/api/load',{cache:'no-store'});
     if(!res.ok){ ptBootDone('nothing to adopt'); return; }
     var raw=await res.json();
+    try{ ptMaalInbox(raw&&raw.maalInbox); }catch(eM){}
     var data=raw;
     if(raw&&raw.value&&typeof raw.value==='string'){try{data=JSON.parse(raw.value);}catch(ex){ ptBootDone('corrupt payload'); return; }}
     if(!data||!data.accs||!Array.isArray(data.accs)||!data.accs.length){ ptBootDone('nothing to adopt'); return; }
@@ -2654,6 +2661,70 @@ function lkInit(){
     .catch(function(){ /* offline: local data still readable */ });
 }
 function lkSetup(){ lkShow('setup'); }
+
+// -- Maal link --------------------------------------------------------------
+// Maal is the phone app that reads bank messages. When it sees money leave the
+// bank that matches a scheduled payment here, it proposes the match. Nothing is
+// marked paid until you say yes below -- unless you switch automatic marking on.
+function maalEsc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
+function maalDate(iso){ var m=/^(\d{4})-(\d{2})-(\d{2})/.exec(iso||''); return m? m[3]+'-'+m[2]+'-'+m[1] : ''; }
+function ptMaalInbox(items){
+  var card=document.getElementById('maal-card'); if(!card) return;
+  items=Array.isArray(items)?items:[];
+  if(!items.length){ card.style.display='none'; return; }
+  card.style.display='';
+  document.getElementById('maal-n').textContent=items.length;
+  document.getElementById('maal-body').innerHTML=items.map(function(x){
+    return '<div class="maal-row" style="display:flex;gap:10px;align-items:center;padding:9px 0;border-top:1px solid var(--b1)">'
+      +'<div style="flex:1;min-width:0">'
+      +'<div style="font-size:13px;font-weight:600">'+maalEsc(x.accName)+' · '+maalEsc(x.desc)+'</div>'
+      +'<div style="font-size:11px;color:var(--t2)">Due '+maalEsc(maalDate(x.dueDate))+' · '+maalEsc(x.bank||'Bank')+' paid '+maalEsc(maalDate(x.bankDate))+(x.merchant?' · '+maalEsc(x.merchant):'')+'</div>'
+      +'</div>'
+      +'<div style="font-family:var(--m);font-size:13px;white-space:nowrap">'+fmt(x.amount)+'</div>'
+      +'<button class="btn-p" style="padding:6px 10px" onclick="maalResolve(\''+maalEsc(x.id)+'\',true,this)">Mark paid</button>'
+      +'<button class="btn-s" style="padding:6px 10px" onclick="maalResolve(\''+maalEsc(x.id)+'\',false,this)">Not this</button>'
+      +'</div>';
+  }).join('');
+}
+function maalResolve(id,accept,btn){
+  if(btn) btn.disabled=true;
+  fetch('/api/maal?action=resolve',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:id,accept:accept})})
+    .then(function(r){ return r.json().then(function(j){ return {ok:r.ok,status:r.status,j:j}; }); })
+    .then(function(res){
+      if(res.status===409){ alert('Another device saved just now. Nothing was changed \u2014 try again in a moment.'); if(btn) btn.disabled=false; return; }
+      if(!res.ok && res.status!==404){ alert('Could not update: '+((res.j&&res.j.error)||res.status)); if(btn) btn.disabled=false; return; }
+      if(res.j&&res.j.status==='stale') alert('That payment changed since Maal matched it (it is '+String(res.j.reason||'').replace('already-','already ')+'), so nothing was marked.');
+      // The server wrote the change; read it back rather than editing locally.
+      PT_LAST_REFRESH=0; loadFromServer();
+    })
+    .catch(function(){ alert('Could not reach the server.'); if(btn) btn.disabled=false; });
+}
+function maalLink(){
+  fetch('/api/maal?action=status',{cache:'no-store'}).then(function(r){return r.json();}).then(function(s){
+    if(s.error){ alert(s.error); return; }
+    var msg='Maal link: '+(s.connected?'connected':'not connected')
+      +'\nAutomatic marking: '+(s.autoMark?'ON \u2014 matches are marked paid without asking':'OFF \u2014 you confirm each match')
+      +'\nWaiting for you: '+(s.pending||0);
+    var choice=prompt(msg+'\n\nType:\n  K  create a new key for Maal'+(s.connected?' (the old one stops working)':'')
+      +'\n  A  turn automatic marking '+(s.autoMark?'OFF':'ON')
+      +(s.connected?'\n  R  disconnect Maal':''),'');
+    if(!choice) return;
+    choice=choice.trim().toUpperCase();
+    if(choice==='K'){
+      fetch('/api/maal?action=new-key',{method:'POST'}).then(function(r){return r.json();}).then(function(j){
+        if(!j.key){ alert(j.error||'Could not create a key.'); return; }
+        prompt('Copy this key into Maal \u2192 Settings \u2192 PayTrack. It is shown only once.', j.key);
+      });
+    } else if(choice==='A'){
+      if(!s.autoMark && !confirm('Mark matched payments paid automatically, without asking?\n\nOnly exact amount matches are ever marked, and you can switch this off here at any time.')) return;
+      fetch('/api/maal?action=config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({autoMark:!s.autoMark})})
+        .then(function(r){return r.json();}).then(function(j){ alert('Automatic marking is now '+(j.autoMark?'ON':'OFF')+'.'); });
+    } else if(choice==='R' && s.connected){
+      if(!confirm('Disconnect Maal? It will stop reading and proposing until you create a new key.')) return;
+      fetch('/api/maal?action=revoke',{method:'POST'}).then(function(){ alert('Maal disconnected.'); });
+    }
+  }).catch(function(){ alert('Could not reach the server.'); });
+}
 
 // Entry point from the More sheet: set a passcode, or lock the app now.
 function lkSecurity(){
@@ -2954,6 +3025,7 @@ function urlB64ToUint8(base64String){
     <div class="msheet-grip"></div>
     <div class="msheet-r" onclick="closeMore();go('stk',null)"><span><svg class="ic"><use href="#ic-stocks"/></svg></span><div><div class="msheet-t">Stocks &amp; savings</div><div class="msheet-s">Portfolio &amp; live prices</div></div></div>
     <div class="msheet-r" onclick="closeMore();go('ai',null)"><span><svg class="ic"><use href="#ic-ai"/></svg></span><div><div class="msheet-t">AI CFO</div><div class="msheet-s">Your financial intelligence layer</div></div></div>
+    <div class="msheet-r" onclick="closeMore();maalLink()"><span><svg class="ic"><use href="#ic-more"/></svg></span><div><div class="msheet-t">Maal link</div><div class="msheet-s">Bank payments from the Maal app</div></div></div>
     <div class="msheet-r" onclick="closeMore();lkSecurity()"><span><svg class="ic"><use href="#ic-more"/></svg></span><div><div class="msheet-t">Security</div><div class="msheet-s" id="msheet-sec">Passcode &amp; fingerprint</div></div></div>
     <div class="msheet-r" onclick="closeMore();go('exp',null)"><span><svg class="ic"><use href="#ic-export"/></svg></span><div><div class="msheet-t">Export</div><div class="msheet-s">Report, Excel, print</div></div></div>
   </div>
