@@ -3,10 +3,71 @@
 //   ?action=writes     server-side audit of who wrote what
 //   ?action=test-push  send a test notification to every registered device
 //   ?action=usage      gated requests per day for the last 31 days
-// All session-guarded.
+//   ?action=widget     desktop widget feed (x-widget-key header), also /api/widget
+// All session-guarded except widget.
 
+import crypto from 'node:crypto';
 import webpush from 'web-push';
 import { guard, kvGet, kvCmd, usageKey } from './_auth.js';
+import { refreshStockPrices } from './_quotes.js';
+import { buildWidgetSummary } from '../widget-summary.js';
+
+// ── desktop widget feed ───────────────────────────────────────────────────
+// Lets the desktop widget stay current with PayTrack closed. It serves the
+// same summary the app writes to paytrack.json (one shared builder), never
+// the raw records. Authenticated by the x-widget-key header against the
+// WIDGET_KEY env var -- a header, not a URL, so the key stays out of logs.
+//
+// Cost control: the free database allows 500K requests a month. A cache miss
+// is ONE request (read + usage counter in a single script); a hit within 60s
+// is none. Prices come from TradingView, which costs no database requests.
+const WIDGET_TTL = 60 * 1000;
+const WIDGET_LUA =
+  "local c = redis.call('INCR', KEYS[2]) " +
+  "if c == 1 then redis.call('EXPIRE', KEYS[2], 3024000) end " +
+  "return redis.call('GET', KEYS[1])";
+const DUBAI_OFFSET = 4 * 60 * 60 * 1000;   // UAE has no daylight saving
+let widgetCache = { at: 0, body: null };
+
+function keyMatches(given, want) {
+  // Hash both sides so lengths match and the compare is constant-time.
+  const a = crypto.createHash('sha256').update(String(given)).digest();
+  const b = crypto.createHash('sha256').update(String(want)).digest();
+  return crypto.timingSafeEqual(a, b);
+}
+
+async function doWidget(req, res) {
+  const want = process.env.WIDGET_KEY || '';
+  if (want.length < 32) return res.status(503).json({ error: 'Widget feed not configured' });
+  if (!keyMatches(req.headers['x-widget-key'] || '', want)) {
+    return res.status(401).json({ error: 'Bad key' });
+  }
+  // private: a shared cache must never serve this to a request without the key
+  res.setHeader('Cache-Control', 'private, max-age=60');
+
+  if (widgetCache.body && Date.now() - widgetCache.at < WIDGET_TTL) {
+    res.setHeader('X-Cache', 'HIT');
+    return res.status(200).json(widgetCache.body);
+  }
+  try {
+    const raw = await kvCmd(['EVAL', WIDGET_LUA, '2', 'paytrack_data', usageKey()]);
+    if (!raw) return res.status(404).json({ error: 'No data' });
+    let data = JSON.parse(raw);
+    if (data && typeof data.value === 'string') data = JSON.parse(data.value);
+
+    await refreshStockPrices(data.stocks);
+    // The server clock is UTC; "today", "this month" and "days away" must be
+    // Dubai's, or the countdown is a day off between midnight and 4am.
+    const body = buildWidgetSummary(data, new Date(Date.now() + DUBAI_OFFSET));
+    body.generated = new Date().toISOString();
+
+    widgetCache = { at: Date.now(), body };
+    res.setHeader('X-Cache', 'MISS');
+    return res.status(200).json(body);
+  } catch (e) {
+    return res.status(503).json({ error: 'Widget feed unavailable', detail: e.message });
+  }
+}
 
 async function doRecover(res) {
   try {
@@ -151,11 +212,12 @@ export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
   const action = (req.query && req.query.action) || '';
 
-  // The public widget feed is retired. Every refresh from a phone widget cost
-  // database requests without a session, and one widget alone used up the
-  // free monthly allowance. The desktop widget reads paytrack.json locally.
-  if (action === 'widget' || action === 'widget-token') {
-    return res.status(410).json({ error: 'Widget feed retired. Use the local paytrack.json export.' });
+  // Desktop widget feed, reached as /api/widget (rewrite in vercel.json).
+  if (action === 'widget') return doWidget(req, res);
+  // The old URL-token feed stays retired: a phone widget polling it with the
+  // token in the URL used up the free monthly allowance on its own.
+  if (action === 'widget-token') {
+    return res.status(410).json({ error: 'Retired. Use /api/widget with the x-widget-key header.' });
   }
 
   if (!(await guard(req, res))) return;

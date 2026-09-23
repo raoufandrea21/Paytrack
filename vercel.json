@@ -8,5 +8,11 @@
       "path": "/api/check-reminders",
       "schedule": "0 4 * * *"
     }
+  ],
+  "rewrites": [
+    {
+      "source": "/api/widget",
+      "destination": "/api/admin?action=widget"
+    }
   ]
 }

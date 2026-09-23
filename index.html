@@ -1735,145 +1735,15 @@ function wsClear(){
   }).catch(function(){});
 }
 
-// --- helpers -------------------------------------------------------------
-function wsIso(d){
-  if(!d) return '';
-  var y = d.getFullYear(), m = d.getMonth() + 1, day = d.getDate();
-  return y + '-' + (m < 10 ? '0' : '') + m + '-' + (day < 10 ? '0' : '') + day;
-}
-function wsNum(n){ n = +n; return isFinite(n) ? Math.round(n * 100) / 100 : 0; }
-// The widget must agree with the app, so these mirror owed()/eff() exactly.
-function wsOwed(p){ return p && p.status !== 'paid' && p.status !== 'deferred'; }
-function wsStatus(s){
-  if(s === 'notpaid') return 'not paid';
-  if(s === 'confirm') return 'confirm cheque';
-  return s || 'not paid';
-}
-
+// The summary is built by widget-summary.js, shared with /api/widget so the
+// file this writes and the server feed can never disagree.
 function buildWidgetJson(){
-  var now = new Date();
-  var today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  var MN = ['January','February','March','April','May','June','July',
-            'August','September','October','November','December'];
-
-  // every unpaid, dated obligation once
-  var rows = [];
-  accs.forEach(function(a){
-    (a.pays || []).forEach(function(p){
-      var d = pd(eff(p));
-      rows.push({
-        acc: a.name, desc: p.desc || 'Payment',
-        amount: +p.amount || 0, status: p.status || 'notpaid',
-        d: d, owed: wsOwed(p)
-      });
-    });
-  });
-
-  var dated = rows.filter(function(r){ return r.owed && r.d; });
-  dated.sort(function(x, y){ return x.d - y.d; });
-
-  var nextRow = dated.filter(function(r){ return r.d >= today; })[0] || null;
-  var next = nextRow ? {
-    date: wsIso(nextRow.d), account: nextRow.acc, desc: nextRow.desc,
-    amount: wsNum(nextRow.amount),
-    daysAway: Math.round((nextRow.d - today) / 86400000)
-  } : { date: '', account: '', desc: '', amount: 0, daysAway: 0 };
-
-  function monthBlock(offset){
-    var t = new Date(today.getFullYear(), today.getMonth() + offset, 1);
-    var sel = dated.filter(function(r){
-      return r.d.getFullYear() === t.getFullYear() && r.d.getMonth() === t.getMonth();
-    });
-    return {
-      label: MN[t.getMonth()] + ' ' + t.getFullYear(),
-      amount: wsNum(sel.reduce(function(s, r){ return s + r.amount; }, 0)),
-      count: sel.length
-    };
-  }
-
-  // Overdue: anything owed whose effective date has passed, plus rows already
-  // flagged overdue. Deferred is never overdue -- it was pushed on purpose.
-  var over = rows.filter(function(r){
-    if(!r.owed) return false;
-    if(r.status === 'overdue') return true;
-    return !!r.d && r.d < today;
-  });
-  var defer = rows.filter(function(r){ return r.status === 'deferred'; });
-
-  var upcoming = dated.filter(function(r){ return r.d >= today; }).slice(0, 6)
-    .map(function(r){
-      return { date: wsIso(r.d), account: r.acc, desc: r.desc,
-               amount: wsNum(r.amount), status: wsStatus(r.status) };
-    });
-
-  // --- stocks ---
-  var pricesAt = 0;
-  // Margin is owed to a brokerage ACCOUNT, not to a share, so a broker's
-  // margin is split across its holdings in proportion to value -- the same
-  // rule the app uses for the "Net at <broker>" line. With one holding per
-  // broker this is simply the whole margin.
-  var wsBrokerValue = {};
-  (stocks || []).forEach(function(s){
-    var b = String(s.broker || '').trim();
-    wsBrokerValue[b] = (wsBrokerValue[b] || 0) + (+s.qty || 0) * (+(s.livePrice || s.cp || 0));
-  });
-  var holdings = (stocks || []).map(function(s){
-    var price = +(s.livePrice || s.cp || 0);
-    // Without a stored previous close, treat today's move as zero rather than
-    // inventing one against the buy price.
-    var prev = +(s.prevClose || price);
-    var qty = +s.qty || 0;
-    var value = qty * price;
-    var dayCh = qty * (price - prev);
-    var bp = +s.bp || 0;
-    if(s.liveAt && s.liveAt > pricesAt) pricesAt = s.liveAt;
-    var brk = String(s.broker || '').trim();
-    var bv = wsBrokerValue[brk] || 0;
-    var brokerMargin = (brk && margins && margins[brk]) ? +margins[brk] : 0;
-    var share = (brokerMargin && bv > 0) ? (brokerMargin * (value / bv)) : 0;
-    return {
-      ticker: s.ticker || '', name: s.name || s.ticker || '',
-      broker: brk, qty: qty, price: wsNum(price), prevClose: wsNum(prev),
-      value: wsNum(value), netValue: wsNum(value - share),
-      dayChange: wsNum(dayCh),
-      dayChangePct: wsNum(prev > 0 ? ((price - prev) / prev * 100) : 0),
-      totalPnl: wsNum(qty * (price - bp)),
-      totalPnlPct: wsNum(bp > 0 ? ((price - bp) / bp * 100) : 0),
-      currency: s.cur || 'AED'
-    };
-  });
-  var marketValue = holdings.reduce(function(t, h){ return t + h.value; }, 0);
-  var prevValue = holdings.reduce(function(t, h){ return t + h.qty * h.prevClose; }, 0);
-  var dayChange = holdings.reduce(function(t, h){ return t + h.dayChange; }, 0);
-  var marginOwed = Object.keys(margins || {})
-    .filter(function(k){ return k !== '__migrated'; })
-    .reduce(function(t, b){ return t + (+margins[b] || 0); }, 0);
-  var sav = (typeof savTotal === 'function') ? savTotal() : 0;
-
-  return {
-    app: 'paytrack', schema: 1, generated: now.toISOString(),
-    next: next,
-    thisMonth: monthBlock(0), nextMonth: monthBlock(1),
-    overdue:  { amount: wsNum(over.reduce(function(s, r){ return s + r.amount; }, 0)), count: over.length },
-    deferred: { amount: wsNum(defer.reduce(function(s, r){ return s + r.amount; }, 0)), count: defer.length },
-    upcoming: upcoming,
-    stocks: {
-      marketValue: wsNum(marketValue), marginOwed: wsNum(marginOwed),
-      // net matches the Total net worth card on the Stocks & savings screen:
-      // stocks minus margin. Savings stay in the export as their own field but
-      // no longer feed net, so the widget and the app cannot disagree.
-      savings: wsNum(sav), net: wsNum(marketValue - marginOwed),
-      dayChange: wsNum(dayChange),
-      dayChangePct: wsNum(prevValue > 0 ? (dayChange / prevValue * 100) : 0),
-      pricesAt: pricesAt ? new Date(pricesAt).toISOString() : now.toISOString(),
-      holdings: holdings
-    }
-  };
+  return window.buildWidgetSummary({ accs: accs, stocks: stocks, savings: savings, margins: margins });
 }
 
 // --- writing -------------------------------------------------------------
 function widgetSyncNow(){
-  if(!WS_DIR) return Promise.resolve(false);
+  if(!WS_DIR || !window.buildWidgetSummary) return Promise.resolve(false);
   return WS_DIR.queryPermission({ mode: 'readwrite' }).then(function(perm){
     if(perm !== 'granted'){ renderWidgetSync('reconnect'); return false; }
     return WS_DIR.getFileHandle('paytrack.json', { create: true })
@@ -3030,5 +2900,10 @@ function urlB64ToUint8(base64String){
     <div class="msheet-r" onclick="closeMore();go('exp',null)"><span><svg class="ic"><use href="#ic-export"/></svg></span><div><div class="msheet-t">Export</div><div class="msheet-s">Report, Excel, print</div></div></div>
   </div>
 </div>
+<script type="module">
+import { buildWidgetSummary } from '/widget-summary.js';
+window.buildWidgetSummary = buildWidgetSummary;
+if (typeof scheduleWidgetSync === 'function') scheduleWidgetSync();
+</script>
 </body>
 </html>
